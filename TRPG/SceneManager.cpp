@@ -102,8 +102,8 @@ void SceneManager::ChangeScene(SceneType next) {
 	case SceneType::BATTLE:
         currentScene = std::make_unique<BattleScene>();
         SetWindowTextW(m_hWnd, L"TRPG - バトル");
-    case SceneType::RESULT:
         break;
+    case SceneType::RESULT:
         currentScene = std::make_unique<Result>();
         SetWindowTextW(m_hWnd, L"TRPG - リザルト");
         break;

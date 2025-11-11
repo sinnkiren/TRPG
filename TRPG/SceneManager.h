@@ -52,8 +52,6 @@ private:
 
 	CharcterScene::CharcterDate playerData;
 	// プレイヤーデータを保持（シーン間で共有）
-
-
 };
 extern SceneManager g_SceneManager; // 実体は別ファイルに
 

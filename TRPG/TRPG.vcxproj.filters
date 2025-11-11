@@ -366,4 +366,7 @@
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\story\story.json" />
+  </ItemGroup>
 </Project>

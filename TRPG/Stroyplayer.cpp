@@ -116,7 +116,7 @@ void StoryPlayer::Render() {
     // DrawTextCentered(ev.text);
     // DrawFaceImage(ev.faceImage, positionLeftBottom);
     // ※実際の描画はエンジンAPIに合わせて実装してください。
-
+    
     // ここではImGuiで簡易表示（開発中用）
     ImGui::SetNextWindowPos(ImVec2(10, 600), ImGuiCond_Always);
     ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);

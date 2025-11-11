@@ -1,0 +1,37 @@
+[
+  {
+    "text": "……暗い部屋だ。目を覚ますと、机の上に一冊の本が置かれていた。",
+    "speaker": "",
+    "face": "",
+    "effect": "fadein",
+    "duration": 2.0
+  },
+  {
+    "text": "ページを開いた瞬間、部屋が揺れた。",
+    "speaker": "",
+    "face": "",
+    "effect": "shake",
+    "duration": 1.5
+  },
+  {
+    "text": "「……お前は、誰だ？」",
+    "speaker": "???",
+    "face": "face_angry.png",
+    "effect": "noise",
+    "duration": 1.5
+  },
+  {
+    "text": "暗闇から影が浮かび上がる。",
+    "speaker": "",
+    "face": "",
+    "effect": "blood",
+    "duration": 1.0
+  },
+  {
+    "text": "戦闘開始！",
+    "speaker": "",
+    "face": "",
+    "effect": "battle_start",
+    "duration": 0.5
+  }
+]

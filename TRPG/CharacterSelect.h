@@ -24,7 +24,7 @@ public:
 
         // V: ‘Ï‹v—ÍiHPj
         int endurance =0;
-        int maxEndurance =0;
+        int maxEndurance = 0;
 
         bool ApplySanityLoss(int amount) {
             sanity = std::clamp(sanity - amount,0, maxSanity);

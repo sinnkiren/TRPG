@@ -38,6 +38,6 @@ private:
 	bool m_playing = false;
 
 	std::unordered_map < std::string, EffectHandler>m_effects;
-	void TriggeeEffect(const StoryEvent& ev);
+	void TriggerEffect(const StoryEvent& ev);
 	void ShowCurrentText();
 };

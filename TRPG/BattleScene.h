@@ -1,0 +1,49 @@
+#pragma once
+#include "IScene.h"
+#include "CharacterSelect.h"
+#include <vector>
+#include <functional>
+#include <string>
+
+class BattleScene : public IScene {
+public:
+    void Initialize() override;
+    void Update() override;
+    void Render() override;
+
+    BattleScene() = default;
+
+    // プレイヤー情報を受け取る（SceneManagerから呼ばれる）
+    void SetPlayer(const CharcterScene::CharcterDate& p) { player = p; prevEndurance = player.endurance; persistentStage =0; persistentTimer =0.0f; }
+
+    // シーン切替要求ハンドラ（SceneManager にセットされる）
+    std::function<void(int)> RequestSceneChange;
+
+private:
+    struct Enemy {
+        std::string name;
+        int hp =10;
+        int maxHp =10;
+        int atk =3;
+        int fearDamage =2; // 敵が与える精神的ダメージ量
+    };
+
+    CharcterScene::CharcterDate player;
+    std::vector<Enemy> enemies;
+
+    enum class Phase { PlayerTurn, EnemyTurn, Victory, Defeat } phase = Phase::PlayerTurn;
+
+    int selectedEnemy =0;
+    int lastRoll =0;
+
+    // UI / 時間管理
+    float timeAccum =0.0f;
+
+    // ダメージ閃光・残痕管理
+    int prevEndurance = -1; // 前フレームの耐久力（HP）
+    float damageFlashTimer =0.0f; // ダメージを受けた瞬間のフラッシュ用タイマー
+    float damageFlashDuration =0.35f; // フラッシュの持続時間（秒）
+
+    int persistentStage =0; // 傷の残り段階（0..4）
+    float persistentTimer =0.0f; // 傷が残る時間
+};

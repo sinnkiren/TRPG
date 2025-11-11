@@ -1,0 +1,16 @@
+{
+  "id": "scenario_001",
+  "title": "廃屋の呼び声",
+  "description": "小さな村外れの廃屋に不穏な気配がするという噂が立った。君たちは真相を調べに行く。",
+  "type": "single",               // "single" or "group"
+  "recommendedPlayers": 1,
+  "progress": 0,                  // 0..100
+  "warning": "このシナリオは恐怖度が高い",
+  "enemies": [
+    { "name": "不気味な影", "hp": 18, "atk": 4, "fearDamage": 3 },
+    { "name": "蠢く何か", "hp": 12, "atk": 2, "fearDamage": 2 }
+  ],
+  "events": [
+    { "trigger": "enter_room", "sanityLoss": 5, "text": "背後から低い唸り声が..." }
+  ]
+}

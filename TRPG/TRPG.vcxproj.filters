@@ -1,0 +1,363 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="ソース ファイル">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="ヘッダー ファイル">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="リソース ファイル">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\Scene">
+      <UniqueIdentifier>{d5d520d8-ebae-4e43-bea9-94360448695d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\Scene">
+      <UniqueIdentifier>{b3db0299-1ce5-4765-b5f6-6419ebbc1742}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="system">
+      <UniqueIdentifier>{bffa5562-a951-42bf-8933-56234ca78875}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="system\json">
+      <UniqueIdentifier>{1c4107fd-3ea2-4228-8687-28dadb995540}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Application.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneManager.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="TitleScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="TRPGSelectScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="game.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="system\BoxDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\AssimpPerse.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\C3DShape.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CapsuleDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CConeMesh.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CCylinderMesh.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CLineMesh.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\collision.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CObj3DMesh.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\ConeDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CPlane.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CPlaneMesh.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CShader.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CSprite.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CStaticMesh.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CStaticMeshRenderer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CTexture.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\CylinderDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\DebugUI.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\dx11helper.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui_demo.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui_impl_dx11.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui_draw.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui_impl_win32.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui_tables.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\imgui\imgui_widgets.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\LineDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\parseobj.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\PlaneDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\renderer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\SphereDrawer.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="system\stb.cpp">
+      <Filter>system</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="ScenarioScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="CharacterSelect.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGuiFontLoader.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Result.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Main Story.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Application.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneManager.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneType.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="TitleScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="TRPGSelectScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="game.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="system\AssimpPerse.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\BoxDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\C3DShape.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CapsuleDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CBoxMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CConeMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CCylinderMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CDirectInput.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CIndexBuffer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CLineMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CMaterial.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CMeshRenderer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CObj3DMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\collision.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\commontypes.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\ConeDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CPlane.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CPlaneMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CPolar3D.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CShader.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CSphereMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CSprite.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CStaticMesh.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CStaticMeshRenderer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CTexture.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CTreeNode.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CVertexBuffer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\CylinderDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\DebugUI.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\dx11helper.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imgui.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imgui_impl_dx11.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imconfig.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imgui_impl_win32.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imgui_internal.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imstb_rectpack.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imstb_textedit.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\imgui\imstb_truetype.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\LineDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\noncopyable.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\PlaneDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\parseobj.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\renderer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\SphereDrawer.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\stb_image.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="system\transform.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="IScene.h">
+      <Filter>system</Filter>
+    </ClInclude>
+    <ClInclude Include="main.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="ScenarioScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="CharacterSelect.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="CharacterDateManeger.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="system\json.hpp">
+      <Filter>system\json</Filter>
+    </ClInclude>
+    <ClInclude Include="Dice.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="FearEffects.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiFontLoader.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Result.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Main Story.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="BattleScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

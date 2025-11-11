@@ -1,4 +1,5 @@
-#include "Stroyplayer.h"
+ï»¿#include "StoryPlayer.h"
+#include "SceneManager.h"
 #include <fstream>
 #include <iostream>
 #include "system/imgui/imgui.h"
@@ -8,6 +9,19 @@ using json = nlohmann::json;
 
 StoryPlayer::StoryPlayer() {}
 StoryPlayer::~StoryPlayer() {}
+
+void StoryPlayer::Initialize() {
+    LoadFromFile("assets/story/story.json");
+    onEventFinished = [](const StoryEvent& ev) {
+        if (ev.effect == "battle_start") {
+            g_SceneManager.ChangeScene(SceneType::BATTLE);
+        }
+        };
+    Play();
+}
+
+void StoryPlayer::Update() {
+}
 
 bool StoryPlayer::LoadFromFile(const std::string& path) {
     std::ifstream ifs(path);
@@ -38,13 +52,13 @@ void StoryPlayer::RegisterEffect(const std::string& name, EffectHandler handler)
 }
 
 void StoryPlayer::TriggerEffect(const StoryEvent& ev) {
-    // “o˜^‚³‚ê‚Ä‚¢‚ê‚ÎŒÄ‚Ño‚·
+    // ç™»éŒ²ã•ã‚Œã¦ã„ã‚Œã°å‘¼ã³å‡ºã™
     auto it = m_effects.find(ev.effect);
     if (it != m_effects.end()) {
         it->second(ev);
     }
     else {
-        // –³‚¯‚ê‚ÎƒfƒtƒHƒ‹ƒg‚ÌU‚é•‘‚¢iƒƒOj
+        // ç„¡ã‘ã‚Œã°ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®æŒ¯ã‚‹èˆã„ï¼ˆãƒ­ã‚°ï¼‰
         std::cout << "[Effect] " << ev.effect << " (no handler)\n";
     }
 }
@@ -53,7 +67,7 @@ void StoryPlayer::Play() {
     if (m_events.empty()) return;
     m_playing = true;
     m_timer = 0.0f;
-    // ‰‰ñƒCƒxƒ“ƒg‚ÌŒø‰Ê‚ğ‚·‚®”­‰Î‚·‚é
+    // åˆå›ã‚¤ãƒ™ãƒ³ãƒˆã®åŠ¹æœã‚’ã™ãç™ºç«ã™ã‚‹
     TriggerEffect(m_events[m_index]);
     ShowCurrentText();
 }
@@ -64,17 +78,23 @@ void StoryPlayer::Pause() {
 
 void StoryPlayer::Next() {
     if (m_events.empty()) return;
-    // Š®—¹ˆ—i•K—v‚È‚çƒR[ƒ‹ƒoƒbƒNj
-    if (onEventFinished) onEventFinished(m_events[m_index]);
+
+    // ã‚¤ãƒ™ãƒ³ãƒˆå®Œäº†ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯
+    if (onEventFinished) {
+        onEventFinished(m_events[m_index]);
+
+        // ã‚‚ã—ã‚·ãƒ¼ãƒ³ãŒå¤‰ã‚ã£ãŸå ´åˆã€this ã¯ç ´æ£„ã•ã‚Œã‚‹ã®ã§ä»¥é™ã®å‡¦ç†ã‚’ã‚„ã‚ã‚‹
+        if (!m_playing) return;
+    }
 
     m_index++;
     m_timer = 0.0f;
     if (m_index >= (int)m_events.size()) {
         m_playing = false;
-        // ‘SƒCƒxƒ“ƒgI—¹
         return;
     }
-    // ŸƒCƒxƒ“ƒg‚ğ”­‰Î
+
+    // æ¬¡ã‚¤ãƒ™ãƒ³ãƒˆã‚’ç™ºç«
     TriggerEffect(m_events[m_index]);
     ShowCurrentText();
 }
@@ -85,13 +105,13 @@ void StoryPlayer::Reset() {
     m_playing = false;
 }
 
-void StoryPlayer::Update(float dt) {
+void StoryPlayer::UpdateImpl(float dt) {
     if (!m_playing || m_events.empty() || m_index >= (int)m_events.size()) return;
 
     m_timer += dt;
     float dur = m_events[m_index].duration;
     if (m_timer >= dur) {
-        // ƒCƒxƒ“ƒgŠ®—¹
+        // ã‚¤ãƒ™ãƒ³ãƒˆå®Œäº†
         if (onEventFinished) onEventFinished(m_events[m_index]);
         m_index++;
         m_timer = 0.0f;
@@ -104,20 +124,20 @@ void StoryPlayer::Update(float dt) {
         }
     }
 
-    // --- ImGui ƒfƒoƒbƒOUIiƒIƒvƒVƒ‡ƒ“j ---
-    // ‚±‚±‚ğŒÄ‚Ño‚µŒ³‚ÌUIƒR[ƒh‚Å•`‰æ‚µ‚Ä‚à—Ç‚¢
+    // --- ImGui ãƒ‡ãƒãƒƒã‚°UIï¼ˆã‚ªãƒ—ã‚·ãƒ§ãƒ³ï¼‰ ---
+    // ã“ã“ã‚’å‘¼ã³å‡ºã—å…ƒã®UIã‚³ãƒ¼ãƒ‰ã§æç”»ã—ã¦ã‚‚è‰¯ã„
 }
 
 void StoryPlayer::Render() {
     if (m_index >= (int)m_events.size()) return;
     const StoryEvent& ev = m_events[m_index];
 
-    // --- —á: ©ì•`‰æAPIŒÄ‚Ño‚µ ---
+    // --- ä¾‹: è‡ªä½œæç”»APIå‘¼ã³å‡ºã— ---
     // DrawTextCentered(ev.text);
     // DrawFaceImage(ev.faceImage, positionLeftBottom);
-    // ¦ÀÛ‚Ì•`‰æ‚ÍƒGƒ“ƒWƒ“API‚É‡‚í‚¹‚ÄÀ‘•‚µ‚Ä‚­‚¾‚³‚¢B
+    // â€»å®Ÿéš›ã®æç”»ã¯ã‚¨ãƒ³ã‚¸ãƒ³APIã«åˆã‚ã›ã¦å®Ÿè£…ã—ã¦ãã ã•ã„ã€‚
     
-    // ‚±‚±‚Å‚ÍImGui‚ÅŠÈˆÕ•\¦iŠJ”­’†—pj
+    // ã“ã“ã§ã¯ImGuiã§ç°¡æ˜“è¡¨ç¤ºï¼ˆé–‹ç™ºä¸­ç”¨ï¼‰
     ImGui::SetNextWindowPos(ImVec2(10, 600), ImGuiCond_Always);
     ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
     if (!ev.speaking.empty()) ImGui::TextColored(ImVec4(1, 0.8f, 0.6f, 1), "%s", ev.speaking.c_str());
@@ -133,6 +153,6 @@ void StoryPlayer::Render() {
 }
 
 void StoryPlayer::ShowCurrentText() {
-    // ƒeƒLƒXƒg‚âŠçØ‘Ö‚Ìd‚İ‚ğ‚±‚±‚ÉiƒLƒƒƒbƒVƒ…‚â•`‰æ€”õj
-    // —á: LoadFaceTexture(m_events[m_index].faceImage);
+    // ãƒ†ã‚­ã‚¹ãƒˆã‚„é¡”åˆ‡æ›¿ã®ä»•è¾¼ã¿ã‚’ã“ã“ã«ï¼ˆã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚„æç”»æº–å‚™ï¼‰
+    // ä¾‹: LoadFaceTexture(m_events[m_index].faceImage);
 }

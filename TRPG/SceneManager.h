@@ -44,7 +44,8 @@ private:
 	{ SceneType::TRPG_SELECT, SceneType::SCENARIO_SELECT },
 	{ SceneType::SCENARIO_SELECT, SceneType::CHARACTER_SELECT },
 	{ SceneType::CHARACTER_SELECT, SceneType::GAME_PLAY },
-	{ SceneType::GAME_PLAY, SceneType::RESULT },
+	{ SceneType::GAME_PLAY, SceneType::BATTLE}, 
+	{ SceneType::BATTLE, SceneType::RESULT },
 	{ SceneType::RESULT, SceneType::TITLE},
 	// ëºÇÃÉVÅ[ÉìÇ‡Ç±Ç±Ç…í«â¡
 	};

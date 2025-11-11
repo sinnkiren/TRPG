@@ -3,7 +3,8 @@
 #include "TRPGSelectScene.h"//TRPGの選択
 #include "ScenarioScene.h"  //シナリオの選択
 #include "CharacterSelect.h"//キャラクター作成と選択功績点があれば強化
-#include "Main Story.h"     //ゲーム本編
+#include "StoryPlayer.h"    //ゲーム本編
+#include "BattleScene.h"    //戦闘シーン（オプション）
 #include "Result.h"         //リザルト
                             //物語の進行状況記録
 #include "IScene.h"
@@ -95,10 +96,14 @@ void SceneManager::ChangeScene(SceneType next) {
         SetWindowTextW(m_hWnd, L"TRPG - キャラクター選択");
         break;
     case SceneType::GAME_PLAY:
-        currentScene = std::make_unique<MainStory>();
+        currentScene = std::make_unique<StoryPlayer>();
         SetWindowTextW(m_hWnd, L"TRPG - 本編");
         break;
+	case SceneType::BATTLE:
+        currentScene = std::make_unique<BattleScene>();
+        SetWindowTextW(m_hWnd, L"TRPG - バトル");
     case SceneType::RESULT:
+        break;
         currentScene = std::make_unique<Result>();
         SetWindowTextW(m_hWnd, L"TRPG - リザルト");
         break;

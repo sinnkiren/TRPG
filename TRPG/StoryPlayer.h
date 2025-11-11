@@ -3,6 +3,7 @@
 #include <vector>
 #include <functional>
 #include <unordered_map>
+#include "IScene.h"
 
 struct StoryEvent
 {
@@ -12,15 +13,18 @@ struct StoryEvent
 	std::string effect;
 	float duration = 1.0f;
 };
-class StoryPlayer {
+class StoryPlayer : public IScene{
 	using EffectHandler = std::function<void(const StoryEvent)>;
 public:
 	StoryPlayer();
 	~StoryPlayer();
+		void Initialize() override;
+		void Update() override;   // 引数なし
+		void Render() override;
+
+		void UpdateImpl(float dt); // float 引数での実装は別関数
 
 	bool LoadFromFile(const std::string& path);
-	void Update(float dt);//毎フレーム呼ぶ
-	void Render();//テキスト描画
 	void Play();//再生開始
 	void Pause();//一時停止
 	void Next();//次のイベントへ強制移行

@@ -24,6 +24,7 @@ public:
 	} // ウィンドウハンドルを渡す関数
 
 	void ChangeScene(SceneType Next);	//シーン切り替え
+	void ApplyPendingChange();
 	SceneType GetCurrentScene() const;	//現在のシーン確認
 	void HandleInput();
 
@@ -51,6 +52,8 @@ private:
 	};
 
 	CharcterScene::CharcterDate playerData;
+	bool pendingChange = false;
+	SceneType pendingSceneType;
 	// プレイヤーデータを保持（シーン間で共有）
 };
 extern SceneManager g_SceneManager; // 実体は別ファイルに

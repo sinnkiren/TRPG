@@ -33,9 +33,11 @@ void SceneManager::Update() {
     // 1. 入力処理
     HandleInput();
 
-    // 2. 現在のシーン更新
     if (currentScene)
         currentScene->Update();
+
+    // ← フレーム末尾で安全に反映
+    ApplyPendingChange();
 }
 
 void SceneManager::HandleInput() {
@@ -66,19 +68,27 @@ void SceneManager::Render() {
     }
 }
 
+void SceneManager::ChangeScene(SceneType next)
+{
+    pendingChange = true;
+    pendingSceneType = next;
+}
 
+void SceneManager::ApplyPendingChange() {
+    if (!pendingChange) return;
+    pendingChange = false;
 
-void SceneManager::ChangeScene(SceneType next) {
-    currentType = next;
 
     // 既存シーンを破棄
-    if (currentScene) {
-        // currentScene->Finalize(); // 必要なら呼ぶ
-        currentScene.reset();      // unique_ptr を nullptr に
+    currentType = pendingSceneType;
+
+    if (currentScene)
+    {
+        currentScene.reset();
     }
 
     // 新しいシーンを生成
-    switch (next) {
+    switch (pendingSceneType) {
     case SceneType::TITLE:
         currentScene = std::make_unique<TitleScene>();
         SetWindowTextW(m_hWnd, L"TRPG - タイトル");

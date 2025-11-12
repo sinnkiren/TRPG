@@ -111,6 +111,12 @@ void StoryPlayer::UpdateImpl(float dt) {
     m_timer += dt;
     float dur = m_events[m_index].duration;
     if (m_timer >= dur) {
+        const StoryEvent& ev = m_events[m_index];
+        if (ev.effect == "battle_start")
+        {
+            g_SceneManager.ChangeScene(SceneType::BATTLE);
+            return;
+        }
         // イベント完了
         if (onEventFinished) onEventFinished(m_events[m_index]);
         m_index++;

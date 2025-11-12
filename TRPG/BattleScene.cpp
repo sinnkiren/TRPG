@@ -15,8 +15,8 @@ void BattleScene::Initialize()
 
     // テスト用の敵を作成（シナリオから読み込む予定）
     enemies.clear();
-    enemies.push_back({ "Eerie Shadow", 18, 12, 1, 3 });
-    enemies.push_back({ "Unnamable Stirring", 16, 12, 2, 2 });
+    enemies.push_back({ "Eerie Shadow", 12, 12, 1, 3 });
+    enemies.push_back({ "Unnamable Stirring", 12, 12, 2, 2 });
 
     selectedEnemy = enemies.empty() ? -1 : 0;
     phase = Phase::PlayerTurn;

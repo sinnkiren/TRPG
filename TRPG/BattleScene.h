@@ -19,6 +19,8 @@ public:
     // シーン切替要求ハンドラ（SceneManager にセットされる）
     std::function<void(int)> RequestSceneChange;
 
+    CharcterScene::CharcterDate player;
+
 private:
     struct Enemy {
         std::string name;
@@ -28,7 +30,7 @@ private:
         int fearDamage =2; // 敵が与える精神的ダメージ量
     };
 
-    CharcterScene::CharcterDate player;
+
     std::vector<Enemy> enemies;
 
     enum class Phase { PlayerTurn, EnemyTurn, Victory, Defeat } phase = Phase::PlayerTurn;

@@ -109,10 +109,13 @@ void SceneManager::ApplyPendingChange() {
         currentScene = std::make_unique<StoryPlayer>();
         SetWindowTextW(m_hWnd, L"TRPG - 本編");
         break;
-	case SceneType::BATTLE:
-        currentScene = std::make_unique<BattleScene>();
+    case SceneType::BATTLE: {
+        auto battle = std::make_unique<BattleScene>();
+        battle->player = playerData;
+        currentScene = std::move(battle);
         SetWindowTextW(m_hWnd, L"TRPG - バトル");
         break;
+    }
     case SceneType::RESULT:
         currentScene = std::make_unique<Result>();
         SetWindowTextW(m_hWnd, L"TRPG - リザルト");

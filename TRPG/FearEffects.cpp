@@ -1,4 +1,4 @@
-#include "FearEffects.h"
+ï»¿#include "FearEffects.h"
 #include "system/imgui/imgui.h"
 #include <cmath>
 #include <algorithm>
@@ -6,174 +6,255 @@
 #include <array>
 #include <cstdint>
 
-// FearEffects –¼‘O‹óŠÔ“à‚É“à•”ó‘ÔEƒ†[ƒeƒBƒŠƒeƒB‚ğW–ñ‚µ‚Ü‚·B
-// ‚±‚ê‚É‚æ‚è“¯ˆê–¼‘O‹óŠÔ‚ÌŒöŠJ APIiStartShake “™j‚©‚ç’¼ÚƒAƒNƒZƒX‚Å‚«‚Ü‚·B
 namespace FearEffects
 {
-    // -------------------------
-    // ƒVƒFƒCƒNi‰æ–Ê—h‚êjŠÖ˜A‚Ìó‘Ô
-    // -------------------------
-    // Œ»İ—LŒø‚È—h‚ê‚Ì‹­“xiƒsƒNƒZƒ‹’PˆÊ‚â”{—¦‚È‚ÇA‰^—p‚É‡‚í‚¹‚éj
+    // ---- çŠ¶æ…‹ ----
     float g_shakeIntensity = 0.0f;
-    // —h‚ê‚Ì‘ŠÔi•bj
     float g_shakeDuration = 0.0f;
-    // Œo‰ßŠÔi•bj
     float g_shakeElapsed = 0.0f;
-    // ˆÊ‘Ši—”‚Å‰Šú‰»‚µ‚Ä•¡”‰ñ‚ÌŒÄ‚Ño‚µ‚Å·ˆÙ‚ğo‚·j
     float g_shakePhaseX = 0.0f;
     float g_shakePhaseY = 0.0f;
 
-    // -------------------------
-    // ƒI[ƒo[ƒŒƒCi‰æ–ÊÔ‚İ“™jŠÖ˜A‚Ìó‘Ô
-    // -------------------------
-    float g_overlayIntensity = 0.0f; // Å‘åƒAƒ‹ƒtƒ@“™‚ÉæZ‚·‚é‹­“x
-    float g_overlayDuration = 0.0f;  // •\¦ŠÔi•bj
-    float g_overlayElapsed = 0.0f;   // Œo‰ßŠÔi•bj
-    int   g_overlayStage = 0;        // ƒXƒe[ƒWi‹­‚³’iŠKj‚ğ¦‚·”CˆÓ’l
+    float g_overlayIntensity = 0.0f;
+    float g_overlayDuration = 0.0f;
+    float g_overlayElapsed = 0.0f;
+    int   g_overlayStage = 0;
 
-    // -------------------------
-    // —”EƒmƒCƒYƒ†[ƒeƒBƒŠƒeƒB
-    // -------------------------
-    // ‹¤—L‚Ì—”¶¬Ší‚ğ•Ô‚·i“à•”Ã“I•Ûj
+    // ---- ãƒ©ãƒ³ã‚¿ã‚¤ãƒ èª¿æ•´å¯èƒ½ãªãƒã‚¤ã‚ºãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼ˆæ¿ƒãè¦‹ãˆã‚‹åˆæœŸå€¤ï¼‰ ----
+    // ã“ã‚Œã‚‰ã¯ SetOverlayNoise... ã§å®Ÿè¡Œæ™‚ã«å¤‰æ›´ã§ãã¾ã™
+    static float s_noiseScale = 0.0025f;      // ç©ºé–“ã‚¹ã‚±ãƒ¼ãƒ«ï¼ˆå°ã•ã„ã»ã©å¤§ããªã†ã­ã‚Šï¼ç²—ã‚ï¼‰
+    static int   s_noiseBaseCount = 700;      // ãƒ™ãƒ¼ã‚¹ã®ãƒã‚¤ã‚ºæ•°ï¼ˆå¯†åº¦ï¼‰ â† å¤§ããã—ã¦æ¿ƒãã™ã‚‹
+    static float s_noiseAlphaScale = 2.5f;    // ã‚¢ãƒ«ãƒ•ã‚¡å€ç‡ï¼ˆ1.0 = æ—¢å®šï¼‰ â† å¤§ãã‚ã§æ¿ƒã
+    static float s_noiseMinSize = 1.0f;       // ãƒã‚¤ã‚ºçŸ©å½¢ã®æœ€å°ã‚µã‚¤ã‚ºï¼ˆpxï¼‰
+    static float s_noiseMaxSize = 6.0f;       // ãƒã‚¤ã‚ºçŸ©å½¢ã®æœ€å¤§ã‚µã‚¤ã‚ºï¼ˆpxï¼‰ â† å¤§ãã‚ã«
+    static float s_noiseTimeSpeed = 0.9f;     // æ™‚é–“é€²è¡Œé€Ÿåº¦ï¼ˆ1.0 = æ—¢å®šï¼‰ â† å°‘ã—é€Ÿã‚
+    static float s_noiseContrastBase = 0.9f;  // ã‚³ãƒ³ãƒˆãƒ©ã‚¹ãƒˆåŸºæº–ï¼ˆ1.0ãŒæ¨™æº–ï¼‰
+
+    // ä¹±æ•°
     std::mt19937& GetRng()
     {
         static std::random_device rd;
-        static std::mt19937 rng(rd()); // ƒV[ƒh‚ÍŠÂ‹«‚ÉˆË‘¶
+        static std::mt19937 rng(rd());
         return rng;
     }
 
-    // 1D ƒmƒCƒYiŠÈˆÕÀ‘•j—p‚Ìƒp[ƒ~ƒ…ƒe[ƒVƒ‡ƒ“ƒe[ƒuƒ‹
+    // ---- ãƒ‘ãƒ¼ãƒŸãƒ¥ãƒ†ãƒ¼ã‚·ãƒ§ãƒ³ãƒ†ãƒ¼ãƒ–ãƒ« ----
     std::array<uint8_t, 256> s_perm;
-
-    // ƒp[ƒ~ƒ…ƒe[ƒVƒ‡ƒ“ƒe[ƒuƒ‹‚ğ‰Šú‰»‚µ‚ÄƒVƒƒƒbƒtƒ‹‚·‚é
     void FE_InitNoisePerm()
     {
         for (int i = 0; i < 256; ++i) s_perm[i] = static_cast<uint8_t>(i);
         std::shuffle(s_perm.begin(), s_perm.end(), GetRng());
     }
 
-    // ƒXƒ€[ƒXƒXƒeƒbƒvi•âŠÔ—pj
     inline float FE_Smoothstep(float t) { return t * t * (3.0f - 2.0f * t); }
 
-    // 1D ‚Ì•âŠÔƒmƒCƒY‚ğ•Ô‚·i’lˆæ‚Í -1..1 ’ö“xj
     float FE_Noise1D(float x)
     {
-        // permutation ‚ª‰Šú‰»Ï‚İ‚©‚Ç‚¤‚©‚ğ’x‰„‰Šú‰»‚Å•ÛØ
         static bool s_init = (FE_InitNoisePerm(), true);
-
         int xi = static_cast<int>(std::floor(x));
         float xf = x - static_cast<float>(xi);
-
-        // ƒ‹ƒbƒNƒAƒbƒviƒoƒCƒgƒ‰ƒbƒvj
         uint8_t i0 = s_perm[static_cast<uint8_t>(xi & 0xFF)];
         uint8_t i1 = s_perm[static_cast<uint8_t>((xi + 1) & 0xFF)];
-
-        // 0..255 ‚ğ -1..1 ‚Éƒ}ƒbƒv
         float v0 = (static_cast<int>(i0) / 255.0f) * 2.0f - 1.0f;
         float v1 = (static_cast<int>(i1) / 255.0f) * 2.0f - 1.0f;
-
         float u = FE_Smoothstep(xf);
-        // üŒ`•âŠÔiŠŠ‚ç‚©‚ÉÚ‘±j
         return v0 * (1.0f - u) + v1 * u;
     }
 
-    // ƒtƒ‰ƒNƒ^ƒ‹ƒmƒCƒYi•¡”ƒIƒNƒ^[ƒu‚ğ‡¬j
-    // octaves: d‚Ë‚é‘w”Alacunarity: ü”g””{—¦Again: U•Œ¸Š
     float FE_FractalNoise1D(float x, int octaves = 3, float lacunarity = 2.0f, float gain = 0.5f)
     {
-        float sum = 0.0f;
-        float amp = 1.0f;
-        float freq = 1.0f;
-        float maxAmp = 0.0f;
-        for (int i = 0; i < octaves; ++i)
-        {
-            sum += FE_Noise1D(x * freq) * amp;
-            maxAmp += amp;
-            amp *= gain;
-            freq *= lacunarity;
-        }
-        // ³‹K‰»‚µ‚Ä -1..1 ‚Ì”ÍˆÍ‚Éû‚Ü‚é‚æ‚¤‚É‚·‚éimaxAmp ‚ª 0 ‚É‚È‚ç‚È‚¢‘O’ñj
+        float sum = 0.0f, amp = 1.0f, freq = 1.0f, maxAmp = 0.0f;
+        for (int i = 0; i < octaves; ++i) { sum += FE_Noise1D(x * freq) * amp; maxAmp += amp; amp *= gain; freq *= lacunarity; }
         return sum / maxAmp;
     }
-}
 
-namespace FearEffects
-{
-    // —h‚ê‚ğŠJn‚·‚é
-    // intensity: —h‚ê‚Ì‹­‚³Aduration: Œp‘±ŠÔi•bj
+    // ---- Perlin 2D å®Ÿè£… ----
+    float FE_Perlin2D(float x, float y)
+    {
+        static bool s_init = (FE_InitNoisePerm(), true);
+        int x0 = static_cast<int>(std::floor(x));
+        int y0 = static_cast<int>(std::floor(y));
+        float xf = x - static_cast<float>(x0);
+        float yf = y - static_cast<float>(y0);
+        float u = FE_Smoothstep(xf), v = FE_Smoothstep(yf);
+        auto hash = [&](int xi, int yi) -> int {
+            return s_perm[(s_perm[static_cast<uint8_t>(xi & 0xFF)] + static_cast<uint8_t>(yi & 0xFF)) & 0xFF];
+            };
+        int h00 = hash(x0, y0), h10 = hash(x0 + 1, y0), h01 = hash(x0, y0 + 1), h11 = hash(x0 + 1, y0 + 1);
+        static const float G[8][2] = {
+            { 1.0f, 0.0f}, {-1.0f, 0.0f}, {0.0f, 1.0f}, {0.0f,-1.0f},
+            { 0.70710678f, 0.70710678f}, {-0.70710678f, 0.70710678f}, {0.70710678f,-0.70710678f}, {-0.70710678f,-0.70710678f}
+        };
+        auto gradDot = [&](int h, float dx, float dy) -> float { int gi = h & 7; return G[gi][0] * dx + G[gi][1] * dy; };
+        float d00 = gradDot(h00, xf, yf);
+        float d10 = gradDot(h10, xf - 1.0f, yf);
+        float d01 = gradDot(h01, xf, yf - 1.0f);
+        float d11 = gradDot(h11, xf - 1.0f, yf - 1.0f);
+        float ix0 = d00 + u * (d10 - d00);
+        float ix1 = d01 + u * (d11 - d01);
+        return ix0 + v * (ix1 - ix0);
+    }
+
+    float FE_FractalNoise2D(float x, float y, int octaves = 3, float lacunarity = 2.0f, float gain = 0.5f)
+    {
+        float sum = 0.0f, amp = 1.0f, freq = 1.0f, maxAmp = 0.0f;
+        for (int i = 0; i < octaves; ++i) { sum += FE_Perlin2D(x * freq, y * freq) * amp; maxAmp += amp; amp *= gain; freq *= lacunarity; }
+        return sum / maxAmp;
+    }
+
+    // ---- ã‚»ãƒƒã‚¿ãƒ¼å®Ÿè£… ----
+    void SetOverlayNoiseScale(float scale) { s_noiseScale = std::max(1e-6f, scale); }
+    void SetOverlayNoiseBaseCount(int count) { s_noiseBaseCount = std::clamp(count, 1, 20000); }
+    void SetOverlayNoiseAlphaScale(float a) { s_noiseAlphaScale = std::max(0.0f, a); }
+    void SetOverlayNoiseSizeRange(float minS, float maxS) {
+        s_noiseMinSize = std::max(0.0f, minS);
+        s_noiseMaxSize = std::max(s_noiseMinSize, maxS);
+    }
+    void SetOverlayNoiseTimeSpeed(float speed) { s_noiseTimeSpeed = std::max(0.0f, speed); }
+    void SetOverlayNoiseContrastBase(float c) { s_noiseContrastBase = std::max(0.01f, c); }
+
+    // ---- æ—¢å­˜ã® API ----
     void StartShake(float intensity, float duration)
     {
-        // ƒ}ƒCƒiƒX“ü—Í‚ğ–h‚®
         g_shakeIntensity = std::max(0.0f, intensity);
         g_shakeDuration = std::max(0.0f, duration);
         g_shakeElapsed = 0.0f;
-
-        // ˆÊ‘Š‚ğƒ‰ƒ“ƒ_ƒ€‚É‚µ‚ÄAX/Y ‚ÅˆÙ‚È‚é”gŒ`‚É‚·‚é
         std::uniform_real_distribution<float> dist(0.0f, 3.14159265f * 2.0f);
         g_shakePhaseX = dist(GetRng());
         g_shakePhaseY = dist(GetRng());
     }
 
-    // ƒI[ƒo[ƒŒƒCi‰æ–ÊÔ‚İ‚È‚Çj‚ğŠJn‚·‚é
-    // stage: Œ©‚½–Ú‹­“x‚Ì’iŠKi”CˆÓj
     void StartOverlay(float intensity, float duration, int stage)
     {
-        g_overlayIntensity = std::max(0.0f, intensity);
-        g_overlayDuration = std::max(0.0f, duration);   
+        float clampedIntensity = std::clamp(intensity, 0.0f, 1.0f);
+        int clampedStage = std::clamp(stage, 0, 4);
+        float clampedDuration = std::max(0.0f, duration);
+        float remaining = std::max(0.0f, g_overlayDuration - g_overlayElapsed);
+        g_overlayIntensity = std::max(g_overlayIntensity, clampedIntensity);
+        g_overlayDuration = std::max(remaining, clampedDuration);
         g_overlayElapsed = 0.0f;
-        g_overlayStage = stage;
+        g_overlayStage = std::max(g_overlayStage, clampedStage);
     }
 
-    // –ˆƒtƒŒ[ƒ€ŒÄ‚Ño‚µ‚ÄŒo‰ßŠÔ‚ği‚ß‚éidt: •bj
     void Update(float dt)
     {
         if (g_shakeElapsed < g_shakeDuration) g_shakeElapsed = std::min(g_shakeElapsed + dt, g_shakeDuration);
         if (g_overlayElapsed < g_overlayDuration) g_overlayElapsed = std::min(g_overlayElapsed + dt, g_overlayDuration);
     }
 
-    // Œ»İ‚Ì—h‚êƒIƒtƒZƒbƒg‚ğæ“¾iImGui ‚Ì SetNextWindowPos “™‚Ö“n‚·j
     ImVec2 GetShakeOffset()
     {
-        // —h‚ê‚ª–³Œø‚È‚çƒ[ƒ‚ğ•Ô‚·
         if (g_shakeDuration <= 0.0f || g_shakeElapsed >= g_shakeDuration) return ImVec2(0.0f, 0.0f);
-
-        // c‚èŠÔ‚É‰‚¶‚½ƒC[ƒWƒ“ƒOiŠÔŒo‰ß‚Å™X‚Éû‘©j
         float rem = 1.0f - (g_shakeElapsed / g_shakeDuration);
         float ease = 1.0f - (1.0f - rem) * (1.0f - rem);
         float mag = g_shakeIntensity * ease;
-
-        // ’èí“I‚È³Œ·¬•ªi‚‘¬U“®j‚ÆƒmƒCƒY¬•ª‚ğ¬‚º‚é
         float sinX = std::sin(g_shakeElapsed * 23.0f + g_shakePhaseX);
         float sinY = std::cos(g_shakeElapsed * 19.0f + g_shakePhaseY);
-
-        // ƒtƒ‰ƒNƒ^ƒ‹ƒmƒCƒY‚ÅŠŠ‚ç‚©‚Èƒ‰ƒ“ƒ_ƒ€—v‘f‚ğ‰Á‚¦‚é
         float noiseX = FE_FractalNoise1D(g_shakeElapsed * 1.4f + g_shakePhaseX, 4);
         float noiseY = FE_FractalNoise1D(g_shakeElapsed * 1.1f + g_shakePhaseY, 4);
-
-        const float sinWeight = 0.6f;   // ³Œ·¬•ª‚Ìd‚İ
-        const float noiseWeight = 0.4f; // ƒmƒCƒY¬•ª‚Ìd‚İ
-
+        const float sinWeight = 0.6f;
+        const float noiseWeight = 0.4f;
         float x = mag * (sinWeight * sinX + noiseWeight * noiseX);
         float y = mag * (sinWeight * sinY + noiseWeight * noiseY);
-
         return ImVec2(x, y);
     }
 
-    // ƒI[ƒo[ƒŒƒC‚ğ•`‰æ‚·‚éiImGui ‚Ìƒtƒƒ“ƒgƒoƒbƒtƒ@‚Ö’¼Ú•`‰æj
-    // GetMainViewport() ‚ğg‚Á‚Ä‰æ–Ê‘S‘Ì‚ğ•¢‚¤‹éŒ`‚ğ•`‚­
+    // ---- RenderOverlayï¼ˆãƒ©ãƒ³ã‚¿ã‚¤ãƒ ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ä½¿ç”¨ï¼‰ ----
     void RenderOverlay()
     {
-        // –³Œø‚Í‰½‚à‚µ‚È‚¢
         if (g_overlayDuration <= 0.0f || g_overlayElapsed >= g_overlayDuration) return;
 
-        // Œo‰ß‚É‰‚¶‚ÄƒtƒF[ƒhƒAƒEƒg‚³‚¹‚é
-        float alpha = g_overlayIntensity * (1.0f - (g_overlayElapsed / g_overlayDuration));
-
-        ImDrawList* dl = ImGui::GetForegroundDrawList();
         const ImGuiViewport* vp = ImGui::GetMainViewport();
+        ImDrawList* dl = ImGui::GetForegroundDrawList();
 
-        // Ô‚İ‚ğ‘Ñ‚Ñ‚½”¼“§–¾‹éŒ`‚ğ‰æ–Ê‘S‘Ì‚É•`‰æ
-        ImU32 col = ImGui::GetColorU32(ImVec4(0.6f, 0.0f, 0.0f, alpha));
-        dl->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
+        float t = 1.0f - (g_overlayElapsed / g_overlayDuration);
+        float intensity = std::clamp(g_overlayIntensity, 0.0f, 1.0f) * t;
+        int stage = std::clamp(g_overlayStage, 0, 4);
+        float stageBoost = 1.0f + 0.35f * static_cast<float>(stage);
+
+        // ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼ˆãƒ©ãƒ³ã‚¿ã‚¤ãƒ ã§å¤‰æ›´å¯èƒ½ãª s_* ã‚’åˆ©ç”¨ï¼‰
+        int baseCount = s_noiseBaseCount;
+        int noiseCount = static_cast<int>(baseCount * stageBoost * (0.7f + intensity));
+        noiseCount = std::clamp(noiseCount, 8, 20000);
+
+        float minSize = s_noiseMinSize;
+        float maxSize = s_noiseMaxSize + stage * 2.0f; // stage ã§å¤§ãã•ã‚’å¢—ã™
+
+        // ãƒ‰ãƒ¡ã‚¤ãƒ³ãƒ¯ãƒ¼ãƒ—è¨­å®šï¼ˆè’ã•ã‚’ä½œã‚‹æ ¸ï¼‰
+        float warpScale = std::max(1e-5f, s_noiseScale * 6.0f);   // ãƒ¯ãƒ¼ãƒ—ã®å‘¨æ³¢æ•°
+        float warpStrength = 0.6f + 1.2f * intensity * (0.5f + 0.5f * stageBoost); // ãƒ¯ãƒ¼ãƒ—ã®å¼·ã•
+
+        float noiseScale = s_noiseScale * (1.0f + 0.25f * stage);
+        float timeBase = g_overlayElapsed * s_noiseTimeSpeed;
+
+        // æ–‘ç‚¹ç”Ÿæˆã®ã—ãã„å€¤ï¼ˆå¼·åº¦ãŒé«˜ã„ã»ã©ã—ãã„å€¤ä¸‹ãŒã‚Šã€æ–‘ç‚¹ãŒå¢—ãˆã‚‹ï¼‰
+        float blotchThreshold = std::clamp(0.72f - 0.35f * intensity, 0.25f, 0.85f);
+
+        // æ ¼å­ã‚µãƒ³ãƒ—ãƒ«ã§å‡ç­‰ã«é…ç½®ï¼ˆåŠ¹ç‡çš„ï¼‰
+        int cols = static_cast<int>(std::sqrt(static_cast<float>(noiseCount)));
+        if (cols < 1) cols = 1;
+        int rows = (noiseCount + cols - 1) / cols;
+
+        int idx = 0;
+        for (int r = 0; r < rows; ++r)
+        {
+            for (int c = 0; c < cols; ++c)
+            {
+                if (idx >= noiseCount) break;
+                float fx = (c + 0.5f) / static_cast<float>(cols);
+                float fy = (r + 0.5f) / static_cast<float>(rows);
+
+                // ãƒ¯ãƒ¼ãƒ«ãƒ‰åº§æ¨™ãƒ™ãƒ¼ã‚¹ã®ãƒã‚¤ã‚ºå…¥åŠ›
+                float sx = (vp->Pos.x + fx * vp->Size.x) * noiseScale;
+                float sy = (vp->Pos.y + fy * vp->Size.y) * noiseScale;
+
+                // ãƒ‰ãƒ¡ã‚¤ãƒ³ãƒ¯ãƒ¼ãƒ—é‡ï¼ˆãƒ•ãƒ©ã‚¯ã‚¿ãƒ«ãƒã‚¤ã‚ºã§æ»‘ã‚‰ã‹ã«å¤‰åŒ–ã•ã›ã‚‹ï¼‰
+                float wx = FE_FractalNoise2D(sx * warpScale + timeBase * 0.18f, sy * warpScale - timeBase * 0.12f, 3) * warpStrength;
+                float wy = FE_FractalNoise2D(sx * warpScale - timeBase * 0.11f, sy * warpScale + timeBase * 0.14f, 3) * warpStrength;
+
+                // ãƒ¯ãƒ¼ãƒ—å¾Œã®ã‚µãƒ³ãƒ—ãƒ«
+                float nx = sx + wx;
+                float ny = sy + wy;
+
+                float v = FE_FractalNoise2D(nx + timeBase * 0.25f, ny - timeBase * 0.21f, 4, 2.0f, 0.5f);
+                float gv = 0.5f * (v + 1.0f); // 0..1
+
+                // ã‚³ãƒ³ãƒˆãƒ©ã‚¹ãƒˆèª¿æ•´
+                float contrast = s_noiseContrastBase + 1.5f * intensity;
+                float gvC = std::pow(gv, 1.0f / contrast);
+
+                // æ–‘ç‚¹åŒ–: ã—ãã„å€¤ä»¥ä¸Šãªã‚‰å¤§ãã‚ã®ãƒ–ãƒ­ãƒƒãƒã€æœªæº€ã¯å°ã•ãªç²’
+                bool isBlotch = (gvC > blotchThreshold);
+
+                float alphaBase = std::clamp(0.08f * intensity * (0.5f + 0.5f * stageBoost) * s_noiseAlphaScale, 0.001f, 0.9f);
+                float alpha = isBlotch ? (alphaBase * (0.9f + 1.2f * (gvC - blotchThreshold))) : (alphaBase * 0.35f * gvC);
+
+                // å¤§ãã•ï¼šãƒ–ãƒ­ãƒƒãƒã¯å¤§ãã‚
+                float size = isBlotch ? (maxSize * (0.6f + 0.8f * (gvC - blotchThreshold))) : (minSize + std::fmod(static_cast<float>(idx) * 7.13f + fy * 3.71f, 1.0f) * (maxSize - minSize) * 0.6f);
+                if (size < 0.5f) size = 0.5f;
+
+                float px = vp->Pos.x + fx * vp->Size.x;
+                float py = vp->Pos.y + fy * vp->Size.y;
+
+                // è‹¥å¹²ã®æš—åŒ–ã§ææ€–æ„Ÿï¼ˆã‚°ãƒ¬ãƒ¼ã‚¹ã‚±ãƒ¼ãƒ«ï¼‰
+                float gray = isBlotch ? std::clamp(0.05f + 0.85f * (1.0f - gvC), 0.0f, 1.0f) : std::clamp(0.2f + 0.8f * gvC, 0.0f, 1.0f);
+
+                ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, alpha));
+                dl->AddRectFilled(ImVec2(px, py), ImVec2(px + size, py + size), col);
+
+                ++idx;
+            }
+        }
+
+        // æ¨ªã‚¹ã‚­ãƒ£ãƒ³ãƒ©ã‚¤ãƒ³ã‚’å°‘ã—å¼·ã‚ã«ã—ã¦è’ã•ã‚’è£œå¼·
+        int lines = 4 + stage * 2;
+        for (int i = 0; i < lines; ++i)
+        {
+            float y = vp->Pos.y + ((i + 1) / static_cast<float>(lines + 1)) * vp->Size.y;
+            float ln = FE_Perlin2D(y * noiseScale * 0.6f + timeBase * 0.2f, i * 0.37f);
+            float la = std::clamp(0.02f * intensity * (0.9f + 0.6f * ln), 0.0f, 0.18f) * s_noiseAlphaScale;
+            ImU32 col = ImGui::GetColorU32(ImVec4(0.45f, 0.45f, 0.45f, la));
+            dl->AddRectFilled(ImVec2(vp->Pos.x, y), ImVec2(vp->Pos.x + vp->Size.x, y + 1.0f), col);
+        }
     }
 }

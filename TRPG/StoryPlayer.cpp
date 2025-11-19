@@ -13,19 +13,23 @@ StoryPlayer::~StoryPlayer() {}
 
 void StoryPlayer::Initialize() {
     LoadFromFile("assets/story/story.json");
+
+    // イベント完了時コールバック（シーン切り替え等）
     onEventFinished = [](const StoryEvent& ev) {
         if (ev.effect == "battle_start") {
             g_SceneManager.ChangeScene(SceneType::BATTLE);
         }
-        };
+    };
+
+    // 揺れエフェクト ("shake")
     RegisterEffect("shake", [](const StoryEvent& ev) {
-        // ev.duration を duration に、effect の値や ev.effectParams から intensity を取る想定
         float intensity = 10.0f;
         if (!ev.effectParams.is_null() && ev.effectParams.contains("intensity"))
             intensity = ev.effectParams["intensity"].get<float>();
         FearEffects::StartShake(intensity, ev.duration);
     });
 
+    // オーバーレイエフェクト ("overlay")
     RegisterEffect("overlay", [](const StoryEvent& ev) {
         float intensity = 0.8f;
         int stage = 0;
@@ -35,6 +39,37 @@ void StoryPlayer::Initialize() {
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
     });
+
+    // ノイズ系エフェクト（ストーリーの恐怖演出用）
+    // ここでは赤みのオーバーレイ＋軽い揺れで演出する
+    RegisterEffect("noise", [](const StoryEvent& ev) {
+        float intensity = 0.6f; // overlay 強度（0..1）
+        float shakeIntensity = 6.0f; // 揺れの量（ピクセル等）
+        int stage = 2;
+        if (!ev.effectParams.is_null()) {
+            if (ev.effectParams.contains("intensity")) intensity = ev.effectParams["intensity"].get<float>();
+            if (ev.effectParams.contains("stage")) stage = ev.effectParams["stage"].get<int>();
+            if (ev.effectParams.contains("shake")) shakeIntensity = ev.effectParams["shake"].get<float>();
+        }
+        // 長さは ev.duration に合わせる
+        FearEffects::StartOverlay(intensity, ev.duration, stage);
+        FearEffects::StartShake(shakeIntensity, ev.duration);
+    });
+
+    // 血やショッキングな表現（強い赤オーバーレイ＋短い揺れ）
+    RegisterEffect("blood", [](const StoryEvent& ev) {
+        float intensity = 1.0f;
+        float shakeIntensity = 8.0f;
+        int stage = 4;
+        if (!ev.effectParams.is_null()) {
+            if (ev.effectParams.contains("intensity")) intensity = ev.effectParams["intensity"].get<float>();
+            if (ev.effectParams.contains("stage")) stage = ev.effectParams["stage"].get<int>();
+            if (ev.effectParams.contains("shake")) shakeIntensity = ev.effectParams["shake"].get<float>();
+        }
+        FearEffects::StartOverlay(intensity, ev.duration, stage);
+        FearEffects::StartShake(shakeIntensity, ev.duration * 0.6f); // 血は少し速めに収束させる等の調整
+    });
+
     Play();
 }
 
@@ -57,6 +92,9 @@ bool StoryPlayer::LoadFromFile(const std::string& path) {
         ev.faceImage = it.value("face", "");
         ev.effect = it.value("effect", "");
         ev.duration = it.value("duration", 1.0f);
+        // effectParams があれば読み込む（無ければ null を保持）
+        if (it.contains("effectParams")) ev.effectParams = it["effectParams"];
+        else ev.effectParams = nullptr;
         m_events.push_back(ev);
     }
     m_index = 0;
@@ -126,6 +164,9 @@ void StoryPlayer::Reset() {
 void StoryPlayer::UpdateImpl(float dt) {
     if (!m_playing || m_events.empty() || m_index >= (int)m_events.size()) return;
 
+    // FearEffects の時間を進める（オーバーレイや揺れの内部タイマー）
+    FearEffects::Update(dt);
+
     m_timer += dt;
     float dur = m_events[m_index].duration;
     if (m_timer >= dur) {
@@ -161,8 +202,16 @@ void StoryPlayer::Render() {
     // DrawFaceImage(ev.faceImage, positionLeftBottom);
     // ※実際の描画はエンジンAPIに合わせて実装してください。
     
+    // FearEffects のオフセット（揺れ）を取得してダイアログ位置に反映する
+    ImVec2 shake = FearEffects::GetShakeOffset();
+    ImVec2 basePos(10.0f, 600.0f);
+    ImVec2 posWithShake(basePos.x + shake.x, basePos.y + shake.y);
+
+    // オーバーレイを描画（前景に描画するので Begin の前後どちらでも可）
+    FearEffects::RenderOverlay();
+
     // ここではImGuiで簡易表示（開発中用）
-    ImGui::SetNextWindowPos(ImVec2(10, 600), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(posWithShake, ImGuiCond_Always);
     ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
     if (!ev.speaking.empty()) ImGui::TextColored(ImVec4(1, 0.8f, 0.6f, 1), "%s", ev.speaking.c_str());
     ImGui::TextWrapped("%s", ev.text.c_str());

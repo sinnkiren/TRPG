@@ -96,7 +96,7 @@ void CharcterScene::Render()
 
  // 左: 能力テーブル
  ImGui::BeginChild("Abilities", ImVec2(0,0), false);
- ImGui::Text("Ability Scores");
+ ImGui::Text("能力");
  ImGui::Separator();
 
  if (ImGui::Button("Roll All")) {
@@ -147,12 +147,12 @@ void CharcterScene::Render()
  int SIZ = findVal("SIZ");
  int STR = findVal("STR");
 
- ImGui::Text("SAN (Sanity): %d", POW*5);
- ImGui::Text("Luck: %d", POW*5);
- ImGui::Text("Idea: %d", INT*5);
- ImGui::Text("Knowledge: %d", EDU*5);
- ImGui::Text("Endurance: %d", (CON+SIZ)/2);
- ImGui::Text("Magic Points: %d", POW*1);
+ ImGui::Text("SAN (Sanity): %d", POW*5);//正気度
+ ImGui::Text("Luck: %d", POW*5);//幸運
+ ImGui::Text("Idea: %d", INT*5);//アイデア
+ ImGui::Text("Knowledge: %d", EDU*5);//知識
+ ImGui::Text("Endurance: %d", (CON+SIZ)/2);//耐久力
+ ImGui::Text("Magic Points: %d", POW*1);//マジックポイント
  ImGui::Text("Occupational Skill Points: %d", EDU*20);
  ImGui::Text("Hobby Skill Points: %d", INT*10);
  ImGui::Text("Damage Bonus: %d", STR + SIZ);

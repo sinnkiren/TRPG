@@ -4,6 +4,9 @@
 #include <functional>
 #include <unordered_map>
 #include "IScene.h"
+#include "system/json.hpp"
+
+using json = nlohmann::json;
 
 struct StoryEvent
 {
@@ -12,6 +15,7 @@ struct StoryEvent
 	std::string faceImage;
 	std::string effect;
 	float duration = 1.0f;
+	json effectParams = nullptr; // JSON ‚Å”CˆÓƒpƒ‰ƒ[ƒ^‚ğó‚¯æ‚é
 };
 class StoryPlayer : public IScene{
 	using EffectHandler = std::function<void(const StoryEvent)>;

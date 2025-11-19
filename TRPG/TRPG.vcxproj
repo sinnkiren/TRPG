@@ -22,6 +22,7 @@
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="BattleScene.cpp" />
     <ClCompile Include="CharacterSelect.cpp" />
+    <ClCompile Include="FearEffects.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="ImGuiFontLoader.cpp" />
     <ClCompile Include="main.cpp" />

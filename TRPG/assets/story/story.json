@@ -14,6 +14,14 @@
     "duration": 1.5
   },
   {
+    "text": "……怖い！",
+    "speaker": "NPC",
+    "face": "npc_angry.png",
+    "effect": "shake",
+    "duration": 1.2,
+    "effectParams": { "intensity": 20.0 }
+  },
+  {
     "text": "「……お前は、誰だ？」",
     "speaker": "???",
     "face": "face_angry.png",

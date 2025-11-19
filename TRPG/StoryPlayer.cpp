@@ -4,6 +4,7 @@
 #include <iostream>
 #include "system/imgui/imgui.h"
 #include "system/json.hpp" 
+#include "FearEffects.h"
 
 using json = nlohmann::json;
 
@@ -17,6 +18,23 @@ void StoryPlayer::Initialize() {
             g_SceneManager.ChangeScene(SceneType::BATTLE);
         }
         };
+    RegisterEffect("shake", [](const StoryEvent& ev) {
+        // ev.duration を duration に、effect の値や ev.effectParams から intensity を取る想定
+        float intensity = 10.0f;
+        if (!ev.effectParams.is_null() && ev.effectParams.contains("intensity"))
+            intensity = ev.effectParams["intensity"].get<float>();
+        FearEffects::StartShake(intensity, ev.duration);
+    });
+
+    RegisterEffect("overlay", [](const StoryEvent& ev) {
+        float intensity = 0.8f;
+        int stage = 0;
+        if (!ev.effectParams.is_null()) {
+            if (ev.effectParams.contains("intensity")) intensity = ev.effectParams["intensity"].get<float>();
+            if (ev.effectParams.contains("stage")) stage = ev.effectParams["stage"].get<int>();
+        }
+        FearEffects::StartOverlay(intensity, ev.duration, stage);
+    });
     Play();
 }
 

@@ -1,6 +1,22 @@
 #pragma once
 #include "system/imgui/imgui.h"
 #include <cmath>
+#include <algorithm> // ← 追加
+
+// 軽量な演出 API (宣言)
+namespace FearEffects
+{
+    // 画面揺れを開始
+    void StartShake(float intensity, float duration);
+    // 全画面オーバーレイ（血やノイズ）を開始
+    void StartOverlay(float intensity, float duration, int stage = 0);
+    // 毎フレーム更新 (StoryPlayer::UpdateImpl などから呼ぶ)
+    void Update(float dt);
+    // 現在の揺れオフセット（ImGui の SetNextWindowPos に合成する）
+    ImVec2 GetShakeOffset();
+    // オーバーレイ描画（ImGui::GetForegroundDrawList を使う）
+    void RenderOverlay();
+}
 
 // 簡易恐怖オーバーレイ（ImGui の ForegroundDrawList を利用）
 // stage:0..4 のダメージ段階（0: 軽微、4: 致命的）
@@ -24,7 +40,7 @@ inline void DrawFearOverlay(float intensity, float timeSeconds, int stage =0)
         float pad = i *40.0f * intensity * (1.0f +0.2f * stage);
         float a =0.02f +0.06f * intensity * (1.0f +0.6f * stage) * (1.0f +0.5f * std::sin(timeSeconds * (1.2f + i)));
         // 赤の成分を段階的に上げる
-        ImU32 col = ImColor(std::min(1.0f, redTint +0.1f * i),0.0f,0.0f, a);
+        ImU32 col = ImColor((std::min)(1.0f, redTint +0.1f * i),0.0f,0.0f, a);
         dl->AddRectFilled(ImVec2(pad, pad), ImVec2(disp.x - pad, disp.y - pad), col);
     }
 

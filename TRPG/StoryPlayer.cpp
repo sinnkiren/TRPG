@@ -41,7 +41,6 @@ void StoryPlayer::Initialize() {
     });
 
     // ノイズ系エフェクト（ストーリーの恐怖演出用）
-    // ここでは赤みのオーバーレイ＋軽い揺れで演出する
     RegisterEffect("noise", [](const StoryEvent& ev) {
         float intensity = 0.6f; // overlay 強度（0..1）
         float shakeIntensity = 6.0f; // 揺れの量（ピクセル等）
@@ -51,7 +50,6 @@ void StoryPlayer::Initialize() {
             if (ev.effectParams.contains("stage")) stage = ev.effectParams["stage"].get<int>();
             if (ev.effectParams.contains("shake")) shakeIntensity = ev.effectParams["shake"].get<float>();
         }
-        // 長さは ev.duration に合わせる
         FearEffects::StartOverlay(intensity, ev.duration, stage);
         FearEffects::StartShake(shakeIntensity, ev.duration);
     });
@@ -197,11 +195,6 @@ void StoryPlayer::Render() {
     if (m_index >= (int)m_events.size()) return;
     const StoryEvent& ev = m_events[m_index];
 
-    // --- 例: 自作描画API呼び出し ---
-    // DrawTextCentered(ev.text);
-    // DrawFaceImage(ev.faceImage, positionLeftBottom);
-    // ※実際の描画はエンジンAPIに合わせて実装してください。
-    
     // FearEffects のオフセット（揺れ）を取得してダイアログ位置に反映する
     ImVec2 shake = FearEffects::GetShakeOffset();
     ImVec2 basePos(10.0f, 600.0f);
@@ -210,9 +203,16 @@ void StoryPlayer::Render() {
     // オーバーレイを描画（前景に描画するので Begin の前後どちらでも可）
     FearEffects::RenderOverlay();
 
-    // ここではImGuiで簡易表示（開発中用）
+    // ダイアログのサイズと文字スケールを適用
     ImGui::SetNextWindowPos(posWithShake, ImGuiCond_Always);
-    ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::SetNextWindowSize(m_dialogSize, ImGuiCond_Always);
+
+    // 文字スケール適用 (簡易手法)
+    ImFont* font = ImGui::GetFont();
+    float prevScale = 1.0f;
+    if (font) { prevScale = font->Scale; font->Scale = m_textScale; }
+
+    ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
     if (!ev.speaking.empty()) ImGui::TextColored(ImVec4(1, 0.8f, 0.6f, 1), "%s", ev.speaking.c_str());
     ImGui::TextWrapped("%s", ev.text.c_str());
     ImGui::Separator();
@@ -223,6 +223,9 @@ void StoryPlayer::Render() {
     ImGui::SameLine();
     if (ImGui::Button("Next")) Next();
     ImGui::End();
+
+    // スケールを元に戻す
+    if (font) font->Scale = prevScale;
 }
 
 void StoryPlayer::ShowCurrentText() {

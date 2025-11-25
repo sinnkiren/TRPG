@@ -229,15 +229,14 @@ namespace FearEffects
         if (g_overlayDuration <= 0.0f || g_overlayElapsed >= g_overlayDuration) return;
 
         const ImGuiViewport* vp = ImGui::GetMainViewport();
-        ImDrawList* dl = ImGui::GetForegroundDrawList();
+        ImDrawList* dl = ImGui::GetBackgroundDrawList(); // 背景に描画（UI の上に被らない）
+        if (!vp || !dl) return;
 
-        // 残り比率（1..0）。経過が進むと t は小さくなる（フェードアウト想定）
         float t = 1.0f - (g_overlayElapsed / g_overlayDuration);
         float intensity = std::clamp(g_overlayIntensity, 0.0f, 1.0f) * t;
         int stage = std::clamp(g_overlayStage, 0, 4);
         float stageBoost = 1.0f + 0.35f * static_cast<float>(stage);
 
-        // ランタイム設定を反映してサンプル数・サイズ・スケールを決定
         int baseCount = s_noiseBaseCount;
         int noiseCount = static_cast<int>(baseCount * stageBoost * (0.7f + intensity));
         noiseCount = std::clamp(noiseCount, 8, 20000);
@@ -245,17 +244,23 @@ namespace FearEffects
         float minSize = s_noiseMinSize;
         float maxSize = s_noiseMaxSize + stage * 2.0f;
 
-        // ドメインワープの設定：元のノイズ座標を滑らかに歪めることで荒いうねりを作る
         float warpScale = std::max(1e-5f, s_noiseScale * 6.0f);
-        float warpStrength = 0.6f + 1.2f * intensity * (0.5f + 0.5f * stageBoost);
-
-        float noiseScale = s_noiseScale * (1.0f + 0.25f * stage);
+        // time によるゆらぎを増やす（より不穏に）
         float timeBase = g_overlayElapsed * s_noiseTimeSpeed;
 
-        // 斑点化のしきい値。intensity が高いほどブロッチが出やすい（しきい値を下げる）
+        // 全体強度に応じて warp を少し変動させる
+        float globalWarpMod = 1.0f + 0.6f * FE_FractalNoise2D(timeBase * 0.4f, timeBase * 0.6f, 2);
+        float warpStrengthBase = 0.6f + 1.2f * intensity * (0.5f + 0.5f * stageBoost);
+        float warpStrength = warpStrengthBase * globalWarpMod;
+
+        float noiseScale = s_noiseScale * (1.0f + 0.25f * stage);
+
+        // 中央からの距離でアルファを減衰させる（UI 中央に来る想定で読みやすくする）
+        ImVec2 center = ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f);
+        float maxDist = std::sqrt((vp->Size.x * vp->Size.x + vp->Size.y * vp->Size.y)) * 0.5f;
+
         float blotchThreshold = std::clamp(0.72f - 0.35f * intensity, 0.25f, 0.85f);
 
-        // 格子サンプルで均等に画面を覆う（効率と見た目のバランス）
         int cols = static_cast<int>(std::sqrt(static_cast<float>(noiseCount)));
         if (cols < 1) cols = 1;
         int rows = (noiseCount + cols - 1) / cols;
@@ -269,59 +274,84 @@ namespace FearEffects
                 float fx = (c + 0.5f) / static_cast<float>(cols);
                 float fy = (r + 0.5f) / static_cast<float>(rows);
 
-                // 元座標を Perlin スケールに合わせる
                 float sx = (vp->Pos.x + fx * vp->Size.x) * noiseScale;
                 float sy = (vp->Pos.y + fy * vp->Size.y) * noiseScale;
 
-                // ドメインワープ量をフラクタルノイズで作る（滑らかに座標を歪める）
+                // ドメインワープ（変動を付与）
                 float wx = FE_FractalNoise2D(sx * warpScale + timeBase * 0.18f, sy * warpScale - timeBase * 0.12f, 3) * warpStrength;
                 float wy = FE_FractalNoise2D(sx * warpScale - timeBase * 0.11f, sy * warpScale + timeBase * 0.14f, 3) * warpStrength;
 
-                // 歪ませた座標で最終サンプルを取る
                 float nx = sx + wx;
                 float ny = sy + wy;
 
-                // フラクタルノイズを評価（-1..1）→ 0..1 に正規化
                 float v = FE_FractalNoise2D(nx + timeBase * 0.25f, ny - timeBase * 0.21f, 4, 2.0f, 0.5f);
                 float gv = 0.5f * (v + 1.0f);
 
-                // コントラスト調整（描画の鋭さに寄与）
                 float contrast = s_noiseContrastBase + 1.5f * intensity;
                 float gvC = std::pow(gv, 1.0f / contrast);
-
-                // しきい値以上はブロッチ（大斑点）、未満は小さな粒に分ける
                 bool isBlotch = (gvC > blotchThreshold);
 
-                // 基本アルファ（intensity, stage に依存）。アルファ倍率を掛け合わせる。
-                float alphaBase = std::clamp(0.08f * intensity * (0.5f + 0.5f * stageBoost) * s_noiseAlphaScale, 0.001f, 0.9f);
-                float alpha = isBlotch ? (alphaBase * (0.9f + 1.2f * (gvC - blotchThreshold))) : (alphaBase * 0.35f * gvC);
+                float alphaBase = std::clamp(0.06f * intensity * (0.5f + 0.5f * stageBoost) * s_noiseAlphaScale, 0.0005f, 0.9f);
+                float alpha = isBlotch ? (alphaBase * (0.9f + 1.6f * (gvC - blotchThreshold))) : (alphaBase * 0.35f * gvC);
 
-                // サイズ設定：ブロッチは大きく、粒はやや小さめ
+                // 中央領域ではアルファを弱めて文字を見やすくする
+                float px = vp->Pos.x + fx * vp->Size.x;
+                float py = vp->Pos.y + fy * vp->Size.y;
+                float dist = std::sqrt((px - center.x) * (px - center.x) + (py - center.y) * (py - center.y));
+                float distNorm = std::clamp(dist / maxDist, 0.0f, 1.0f);
+                // vignette: 中心は弱く、端で強くする
+                float vignette = 1.0f - std::pow(1.0f - distNorm, 1.8f);
+                alpha *= vignette * (0.6f + 0.4f * intensity); // 中央はさらに弱める
+
+                // 劇的な大ブロッチ（稀に出現して不穏さを演出）
+                if (isBlotch) {
+                    float slow = FE_FractalNoise2D(nx * 0.12f - timeBase * 0.02f, ny * 0.12f + timeBase * 0.03f, 2);
+                    if (slow > 0.55f) {
+                        alpha *= 1.4f;
+                        // 大きさも増やす
+                        float size = maxSize * (0.9f + 1.2f * (gvC - blotchThreshold)) * (1.0f + 0.5f * (slow - 0.55f));
+                        if (size < 1.0f) size = 1.0f;
+                        float gray = std::clamp(0.05f + 0.85f * (1.0f - gvC), 0.0f, 1.0f);
+                        ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, std::clamp(alpha, 0.0f, 0.95f)));
+                        dl->AddRectFilled(ImVec2(px - size * 0.5f, py - size * 0.5f), ImVec2(px + size * 0.5f, py + size * 0.5f), col);
+                        ++idx;
+                        continue;
+                    }
+                }
+
                 float size = isBlotch ? (maxSize * (0.6f + 0.8f * (gvC - blotchThreshold))) : (minSize + std::fmod(static_cast<float>(idx) * 7.13f + fy * 3.71f, 1.0f) * (maxSize - minSize) * 0.6f);
                 if (size < 0.5f) size = 0.5f;
 
-                float px = vp->Pos.x + fx * vp->Size.x;
-                float py = vp->Pos.y + fy * vp->Size.y;
-
-                // グレースケール色。ブロッチは暗めにして恐怖感を強調
                 float gray = isBlotch ? std::clamp(0.05f + 0.85f * (1.0f - gvC), 0.0f, 1.0f) : std::clamp(0.2f + 0.8f * gvC, 0.0f, 1.0f);
-
-                ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, alpha));
+                ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, std::clamp(alpha, 0.0f, 0.9f)));
                 dl->AddRectFilled(ImVec2(px, py), ImVec2(px + size, py + size), col);
 
                 ++idx;
             }
         }
 
-        // 横スキャンラインを薄く重ねて「荒さ」「不穏さ」を補強する
-        int lines = 4 + stage * 2;
+        // 横スキャンライン（ゆらぎを付加）
+        int lines = 10 + stage * 2;
         for (int i = 0; i < lines; ++i)
         {
             float y = vp->Pos.y + ((i + 1) / static_cast<float>(lines + 1)) * vp->Size.y;
             float ln = FE_Perlin2D(y * noiseScale * 0.6f + timeBase * 0.2f, i * 0.37f);
-            float la = std::clamp(0.02f * intensity * (0.9f + 0.6f * ln), 0.0f, 0.18f) * s_noiseAlphaScale;
+            float la = std::clamp(0.015f * intensity * (0.9f + 0.6f * ln), 0.0f, 0.12f) * s_noiseAlphaScale;
+            // スキャンラインのダークネスもビネットで減衰
+            float dy = std::sqrt((center.x - (vp->Pos.x + vp->Size.x * 0.5f)) * (center.x - (vp->Pos.x + vp->Size.x * 0.5f)) + (y - center.y) * (y - center.y));
+            float v = std::clamp(dy / maxDist, 0.0f, 1.0f);
+            la *= (0.4f + 0.6f * v);
             ImU32 col = ImGui::GetColorU32(ImVec4(0.45f, 0.45f, 0.45f, la));
             dl->AddRectFilled(ImVec2(vp->Pos.x, y), ImVec2(vp->Pos.x + vp->Size.x, y + 1.0f), col);
+        }
+
+        // 低頻度の暗転（ちらつき）を追加して不意の不穏感を作る
+        float flick = FE_FractalNoise2D(timeBase * 3.1f, timeBase * 4.3f, 2);
+        if (flick > 0.72f) {
+            float flashAlpha = (flick - 0.72f) / (1.0f - 0.72f);
+            flashAlpha = std::clamp(flashAlpha * 0.08f * intensity * (0.6f + 0.4f * stage), 0.0f, 0.25f);
+            ImU32 col = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, flashAlpha));
+            dl->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
         }
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include <string>
+#include <vector>
 #include <filesystem>
 
 namespace OBJParse {
@@ -25,7 +26,7 @@ namespace OBJParse {
         std::string mtrlname;     // マテリアル名
         unsigned int vIndex;       // 頂点インデックス
         unsigned int tIndex;       // テクスチャインデックス
-        unsigned int nIndex;	   // 法線インデックス  
+        unsigned int nIndex;       // 法線インデックス  
     };
 
     // マテリアル情報
@@ -51,8 +52,10 @@ namespace OBJParse {
     // std::string 用のディレクトリ取得関数
     std::filesystem::path get_directory(const std::string& path);
 
-    // std::u8string 用のディレクトリ取得関数
+#if (__cplusplus >= 202002L) || defined(__cpp_lib_char8_t)
+    // C++20 環境でのみ有効化：std::u8string 用のディレクトリ取得関数
     std::filesystem::path get_directory(const std::u8string& path);
+#endif
 
     // std::wstring 用のディレクトリ取得関数
     std::filesystem::path get_directory(const std::wstring& path);

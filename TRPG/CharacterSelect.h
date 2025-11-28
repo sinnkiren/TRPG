@@ -5,6 +5,16 @@
 #include <functional>
 #include <algorithm>
 
+namespace trpg
+{
+    // ŠÈˆÕ clampiŠÂ‹«‚É‚æ‚Á‚Ä std::clamp ‚ªŒ©‚Â‚©‚ç‚È‚¢–â‘è‚Ì‰ñ”ğ—pj
+    template <typename T>
+    constexpr const T& clamp(const T& v, const T& lo, const T& hi) noexcept
+    {
+        return (v < lo) ? lo : (hi < v) ? hi : v;
+    }
+}
+
 class CharcterScene : public IScene {
 public:
     void Initialize() override;
@@ -27,19 +37,19 @@ public:
         int maxEndurance = 0;
 
         bool ApplySanityLoss(int amount) {
-            sanity = std::clamp(sanity - amount,0, maxSanity);
+            sanity = static_cast<int>(trpg::clamp(sanity - amount, 0, maxSanity));
             return sanity ==0;
         }
         void RecoverSanity(int amount) {
-            sanity = std::clamp(sanity + amount,0, maxSanity);
+            sanity = static_cast<int>(trpg::clamp(sanity + amount, 0, maxSanity));
         }
 
         bool ApplyEnduranceLoss(int amount) {
-            endurance = std::clamp(endurance - amount,0, maxEndurance);
+            endurance = static_cast<int>(trpg::clamp(endurance - amount, 0, maxEndurance));
             return endurance ==0;
         }
         void RecoverEndurance(int amount) {
-            endurance = std::clamp(endurance + amount,0, maxEndurance);
+            endurance = static_cast<int>(trpg::clamp(endurance + amount, 0, maxEndurance));
         }
     };
 

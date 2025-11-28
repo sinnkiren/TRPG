@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <iostream>
 #include <windows.h>
+#include <string>
+#include <vector>
 
 #ifdef IMGUI_IMPL_DIRECTX11
 extern void ImGui_ImplDX11_CreateDeviceObjects();
@@ -47,9 +49,10 @@ namespace ImGuiFontLoader
         // preferred Ç™éwíËÇ≥ÇÍÇƒÇ¢ÇÍÇŒóDêÊÇµÇƒééÇ∑
         if (!preferredFontPath.empty()) {
             try {
-                if (std::filesystem::exists(preferredFontPath)) {
-                    if (TryAddFont(preferredFontPath.c_str(),16.0f)) {
-                        LogDebug(("ImGuiFontLoader: Loaded preferred font: " + preferredFontPath + "\n").c_str());
+                if (std::filesystem::exists(std::filesystem::path(preferredFontPath))) {
+                    if (TryAddFont(preferredFontPath.c_str(), 16.0f)) {
+                        std::string s = std::string("ImGuiFontLoader: Loaded preferred font: ") + preferredFontPath + "\n";
+                        LogDebug(s.c_str());
                         return true;
                     }
                 } else {
@@ -76,13 +79,15 @@ namespace ImGuiFontLoader
 
         for (const auto& p : candidatePaths) {
             try {
-                if (std::filesystem::exists(p)) {
-                    if (TryAddFont(p.c_str(),16.0f)) {
-                        LogDebug((std::string("ImGuiFontLoader: loaded font: ") + p + "\n").c_str());
+                if (std::filesystem::exists(std::filesystem::path(p))) {
+                    if (TryAddFont(p.c_str(), 16.0f)) {
+                        std::string s = std::string("ImGuiFontLoader: loaded font: ") + p + "\n";
+                        LogDebug(s.c_str());
                         return true;
                     }
                 } else {
-                    LogDebug((std::string("ImGuiFontLoader: not found: ") + p + "\n").c_str());
+                    std::string s = std::string("ImGuiFontLoader: not found: ") + p + "\n";
+                    LogDebug(s.c_str());
                 }
             } catch (...) {
                 LogDebug("ImGuiFontLoader: exception while iterating candidatePaths\n");

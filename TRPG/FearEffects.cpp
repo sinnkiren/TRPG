@@ -10,6 +10,13 @@
 // ここで定義するグローバル変数はモジュール内で共有され、外部には公開しません。
 namespace FearEffects
 {
+    // 互換用 clamp（std::clamp が使えない環境向け）
+    template<typename T>
+    inline T FE_Clamp(const T& v, const T& lo, const T& hi)
+    {
+        return (v < lo) ? lo : (hi < v) ? hi : v;
+    }
+
     // ---- シェイク（画面揺れ）関連の状態 ----
     // 揺れの強度（ピクセル単位想定）
     float g_shakeIntensity = 0.0f;
@@ -88,7 +95,7 @@ namespace FearEffects
     {
         float sum = 0.0f, amp = 1.0f, freq = 1.0f, maxAmp = 0.0f;
         for (int i = 0; i < octaves; ++i) { sum += FE_Noise1D(x * freq) * amp; maxAmp += amp; amp *= gain; freq *= lacunarity; }
-        return sum / maxAmp;
+        return (maxAmp == 0.0f) ? 0.0f : (sum / maxAmp);
     }
 
     // ---- Perlin 2D 実装（簡易） ----
@@ -139,13 +146,13 @@ namespace FearEffects
     {
         float sum = 0.0f, amp = 1.0f, freq = 1.0f, maxAmp = 0.0f;
         for (int i = 0; i < octaves; ++i) { sum += FE_Perlin2D(x * freq, y * freq) * amp; maxAmp += amp; amp *= gain; freq *= lacunarity; }
-        return sum / maxAmp;
+        return (maxAmp == 0.0f) ? 0.0f : (sum / maxAmp);
     }
 
     // ---- ランタイムセッター群 ----
     // 実行時にノイズの見た目を調整するための API。
     void SetOverlayNoiseScale(float scale) { s_noiseScale = std::max(1e-6f, scale); }
-    void SetOverlayNoiseBaseCount(int count) { s_noiseBaseCount = std::clamp(count, 1, 20000); }
+    void SetOverlayNoiseBaseCount(int count) { s_noiseBaseCount = FE_Clamp(count, 1, 20000); }
     void SetOverlayNoiseAlphaScale(float a) { s_noiseAlphaScale = std::max(0.0f, a); }
     void SetOverlayNoiseSizeRange(float minS, float maxS) {
         s_noiseMinSize = std::max(0.0f, minS);
@@ -175,8 +182,8 @@ namespace FearEffects
     // stage: 任意の段階（描画で重みづけ）
     void StartOverlay(float intensity, float duration, int stage)
     {
-        float clampedIntensity = std::clamp(intensity, 0.0f, 1.0f);
-        int clampedStage = std::clamp(stage, 0, 4);
+        float clampedIntensity = FE_Clamp(intensity, 0.0f, 1.0f);
+        int clampedStage = FE_Clamp(stage, 0, 4);
         float clampedDuration = std::max(0.0f, duration);
 
         // 既存の残り時間と新規 duration の長い方を採り、強度は最大値を採ることで過度な累積を防ぐ
@@ -229,37 +236,42 @@ namespace FearEffects
         if (g_overlayDuration <= 0.0f || g_overlayElapsed >= g_overlayDuration) return;
 
         const ImGuiViewport* vp = ImGui::GetMainViewport();
-        ImDrawList* dl = ImGui::GetBackgroundDrawList(); // 背景に描画（UI の上に被らない）
+        ImDrawList* dl = ImGui::GetBackgroundDrawList();
         if (!vp || !dl) return;
 
         float t = 1.0f - (g_overlayElapsed / g_overlayDuration);
-        float intensity = std::clamp(g_overlayIntensity, 0.0f, 1.0f) * t;
-        int stage = std::clamp(g_overlayStage, 0, 4);
+        float intensity = FE_Clamp(g_overlayIntensity, 0.0f, 1.0f) * t;
+        int stage = FE_Clamp(g_overlayStage, 0, 4);
         float stageBoost = 1.0f + 0.35f * static_cast<float>(stage);
 
+        // 密度ブースト（intensity/ stage に応じてノイズを濃くする）
+        float densityBoost = 1.0f + intensity * 1.8f + 0.5f * static_cast<float>(stage);
         int baseCount = s_noiseBaseCount;
-        int noiseCount = static_cast<int>(baseCount * stageBoost * (0.7f + intensity));
-        noiseCount = std::clamp(noiseCount, 8, 20000);
+        int noiseCount = static_cast<int>(baseCount * stageBoost * (0.7f + intensity) * densityBoost);
+        noiseCount = FE_Clamp(noiseCount, 8, 40000); // 上限を増やして濃くできるように
 
         float minSize = s_noiseMinSize;
         float maxSize = s_noiseMaxSize + stage * 2.0f;
 
         float warpScale = std::max(1e-5f, s_noiseScale * 6.0f);
-        // time によるゆらぎを増やす（より不穏に）
         float timeBase = g_overlayElapsed * s_noiseTimeSpeed;
 
-        // 全体強度に応じて warp を少し変動させる
-        float globalWarpMod = 1.0f + 0.6f * FE_FractalNoise2D(timeBase * 0.4f, timeBase * 0.6f, 2);
-        float warpStrengthBase = 0.6f + 1.2f * intensity * (0.5f + 0.5f * stageBoost);
-        float warpStrength = warpStrengthBase * globalWarpMod;
+        // グローバルなスクロール（縦横の動き）を作る
+        float scrollSpeedX = 18.0f * (0.5f + intensity);
+        float scrollSpeedY = 10.0f * (0.4f + 0.6f * intensity);
+        float globalScrollX = std::fmod(timeBase * scrollSpeedX * (0.5f + 0.5f * FE_FractalNoise2D(timeBase * 0.07f, 0.0f, 2)), vp->Size.x);
+        float globalScrollY = std::fmod(timeBase * scrollSpeedY * (0.5f + 0.5f * FE_FractalNoise2D(0.0f, timeBase * 0.09f, 2)), vp->Size.y);
+
+        // 全体の warp 強度（少し揺らす）
+        float warpStrength = 0.6f + 1.2f * intensity * (0.5f + 0.5f * stageBoost);
 
         float noiseScale = s_noiseScale * (1.0f + 0.25f * stage);
 
-        // 中央からの距離でアルファを減衰させる（UI 中央に来る想定で読みやすくする）
+        // 中央保護のためのビネット（UI が中央にある前提）
         ImVec2 center = ImVec2(vp->Pos.x + vp->Size.x * 0.5f, vp->Pos.y + vp->Size.y * 0.5f);
         float maxDist = std::sqrt((vp->Size.x * vp->Size.x + vp->Size.y * vp->Size.y)) * 0.5f;
 
-        float blotchThreshold = std::clamp(0.72f - 0.35f * intensity, 0.25f, 0.85f);
+        float blotchThreshold = FE_Clamp(0.72f - 0.35f * intensity, 0.25f, 0.85f);
 
         int cols = static_cast<int>(std::sqrt(static_cast<float>(noiseCount)));
         if (cols < 1) cols = 1;
@@ -274,16 +286,20 @@ namespace FearEffects
                 float fx = (c + 0.5f) / static_cast<float>(cols);
                 float fy = (r + 0.5f) / static_cast<float>(rows);
 
-                float sx = (vp->Pos.x + fx * vp->Size.x) * noiseScale;
-                float sy = (vp->Pos.y + fy * vp->Size.y) * noiseScale;
+                // スクリーン座標に変換してからスケール
+                float basePx = vp->Pos.x + fx * vp->Size.x;
+                float basePy = vp->Pos.y + fy * vp->Size.y;
+                float sx = basePx * noiseScale; 
+                float sy = basePy * noiseScale;
 
-                // ドメインワープ（変動を付与）
+                // ドメインワープ（動的）
                 float wx = FE_FractalNoise2D(sx * warpScale + timeBase * 0.18f, sy * warpScale - timeBase * 0.12f, 3) * warpStrength;
                 float wy = FE_FractalNoise2D(sx * warpScale - timeBase * 0.11f, sy * warpScale + timeBase * 0.14f, 3) * warpStrength;
 
                 float nx = sx + wx;
                 float ny = sy + wy;
 
+                // フラクタルノイズ値
                 float v = FE_FractalNoise2D(nx + timeBase * 0.25f, ny - timeBase * 0.21f, 4, 2.0f, 0.5f);
                 float gv = 0.5f * (v + 1.0f);
 
@@ -291,65 +307,54 @@ namespace FearEffects
                 float gvC = std::pow(gv, 1.0f / contrast);
                 bool isBlotch = (gvC > blotchThreshold);
 
-                float alphaBase = std::clamp(0.06f * intensity * (0.5f + 0.5f * stageBoost) * s_noiseAlphaScale, 0.0005f, 0.9f);
-                float alpha = isBlotch ? (alphaBase * (0.9f + 1.6f * (gvC - blotchThreshold))) : (alphaBase * 0.35f * gvC);
+                // アルファを濃くして不穏さを増強
+                float alphaBase = FE_Clamp(0.10f * intensity * (0.6f + 0.6f * stageBoost) * s_noiseAlphaScale, 0.0005f, 1.0f);
+                float alpha = isBlotch ? (alphaBase * (1.0f + 1.6f * (gvC - blotchThreshold))) : (alphaBase * 0.45f * gvC);
 
-                // 中央領域ではアルファを弱めて文字を見やすくする
-                float px = vp->Pos.x + fx * vp->Size.x;
-                float py = vp->Pos.y + fy * vp->Size.y;
+                // サンプルごとの局所的な動き（縦横ランダム移動）
+                float localMoveX = FE_FractalNoise2D(nx * 0.06f + timeBase * 0.12f, ny * 0.06f, 2) * (6.0f + 18.0f * intensity);
+                float localMoveY = FE_FractalNoise2D(nx * 0.06f, ny * 0.06f + timeBase * 0.13f, 2) * (4.0f + 12.0f * intensity);
+
+                float px = basePx + globalScrollX * (0.6f + 0.6f * (fx - 0.5f)) + localMoveX;
+                float py = basePy + globalScrollY * (0.6f + 0.6f * (fy - 0.5f)) + localMoveY;
+
+                // 中央領域ではアルファを弱める（可読性維持）
                 float dist = std::sqrt((px - center.x) * (px - center.x) + (py - center.y) * (py - center.y));
-                float distNorm = std::clamp(dist / maxDist, 0.0f, 1.0f);
-                // vignette: 中心は弱く、端で強くする
+                float distNorm = FE_Clamp(dist / maxDist, 0.0f, 1.0f);
                 float vignette = 1.0f - std::pow(1.0f - distNorm, 1.8f);
-                alpha *= vignette * (0.6f + 0.4f * intensity); // 中央はさらに弱める
+                alpha *= vignette * (0.6f + 0.45f * intensity);
 
-                // 劇的な大ブロッチ（稀に出現して不穏さを演出）
-                if (isBlotch) {
-                    float slow = FE_FractalNoise2D(nx * 0.12f - timeBase * 0.02f, ny * 0.12f + timeBase * 0.03f, 2);
-                    if (slow > 0.55f) {
-                        alpha *= 1.4f;
-                        // 大きさも増やす
-                        float size = maxSize * (0.9f + 1.2f * (gvC - blotchThreshold)) * (1.0f + 0.5f * (slow - 0.55f));
-                        if (size < 1.0f) size = 1.0f;
-                        float gray = std::clamp(0.05f + 0.85f * (1.0f - gvC), 0.0f, 1.0f);
-                        ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, std::clamp(alpha, 0.0f, 0.95f)));
-                        dl->AddRectFilled(ImVec2(px - size * 0.5f, py - size * 0.5f), ImVec2(px + size * 0.5f, py + size * 0.5f), col);
-                        ++idx;
-                        continue;
-                    }
-                }
+                // 大きさ
+                float size = isBlotch ? (maxSize * (0.8f + 1.0f * (gvC - blotchThreshold))) : (minSize + std::fmod(static_cast<float>(idx) * 7.13f + fy * 3.71f, 1.0f) * (maxSize - minSize) * 0.8f);
+                if (size < 0.6f) size = 0.6f;
 
-                float size = isBlotch ? (maxSize * (0.6f + 0.8f * (gvC - blotchThreshold))) : (minSize + std::fmod(static_cast<float>(idx) * 7.13f + fy * 3.71f, 1.0f) * (maxSize - minSize) * 0.6f);
-                if (size < 0.5f) size = 0.5f;
+                float gray = isBlotch ? FE_Clamp(0.05f + 0.85f * (1.0f - gvC), 0.0f, 1.0f) : FE_Clamp(0.18f + 0.82f * gvC, 0.0f, 1.0f);
+                ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, FE_Clamp(alpha, 0.0f, 0.95f)));
 
-                float gray = isBlotch ? std::clamp(0.05f + 0.85f * (1.0f - gvC), 0.0f, 1.0f) : std::clamp(0.2f + 0.8f * gvC, 0.0f, 1.0f);
-                ImU32 col = ImGui::GetColorU32(ImVec4(gray, gray, gray, std::clamp(alpha, 0.0f, 0.9f)));
                 dl->AddRectFilled(ImVec2(px, py), ImVec2(px + size, py + size), col);
 
                 ++idx;
             }
         }
 
-        // 横スキャンライン（ゆらぎを付加）
+        // 横スキャンライン（ゆっくり動かす）
         int lines = 10 + stage * 2;
         for (int i = 0; i < lines; ++i)
         {
             float y = vp->Pos.y + ((i + 1) / static_cast<float>(lines + 1)) * vp->Size.y;
-            float ln = FE_Perlin2D(y * noiseScale * 0.6f + timeBase * 0.2f, i * 0.37f);
-            float la = std::clamp(0.015f * intensity * (0.9f + 0.6f * ln), 0.0f, 0.12f) * s_noiseAlphaScale;
-            // スキャンラインのダークネスもビネットで減衰
-            float dy = std::sqrt((center.x - (vp->Pos.x + vp->Size.x * 0.5f)) * (center.x - (vp->Pos.x + vp->Size.x * 0.5f)) + (y - center.y) * (y - center.y));
-            float v = std::clamp(dy / maxDist, 0.0f, 1.0f);
-            la *= (0.4f + 0.6f * v);
+            // スキャンラインの横移動
+            float shift = FE_FractalNoise2D(timeBase * 0.2f, i * 0.37f, 2) * (6.0f + 10.0f * intensity);
+            float ln = FE_Perlin2D((y + timeBase * 6.0f) * noiseScale * 0.6f + timeBase * 0.2f, i * 0.37f);
+            float la = FE_Clamp(0.015f * intensity * (0.9f + 0.6f * ln), 0.0f, 0.14f) * s_noiseAlphaScale;
             ImU32 col = ImGui::GetColorU32(ImVec4(0.45f, 0.45f, 0.45f, la));
-            dl->AddRectFilled(ImVec2(vp->Pos.x, y), ImVec2(vp->Pos.x + vp->Size.x, y + 1.0f), col);
+            dl->AddRectFilled(ImVec2(vp->Pos.x + shift, y), ImVec2(vp->Pos.x + vp->Size.x + shift, y + 1.0f), col);
         }
 
-        // 低頻度の暗転（ちらつき）を追加して不意の不穏感を作る
-        float flick = FE_FractalNoise2D(timeBase * 3.1f, timeBase * 4.3f, 2);
-        if (flick > 0.72f) {
-            float flashAlpha = (flick - 0.72f) / (1.0f - 0.72f);
-            flashAlpha = std::clamp(flashAlpha * 0.08f * intensity * (0.6f + 0.4f * stage), 0.0f, 0.25f);
+        // 低頻度の暗転（ちらつき）を追加（微調整）
+        float flick = FE_FractalNoise2D(timeBase * 2.5f, timeBase * 3.7f, 2);
+        if (flick > 0.75f) {
+            float flashAlpha = (flick - 0.75f) / (1.0f - 0.75f);
+            flashAlpha = FE_Clamp(flashAlpha * 0.08f * intensity * (0.6f + 0.4f * stage), 0.0f, 0.3f);
             ImU32 col = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, flashAlpha));
             dl->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
         }

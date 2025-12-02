@@ -15,11 +15,12 @@ void StoryPlayer::Initialize() {
     LoadFromFile("assets/story/story.json");
 
     // イベント完了時コールバック（シーン切り替え等）
-    onEventFinished = [](const StoryEvent& ev) {
+    // battle_start はフェード開始に置き換え
+    onEventFinished = [this](const StoryEvent& ev) {
         if (ev.effect == "battle_start") {
-            g_SceneManager.ChangeScene(SceneType::BATTLE);
+            StartFadeToBattle();
         }
-    };
+        };
 
     // 揺れエフェクト ("shake")
     RegisterEffect("shake", [](const StoryEvent& ev) {
@@ -27,7 +28,7 @@ void StoryPlayer::Initialize() {
         if (!ev.effectParams.is_null() && ev.effectParams.contains("intensity"))
             intensity = ev.effectParams["intensity"].get<float>();
         FearEffects::StartShake(intensity, ev.duration);
-    });
+        });
 
     // オーバーレイエフェクト ("overlay")
     RegisterEffect("overlay", [](const StoryEvent& ev) {
@@ -38,7 +39,7 @@ void StoryPlayer::Initialize() {
             if (ev.effectParams.contains("stage")) stage = ev.effectParams["stage"].get<int>();
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
-    });
+        });
 
     // ノイズ系エフェクト（ストーリーの恐怖演出用）
     RegisterEffect("noise", [](const StoryEvent& ev) {
@@ -52,7 +53,7 @@ void StoryPlayer::Initialize() {
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
         FearEffects::StartShake(shakeIntensity, ev.duration);
-    });
+        });
 
     // 血やショッキングな表現（強い赤オーバーレイ＋短い揺れ）
     RegisterEffect("blood", [](const StoryEvent& ev) {
@@ -66,12 +67,15 @@ void StoryPlayer::Initialize() {
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
         FearEffects::StartShake(shakeIntensity, ev.duration * 0.6f); // 血は少し速めに収束させる等の調整
-    });
+        });
 
     Play();
 }
 
 void StoryPlayer::Update() {
+    // 毎フレーム呼ばれる Update から実際の更新処理を呼ぶ
+    float dt = ImGui::GetIO().DeltaTime;
+    UpdateImpl(dt);
 }
 
 bool StoryPlayer::LoadFromFile(const std::string& path) {
@@ -159,8 +163,45 @@ void StoryPlayer::Reset() {
     m_playing = false;
 }
 
+void StoryPlayer::StartFadeToBattle(float duration)
+{
+    if (m_fsFadingOut) return; // 既にフェード中なら何もしない
+    m_fsFadingOut = true;
+    m_fsFadeElapsed = 0.0f;
+    m_fsFadeDuration = duration;
+    m_fsFadeAlpha = 0.0f;
+}
+
 void StoryPlayer::UpdateImpl(float dt) {
-    if (!m_playing || m_events.empty() || m_index >= (int)m_events.size()) return;
+    if (!m_playing || m_events.empty() || m_index >= (int)m_events.size()) {
+        // ただしフェードが動いている場合は継続処理する
+        if (m_fsFadingOut) {
+            m_fsFadeElapsed += dt;
+            float r = (m_fsFadeDuration > 0.0f) ? (m_fsFadeElapsed / m_fsFadeDuration) : 1.0f;
+            m_fsFadeAlpha = std::max(0.0f, std::min(1.0f, r));
+            if (r >= 1.0f) {
+                m_fsFadingOut = false;
+                m_fsFadeAlpha = 1.0f;
+                g_SceneManager.ChangeScene(SceneType::BATTLE);
+            }
+        }
+        return;
+    }
+
+    // フェード進行があるなら優先して進める
+    if (m_fsFadingOut) {
+        m_fsFadeElapsed += dt;
+        float r = (m_fsFadeDuration > 0.0f) ? (m_fsFadeElapsed / m_fsFadeDuration) : 1.0f;
+        m_fsFadeAlpha = std::max(0.0f, std::min(1.0f, r));
+        if (r >= 1.0f) {
+            m_fsFadingOut = false;
+            m_fsFadeAlpha = 1.0f;
+            g_SceneManager.ChangeScene(SceneType::BATTLE);
+            return;
+        }
+        // フェード中はイベント進行を止める（任意）
+        return;
+    }
 
     // FearEffects の時間を進める（オーバーレイや揺れの内部タイマー）
     FearEffects::Update(dt);
@@ -169,9 +210,10 @@ void StoryPlayer::UpdateImpl(float dt) {
     float dur = m_events[m_index].duration;
     if (m_timer >= dur) {
         const StoryEvent& ev = m_events[m_index];
+        // battle_start は即時遷移ではなくフェード開始に置き換え
         if (ev.effect == "battle_start")
         {
-            g_SceneManager.ChangeScene(SceneType::BATTLE);
+            StartFadeToBattle(0.8f);
             return;
         }
         // イベント完了
@@ -195,15 +237,16 @@ void StoryPlayer::Render() {
     if (m_index >= (int)m_events.size()) return;
     const StoryEvent& ev = m_events[m_index];
 
-    // FearEffects のオフセット（揺れ）を取得してダイアログ位置に反映する
+    // --- FearEffects の揺れオフセットを取得 ---
     ImVec2 shake = FearEffects::GetShakeOffset();
+
+    // --- オーバーレイを描画（前景に描画するので Begin の前後どちらでも可） ---
+    FearEffects::RenderOverlay();
+
+    // 元の位置（左下寄せ）に戻す: basePos(10,600) に揺れを加える
     ImVec2 basePos(10.0f, 600.0f);
     ImVec2 posWithShake(basePos.x + shake.x, basePos.y + shake.y);
 
-    // オーバーレイを描画（前景に描画するので Begin の前後どちらでも可）
-    FearEffects::RenderOverlay();
-
-    // ダイアログのサイズと文字スケールを適用
     ImGui::SetNextWindowPos(posWithShake, ImGuiCond_Always);
     ImGui::SetNextWindowSize(m_dialogSize, ImGuiCond_Always);
 
@@ -213,8 +256,18 @@ void StoryPlayer::Render() {
     if (font) { prevScale = font->Scale; font->Scale = m_textScale; }
 
     ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-    if (!ev.speaking.empty()) ImGui::TextColored(ImVec4(1, 0.8f, 0.6f, 1), "%s", ev.speaking.c_str());
+
+    // スピーカー名（左寄せ）
+    if (!ev.speaking.empty()) {
+        ImGui::TextColored(ImVec4(1, 0.8f, 0.6f, 1), "%s", ev.speaking.c_str());
+        ImGui::Spacing();
+    }
+
+    // テキストは ImGui のラップで描画（左揃え、元の位置）
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + m_dialogSize.x - 16.0f);
     ImGui::TextWrapped("%s", ev.text.c_str());
+    ImGui::PopTextWrapPos();
+
     ImGui::Separator();
     ImGui::Text("Effect: %s  Time: %.2f/%.2f", ev.effect.c_str(), m_timer, ev.duration);
     if (ImGui::Button("Play")) Play();
@@ -226,6 +279,16 @@ void StoryPlayer::Render() {
 
     // スケールを元に戻す
     if (font) font->Scale = prevScale;
+
+    // フェード中は画面全体を覆う黒矩形を描画（UI の上）
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    if ((m_fsFadingOut || m_fsFadeAlpha > 0.0f) && vp) {
+        ImDrawList* fg = ImGui::GetForegroundDrawList();
+        if (fg) {
+            ImU32 col = ImGui::GetColorU32(ImVec4(0, 0, 0, m_fsFadeAlpha));
+            fg->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
+        }
+    }
 }
 
 void StoryPlayer::ShowCurrentText() {

@@ -1,3 +1,4 @@
+
 #pragma once
 #include <string>
 #include <vector>
@@ -18,16 +19,16 @@ struct StoryEvent
 	float duration = 1.0f;
 	json effectParams = nullptr; // JSON での効果パラメータを保持
 };
-class StoryPlayer : public IScene{
+class StoryPlayer : public IScene {
 	using EffectHandler = std::function<void(const StoryEvent)>;
 public:
 	StoryPlayer();
 	~StoryPlayer();
-		void Initialize() override;
-		void Update() override;   // 未使用
-		void Render() override;
+	void Initialize() override;
+	void Update() override;   // 未使用
+	void Render() override;
 
-		void UpdateImpl(float dt); // float dt を受け取る更新
+	void UpdateImpl(float dt); // float dt を受け取る更新
 
 	bool LoadFromFile(const std::string& path);
 	void Play();//再生
@@ -39,13 +40,6 @@ public:
 	void RegisterEffect(const std::string& name, EffectHandler  handler);
 	// イベント完了コールバック
 	std::function<void(const StoryEvent&)>onEventFinished;
-
-	// 追加: ダイアログ／文字サイズ調整 API
-	void SetTextScale(float scale) { m_textScale = std::max(0.1f, scale); }
-	float GetTextScale() const { return m_textScale; }
-
-	void SetDialogSize(const ImVec2& size) { m_dialogSize = ImVec2(std::max(1.0f, size.x), std::max(1.0f, size.y)); }
-	ImVec2 GetDialogSize() const { return m_dialogSize; }
 
 private:
 	std::vector<StoryEvent>m_events;
@@ -60,4 +54,13 @@ private:
 	// 追加メンバ
 	float m_textScale = 1.0f;      // 文字の拡大率（1.0 = 標準）
 	ImVec2 m_dialogSize = ImVec2(400.0f, 160.0f); // ダイアログサイズのデフォルト
+
+	// フェード遷移用（story -> battle）
+	float m_fsFadeAlpha = 0.0f;
+	float m_fsFadeDuration = 0.8f;
+	float m_fsFadeElapsed = 0.0f;
+	bool  m_fsFadingOut = false;
+
+	// フェード開始
+	void StartFadeToBattle(float duration = 0.8f);
 };

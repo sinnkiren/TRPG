@@ -7,7 +7,7 @@
 #include <vector>
 
 #ifdef IMGUI_IMPL_DIRECTX11
-extern void ImGui_ImplDX11_CreateDeviceObjects();
+extern bool ImGui_ImplDX11_CreateDeviceObjects();
 #endif
 
 namespace ImGuiFontLoader
@@ -31,10 +31,20 @@ namespace ImGuiFontLoader
 
         // フォントをデフォルトに設定
         io.FontDefault = font;
+        io.Fonts->Build(); // 明示的にビルド（通常は不要だが確実にする）
 
-        // フォントテクスチャ再生成（DX11バックエンドを使用しているなら）
+        // If DX11 backend is active, upload font atlas to GPU
     #ifdef IMGUI_IMPL_DIRECTX11
-        ImGui_ImplDX11_CreateDeviceObjects();
+        if (io.BackendRendererName && std::string(io.BackendRendererName) == "imgui_impl_dx11") {
+            if (!ImGui_ImplDX11_CreateDeviceObjects()) {
+                LogDebug("ImGuiFontLoader: ImGui_ImplDX11_CreateDeviceObjects() failed\n");
+                // 失敗したら続行は可能（フォールバックでCPUフォント描画等は無い）がログ出力しておく
+            } else {
+                LogDebug("ImGuiFontLoader: ImGui_ImplDX11_CreateDeviceObjects() succeeded\n");
+            }
+        } else {
+            LogDebug("ImGuiFontLoader: DX11 backend not active yet; font atlas will be created when renderer initializes\n");
+        }
     #endif
 
         std::string ok = std::string("ImGuiFontLoader: loaded and set default font: ") + path + "\n";

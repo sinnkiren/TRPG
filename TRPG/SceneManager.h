@@ -1,4 +1,5 @@
 #pragma once
+
 #include "SceneType.h"
 #include <memory>
 #include <string>
@@ -14,47 +15,50 @@ class IScene;
 
 class SceneManager {
 public:
-	void Initialize();	//初期化処理
-	void Update();		//入力ロジック更新
-	void Render();		//描画処理
-	void Finalize();
-	void SetWindowHandle(HWND hwnd)
-	{
-		m_hWnd = hwnd;
-	} // ウィンドウハンドルを渡す関数
+    void Initialize();
+    void Update();
+    void Render();
+    void Finalize();
 
-	void ChangeScene(SceneType Next);	//シーン切り替え
-	void ApplyPendingChange();
-	SceneType GetCurrentScene() const;	//現在のシーン確認
-	void HandleInput();
+    // シーン遷移管理
+    void ChangeScene(SceneType Next);
+    void ApplyPendingChange();
+    SceneType GetCurrentScene() const;
 
-	// プレイヤーデータの設定/取得
-	void SetPlayer(const CharcterScene::CharcterDate& p) { playerData = p; }
-	CharcterScene::CharcterDate& GetPlayer() { return playerData; }
-	const CharcterScene::CharcterDate& GetPlayer() const { return playerData; }
+    // ウィンドウハンドル設定（Application から呼ぶ想定）
+    void SetWindowHandle(HWND hwnd) { m_hWnd = hwnd; }
+
+    // プレイヤーデータ操作
+    void SetPlayer(const CharcterScene::CharcterDate& p);
+    CharcterScene::CharcterDate& GetPlayer();
+    const CharcterScene::CharcterDate& GetPlayer() const;
 
 private:
-	std::unique_ptr<IScene>currentScene;	//現在のシーンインスタンス	
-	SceneType currentType;					//現在のシーン種類
-	HWND m_hWnd = nullptr; // ウィンドウハンドルを保持
-	bool spacePressedLastFrame = false; // 前フレームの状態を保持
+    // フレーム処理の補助（SceneManager.cpp で実装）
+    void HandleInput();
 
-	//シーンの移動をマップにしてコード纏めた
-	std::unordered_map<SceneType, SceneType> nextSceneMap = {
-	{ SceneType::TITLE, SceneType::TRPG_SELECT },
-	{ SceneType::TRPG_SELECT, SceneType::SCENARIO_SELECT },
-	{ SceneType::SCENARIO_SELECT, SceneType::CHARACTER_SELECT },
-	{ SceneType::CHARACTER_SELECT, SceneType::GAME_PLAY },
-	{ SceneType::GAME_PLAY, SceneType::BATTLE}, 
-	{ SceneType::BATTLE, SceneType::RESULT },
-	{ SceneType::RESULT, SceneType::TITLE},
-	// 他のシーンもここに追加
-	};
+    std::unique_ptr<IScene> currentScene;    // 現在のシーンインスタンス
+    SceneType currentType = SceneType::TITLE; // 現在のシーン種類
+    HWND m_hWnd = nullptr;                    // ウィンドウハンドル
+    bool spacePressedLastFrame = false;       // 前フレームのスペースキー状態
 
-	CharcterScene::CharcterDate playerData;
-	bool pendingChange = false;
-	SceneType pendingSceneType;
-	// プレイヤーデータを保持（シーン間で共有）
+    // シーン遷移マップ
+    std::unordered_map<SceneType, SceneType> nextSceneMap = {
+        { SceneType::TITLE, SceneType::TRPG_SELECT },
+        { SceneType::TRPG_SELECT, SceneType::SCENARIO_SELECT },
+        { SceneType::SCENARIO_SELECT, SceneType::CHARACTER_SELECT },
+        { SceneType::CHARACTER_SELECT, SceneType::GAME_PLAY },
+        { SceneType::GAME_PLAY, SceneType::BATTLE },
+        { SceneType::BATTLE, SceneType::RESULT },
+        { SceneType::RESULT, SceneType::TITLE },
+    };
+
+    // SceneManager が所有するプレイヤーデータ（値で保持）
+    CharcterScene::CharcterDate playerData;
+
+    // ペンディング遷移フラグ
+    bool pendingChange = false;
+    SceneType pendingSceneType = SceneType::TITLE;
 };
-extern SceneManager g_SceneManager; // 実体は別ファイルに
 
+extern SceneManager g_SceneManager;

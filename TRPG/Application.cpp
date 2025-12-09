@@ -298,3 +298,14 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 
     return DefWindowProc(hWnd, msg, wp, lp);
 }
+
+// 既存の static メンバ定義の直後に追加（ファイル先頭付近にまとめると良いです）
+ID3D11Device* Application::GetDevice()
+{
+    return m_Device;
+}
+
+ID3D11DeviceContext* Application::GetDeviceContext()
+{
+    return m_DeviceContext;
+}

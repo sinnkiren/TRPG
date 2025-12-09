@@ -5,15 +5,14 @@
 #include "SceneManager.h"
 #include <algorithm>
 
+// --- 先頭付近の Initialize() を次のように修正 ---
 void BattleScene::Initialize()
 {
-    // SceneManager からプレイヤーデータを受け取る
-    CharcterScene::CharcterDate& player = g_SceneManager.GetPlayer();
-
-    // プレイヤーの初期耐久力を設定
+    // Use the BattleScene::player member (copied from SceneManager on scene change)
+    // Ensure we don't reference g_SceneManager here.
     player.endurance = player.maxEndurance;
 
-    // テスト用の敵を作成（シナリオから読み込む予定）
+    // 敵の初期化
     enemies.clear();
     enemies.push_back({ "Eerie Shadow", 12, 12, 1, 3 });
     enemies.push_back({ "Unnamable Stirring", 12, 12, 2, 2 });
@@ -23,7 +22,7 @@ void BattleScene::Initialize()
     lastRoll = 0;
     timeAccum = 0.0f;
 
-    // ダメージ／耐久力トラッキングの初期化
+    // UI/演出用の初期化
     prevEndurance = player.endurance;
     damageFlashTimer = 0.0f;
     persistentStage = 0;

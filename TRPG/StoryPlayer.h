@@ -1,4 +1,3 @@
-
 #pragma once
 #include <string>
 #include <vector>
@@ -7,6 +6,7 @@
 #include "IScene.h"
 #include "system/json.hpp"
 #include "system/imgui/imgui.h"
+#include <d3d11.h>
 
 using json = nlohmann::json;
 
@@ -41,6 +41,15 @@ public:
 	// イベント完了コールバック
 	std::function<void(const StoryEvent&)>onEventFinished;
 
+	// 背景画像設定（汎用 ImTextureID）
+	void SetBackgroundTexture(ImTextureID tex) { m_bgTex = tex; }
+	ImTextureID GetBackgroundTexture() const { return m_bgTex; }
+
+#ifdef IMGUI_IMPL_DIRECTX11
+	// DirectX11 の SRV を渡すヘルパー（StoryPlayer が既存 SRV を解放して管理します）
+	void SetBackgroundSRV(ID3D11ShaderResourceView* srv);
+#endif
+
 private:
 	std::vector<StoryEvent>m_events;
 	int m_index = 0;
@@ -60,6 +69,21 @@ private:
 	float m_fsFadeDuration = 0.8f;
 	float m_fsFadeElapsed = 0.0f;
 	bool  m_fsFadingOut = false;
+
+	// 背景テクスチャ（ImGui 用）
+	ImTextureID m_bgTex = nullptr;
+
+#ifdef IMGUI_IMPL_DIRECTX11
+	// DirectX11 用に SRV の参照を保持して自動解放
+	ID3D11ShaderResourceView* m_bgSrv = nullptr;
+#endif
+
+	// 遅延ロード用メンバ（追加）
+	std::string m_bgPath;             // 読み込む画像のパス（遅延読み込み用）
+	bool m_bgLoadedAttempted = false; // 一度読み込み試行済みフラグ
+
+	// 内部ヘルパー（遅延読み込み）
+	void LoadBackgroundTextureIfNeeded();
 
 	// フェード開始
 	void StartFadeToBattle(float duration = 0.8f);

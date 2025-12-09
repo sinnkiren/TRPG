@@ -1,15 +1,148 @@
-﻿#include "StoryPlayer.h"
+﻿#include "Application.h"
+#include "system/stb_image.h"
+#include "StoryPlayer.h"
 #include "SceneManager.h"
 #include <fstream>
 #include <iostream>
 #include "system/imgui/imgui.h"
 #include "system/json.hpp" 
 #include "FearEffects.h"
+#include <filesystem>
+#include <d3d11.h>
+#include <direct.h> // _getcwd
 
 using json = nlohmann::json;
 
 StoryPlayer::StoryPlayer() {}
-StoryPlayer::~StoryPlayer() {}
+StoryPlayer::~StoryPlayer() {
+#ifdef IMGUI_IMPL_DIRECTX11
+    if (m_bgSrv) { m_bgSrv->Release(); m_bgSrv = nullptr; }
+#endif
+}
+
+#ifdef IMGUI_IMPL_DIRECTX11
+void StoryPlayer::SetBackgroundSRV(ID3D11ShaderResourceView* srv)
+{
+    if (m_bgSrv == srv) return;
+    if (m_bgSrv) { m_bgSrv->Release(); m_bgSrv = nullptr; }
+    m_bgSrv = srv;
+    m_bgTex = reinterpret_cast<ImTextureID>(srv);
+}
+#endif
+
+// --- 追加: 遅延ロード用ヘルパー ---
+// m_bgPath にパスをセットしておけば、Device が準備できた時点でここでロードします。
+
+void StoryPlayer::LoadBackgroundTextureIfNeeded()
+{
+    if (m_bgLoadedAttempted) return; // 既に試行済み
+    if (m_bgPath.empty()) return;
+
+#ifdef IMGUI_IMPL_DIRECTX11
+    // Device が準備できているかチェック
+    if (!Application::GetDevice()) {
+        // Device 未初期化 => 後で試す
+        return;
+    }
+
+    m_bgLoadedAttempted = true; // 一度だけ試す
+    const std::string path = m_bgPath;
+    // 実行時カレントディレクトリをログ出力
+    char cwdBuf[1024] = { 0 };
+    if (_getcwd(cwdBuf, sizeof(cwdBuf))) {
+        std::string cwd(cwdBuf);
+        std::cerr << "StoryPlayer: CWD = " << cwd << "\n";
+        OutputDebugStringA(("StoryPlayer: CWD = " + cwd + "\n").c_str());
+    }
+
+    // ファイル存在確認（相対/絶対）
+    bool exists = std::filesystem::exists(path);
+    std::cerr << "StoryPlayer: checking path: " << path << " exists=" << (exists ? "yes" : "no") << "\n";
+    OutputDebugStringA(("StoryPlayer: checking path: " + path + (exists ? " exists\n" : " not exists\n")).c_str());
+
+    const char* bgPath = path.c_str();
+    if (!exists) {
+        // デバッグ用にカレントディレクトリを付けた絶対パスを試す
+        std::string alt = std::filesystem::current_path().string() + "/" + path;
+        if (std::filesystem::exists(alt)) {
+            bgPath = alt.c_str();
+            std::cerr << "StoryPlayer: found at alt path: " << alt << "\n";
+            OutputDebugStringA(("StoryPlayer: found at alt path: " + alt + "\n").c_str());
+        }
+        else {
+            std::cerr << "StoryPlayer: file not found: " << path << "\n";
+            OutputDebugStringA("StoryPlayer: background file not found, aborting load\n");
+            return;
+        }
+    }
+
+    int w = 0, h = 0, channels = 0;
+    unsigned char* pixels = stbi_load(bgPath, &w, &h, &channels, 4);
+    if (!pixels || w <= 0 || h <= 0) {
+        std::cerr << "StoryPlayer: stbi_load failed for: " << bgPath << " (w=" << w << " h=" << h << " channels=" << channels << ")\n";
+        OutputDebugStringA("StoryPlayer: stbi_load failed\n");
+        if (pixels) stbi_image_free(pixels);
+        return;
+    }
+
+    std::cerr << "StoryPlayer: stbi_load OK: " << bgPath << " size=" << w << "x" << h << " channels=" << channels << "\n";
+    OutputDebugStringA("StoryPlayer: stbi_load succeeded\n");
+
+    D3D11_TEXTURE2D_DESC desc;
+    ZeroMemory(&desc, sizeof(desc));
+    desc.Width = static_cast<UINT>(w);
+    desc.Height = static_cast<UINT>(h);
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.SampleDesc.Count = 1;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData;
+    ZeroMemory(&initData, sizeof(initData));
+    initData.pSysMem = pixels;
+    initData.SysMemPitch = static_cast<UINT>(w * 4);
+
+    ID3D11Texture2D* tex = nullptr;
+    HRESULT hr = Application::GetDevice()->CreateTexture2D(&desc, &initData, &tex);
+    if (FAILED(hr) || tex == nullptr) {
+        std::cerr << "StoryPlayer: CreateTexture2D failed for: " << bgPath << " hr=0x" << std::hex << hr << std::dec << "\n";
+        OutputDebugStringA("StoryPlayer: CreateTexture2D failed\n");
+        if (tex) tex->Release();
+        stbi_image_free(pixels);
+        return;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    ZeroMemory(&srvDesc, sizeof(srvDesc));
+    srvDesc.Format = desc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+
+    ID3D11ShaderResourceView* srv = nullptr;
+    hr = Application::GetDevice()->CreateShaderResourceView(tex, &srvDesc, &srv);
+    if (FAILED(hr) || srv == nullptr) {
+        std::cerr << "StoryPlayer: CreateShaderResourceView failed for: " << bgPath << " hr=0x" << std::hex << hr << std::dec << "\n";
+        OutputDebugStringA("StoryPlayer: CreateShaderResourceView failed\n");
+        if (srv) srv->Release();
+        tex->Release();
+        stbi_image_free(pixels);
+        return;
+    }
+
+    // 成功
+    SetBackgroundSRV(srv); // StoryPlayer が srv を所有する
+    tex->Release();
+    stbi_image_free(pixels);
+
+    std::cerr << "StoryPlayer: background loaded: " << bgPath << " (" << w << "x" << h << ")\n";
+    OutputDebugStringA("StoryPlayer: background loaded successfully\n");
+#endif
+}
 
 void StoryPlayer::Initialize() {
     LoadFromFile("assets/story/story.json");
@@ -20,7 +153,7 @@ void StoryPlayer::Initialize() {
         if (ev.effect == "battle_start") {
             StartFadeToBattle();
         }
-        };
+    };
 
     // 揺れエフェクト ("shake")
     RegisterEffect("shake", [](const StoryEvent& ev) {
@@ -28,7 +161,7 @@ void StoryPlayer::Initialize() {
         if (!ev.effectParams.is_null() && ev.effectParams.contains("intensity"))
             intensity = ev.effectParams["intensity"].get<float>();
         FearEffects::StartShake(intensity, ev.duration);
-        });
+    });
 
     // オーバーレイエフェクト ("overlay")
     RegisterEffect("overlay", [](const StoryEvent& ev) {
@@ -39,7 +172,7 @@ void StoryPlayer::Initialize() {
             if (ev.effectParams.contains("stage")) stage = ev.effectParams["stage"].get<int>();
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
-        });
+    });
 
     // ノイズ系エフェクト（ストーリーの恐怖演出用）
     RegisterEffect("noise", [](const StoryEvent& ev) {
@@ -53,7 +186,7 @@ void StoryPlayer::Initialize() {
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
         FearEffects::StartShake(shakeIntensity, ev.duration);
-        });
+    });
 
     // 血やショッキングな表現（強い赤オーバーレイ＋短い揺れ）
     RegisterEffect("blood", [](const StoryEvent& ev) {
@@ -66,8 +199,12 @@ void StoryPlayer::Initialize() {
             if (ev.effectParams.contains("shake")) shakeIntensity = ev.effectParams["shake"].get<float>();
         }
         FearEffects::StartOverlay(intensity, ev.duration, stage);
-        FearEffects::StartShake(shakeIntensity, ev.duration * 0.6f); // 血は少し速めに収束させる等の調整
-        });
+        FearEffects::StartShake(shakeIntensity, ev.duration * 0.6f);
+    });
+
+    // 背景パスを登録（遅延ロード）
+    m_bgPath = "assets/texture/dark-tunnel2.jpg"; // 実行ディレクトリに合わせて配置してください
+    m_bgLoadedAttempted = false;
 
     Play();
 }
@@ -94,7 +231,6 @@ bool StoryPlayer::LoadFromFile(const std::string& path) {
         ev.faceImage = it.value("face", "");
         ev.effect = it.value("effect", "");
         ev.duration = it.value("duration", 1.0f);
-        // effectParams があれば読み込む（無ければ null を保持）
         if (it.contains("effectParams")) ev.effectParams = it["effectParams"];
         else ev.effectParams = nullptr;
         m_events.push_back(ev);
@@ -110,13 +246,10 @@ void StoryPlayer::RegisterEffect(const std::string& name, EffectHandler handler)
 }
 
 void StoryPlayer::TriggerEffect(const StoryEvent& ev) {
-    // 登録されていれば呼び出す
     auto it = m_effects.find(ev.effect);
     if (it != m_effects.end()) {
         it->second(ev);
-    }
-    else {
-        // 無ければデフォルトの振る舞い（ログ）
+    } else {
         std::cout << "[Effect] " << ev.effect << " (no handler)\n";
     }
 }
@@ -125,34 +258,21 @@ void StoryPlayer::Play() {
     if (m_events.empty()) return;
     m_playing = true;
     m_timer = 0.0f;
-    // 初回イベントの効果をすぐ発火する
     TriggerEffect(m_events[m_index]);
     ShowCurrentText();
 }
 
-void StoryPlayer::Pause() {
-    m_playing = false;
-}
+void StoryPlayer::Pause() { m_playing = false; }
 
 void StoryPlayer::Next() {
     if (m_events.empty()) return;
-
-    // イベント完了コールバック
     if (onEventFinished) {
         onEventFinished(m_events[m_index]);
-
-        // もしシーンが変わった場合、this は破棄されるので以降の処理をやめる
         if (!m_playing) return;
     }
-
     m_index++;
     m_timer = 0.0f;
-    if (m_index >= (int)m_events.size()) {
-        m_playing = false;
-        return;
-    }
-
-    // 次イベントを発火
+    if (m_index >= (int)m_events.size()) { m_playing = false; return; }
     TriggerEffect(m_events[m_index]);
     ShowCurrentText();
 }
@@ -163,9 +283,8 @@ void StoryPlayer::Reset() {
     m_playing = false;
 }
 
-void StoryPlayer::StartFadeToBattle(float duration)
-{
-    if (m_fsFadingOut) return; // 既にフェード中なら何もしない
+void StoryPlayer::StartFadeToBattle(float duration) {
+    if (m_fsFadingOut) return;
     m_fsFadingOut = true;
     m_fsFadeElapsed = 0.0f;
     m_fsFadeDuration = duration;
@@ -173,8 +292,10 @@ void StoryPlayer::StartFadeToBattle(float duration)
 }
 
 void StoryPlayer::UpdateImpl(float dt) {
+    // --- 遅延ロードをここで試す ---
+    LoadBackgroundTextureIfNeeded();
+
     if (!m_playing || m_events.empty() || m_index >= (int)m_events.size()) {
-        // ただしフェードが動いている場合は継続処理する
         if (m_fsFadingOut) {
             m_fsFadeElapsed += dt;
             float r = (m_fsFadeDuration > 0.0f) ? (m_fsFadeElapsed / m_fsFadeDuration) : 1.0f;
@@ -188,7 +309,6 @@ void StoryPlayer::UpdateImpl(float dt) {
         return;
     }
 
-    // フェード進行があるなら優先して進める
     if (m_fsFadingOut) {
         m_fsFadeElapsed += dt;
         float r = (m_fsFadeDuration > 0.0f) ? (m_fsFadeElapsed / m_fsFadeDuration) : 1.0f;
@@ -223,47 +343,74 @@ void StoryPlayer::UpdateImpl(float dt) {
         if (m_index < (int)m_events.size()) {
             TriggerEffect(m_events[m_index]);
             ShowCurrentText();
-        }
-        else {
-            m_playing = false;
-        }
+        } else m_playing = false;
     }
-
-    // --- ImGui デバッグUI（オプション） ---
-    // ここを呼び出し元のUIコードで描画しても良い
 }
 
 void StoryPlayer::Render() {
     if (m_index >= (int)m_events.size()) return;
     const StoryEvent& ev = m_events[m_index];
 
-    // --- FearEffects の揺れオフセットを取得 ---
-    ImVec2 shake = FearEffects::GetShakeOffset();
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    // --- オーバーレイを描画（前景に描画するので Begin の前後どちらでも可） ---
+    // --- デバッグオーバーレイ: 背景読み込みステータスを画面左上に描画 ---
+    {
+        ImDrawList* fg = ImGui::GetForegroundDrawList();
+        if (fg && vp) {
+            std::string existsStr = "(n/a)";
+            if (!m_bgPath.empty()) {
+                existsStr = (std::filesystem::exists(m_bgPath) ? "yes" : "no");
+                // 代替パスも確認（出力用メッセージ）
+                std::string alt = std::filesystem::current_path().string() + "/" + m_bgPath;
+                if (existsStr == "no" && std::filesystem::exists(alt)) existsStr = "yes(alt)";
+            }
+
+            std::string s;
+            s += "BG path: " + (m_bgPath.empty() ? std::string("(empty)") : m_bgPath) + "\n";
+            s += "exists: " + existsStr + "\n";
+            s += "loadAttempted: " + std::string(m_bgLoadedAttempted ? "yes" : "no") + "\n";
+            s += "bgTex set: " + std::string(m_bgTex ? "yes" : "no") + "\n";
+
+            ImU32 col = ImGui::GetColorU32(ImVec4(1.0f, 0.9f, 0.2f, 1.0f));
+            ImFont* font = ImGui::GetFont();
+            float fontSize = ImGui::GetFontSize();
+            fg->AddText(font, fontSize, ImVec2(vp->Pos.x + 8.0f, vp->Pos.y + 8.0f), col, s.c_str());
+        }
+    }
+
+    // --- 背景描画（あれば） ---
+    if (m_bgTex && vp) {
+        ImDrawList* bg = ImGui::GetBackgroundDrawList();
+        bg->AddImage(m_bgTex, vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y));
+    } else {
+        // デバッグ用: 背景が無い場合は薄いグレーで塗ることで確認可能
+        if (vp) {
+            ImDrawList* bg = ImGui::GetBackgroundDrawList();
+            ImU32 col = ImGui::GetColorU32(ImVec4(0.08f, 0.08f, 0.08f, 1.0f));
+            bg->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
+        }
+    }
+
+    ImVec2 shake = FearEffects::GetShakeOffset();
     FearEffects::RenderOverlay();
 
-    // 元の位置（左下寄せ）に戻す: basePos(10,600) に揺れを加える
     ImVec2 basePos(10.0f, 600.0f);
     ImVec2 posWithShake(basePos.x + shake.x, basePos.y + shake.y);
 
     ImGui::SetNextWindowPos(posWithShake, ImGuiCond_Always);
     ImGui::SetNextWindowSize(m_dialogSize, ImGuiCond_Always);
 
-    // 文字スケール適用 (簡易手法)
     ImFont* font = ImGui::GetFont();
     float prevScale = 1.0f;
     if (font) { prevScale = font->Scale; font->Scale = m_textScale; }
 
     ImGui::Begin("Dialog", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
 
-    // スピーカー名（左寄せ）
     if (!ev.speaking.empty()) {
         ImGui::TextColored(ImVec4(1, 0.8f, 0.6f, 1), "%s", ev.speaking.c_str());
         ImGui::Spacing();
     }
 
-    // テキストは ImGui のラップで描画（左揃え、元の位置）
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + m_dialogSize.x - 16.0f);
     ImGui::TextWrapped("%s", ev.text.c_str());
     ImGui::PopTextWrapPos();
@@ -277,11 +424,8 @@ void StoryPlayer::Render() {
     if (ImGui::Button("Next")) Next();
     ImGui::End();
 
-    // スケールを元に戻す
     if (font) font->Scale = prevScale;
 
-    // フェード中は画面全体を覆う黒矩形を描画（UI の上）
-    const ImGuiViewport* vp = ImGui::GetMainViewport();
     if ((m_fsFadingOut || m_fsFadeAlpha > 0.0f) && vp) {
         ImDrawList* fg = ImGui::GetForegroundDrawList();
         if (fg) {
@@ -292,6 +436,5 @@ void StoryPlayer::Render() {
 }
 
 void StoryPlayer::ShowCurrentText() {
-    // テキストや顔切替の仕込みをここに（キャッシュや描画準備）
     // 例: LoadFaceTexture(m_events[m_index].faceImage);
 }

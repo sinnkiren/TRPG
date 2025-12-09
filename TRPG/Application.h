@@ -28,6 +28,10 @@ public:
     static HWND GetWindow();       ///< ウィンドウハンドル
     static HINSTANCE GetHInstance(); ///< インスタンスハンドル
 
+    // DirectX デバイス取得用アクセサ（外部から直接 m_Device へ触らない）
+    static ID3D11Device* GetDevice();
+    static ID3D11DeviceContext* GetDeviceContext();
+
 private:
     // ========== メンバ変数 ==========
     static HINSTANCE   m_hInst;    ///< インスタンスハンドル

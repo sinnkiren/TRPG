@@ -66,6 +66,7 @@
     <ClCompile Include="system\renderer.cpp" />
     <ClCompile Include="system\SphereDrawer.cpp" />
     <ClCompile Include="system\stb.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="TitleScene.cpp" />
     <ClCompile Include="TRPGSelectScene.cpp" />
   </ItemGroup>
@@ -137,6 +138,7 @@
     <ClInclude Include="system\SphereDrawer.h" />
     <ClInclude Include="system\stb_image.h" />
     <ClInclude Include="system\transform.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="TitleScene.h" />
     <ClInclude Include="TRPGSelectScene.h" />
   </ItemGroup>
@@ -235,7 +237,7 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <ShowIncludes>true</ShowIncludes>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

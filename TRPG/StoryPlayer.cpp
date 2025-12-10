@@ -2,6 +2,7 @@
 #include "system/stb_image.h"
 #include "StoryPlayer.h"
 #include "SceneManager.h"
+#include "TextureManager.h"
 #include <fstream>
 #include <iostream>
 #include "system/imgui/imgui.h"
@@ -41,106 +42,24 @@ void StoryPlayer::LoadBackgroundTextureIfNeeded()
 #ifdef IMGUI_IMPL_DIRECTX11
     // Device が準備できているかチェック
     if (!Application::GetDevice()) {
-        // Device 未初期化 => 後で試す
-        return;
+        return; // Device 未初期化 => 後で試す
     }
 
     m_bgLoadedAttempted = true; // 一度だけ試す
-    const std::string path = m_bgPath;
-    // 実行時カレントディレクトリをログ出力
-    char cwdBuf[1024] = { 0 };
-    if (_getcwd(cwdBuf, sizeof(cwdBuf))) {
-        std::string cwd(cwdBuf);
-        std::cerr << "StoryPlayer: CWD = " << cwd << "\n";
-        OutputDebugStringA(("StoryPlayer: CWD = " + cwd + "\n").c_str());
-    }
 
-    // ファイル存在確認（相対/絶対）
-    bool exists = std::filesystem::exists(path);
-    std::cerr << "StoryPlayer: checking path: " << path << " exists=" << (exists ? "yes" : "no") << "\n";
-    OutputDebugStringA(("StoryPlayer: checking path: " + path + (exists ? " exists\n" : " not exists\n")).c_str());
-
-    const char* bgPath = path.c_str();
-    if (!exists) {
-        // デバッグ用にカレントディレクトリを付けた絶対パスを試す
-        std::string alt = std::filesystem::current_path().string() + "/" + path;
-        if (std::filesystem::exists(alt)) {
-            bgPath = alt.c_str();
-            std::cerr << "StoryPlayer: found at alt path: " << alt << "\n";
-            OutputDebugStringA(("StoryPlayer: found at alt path: " + alt + "\n").c_str());
-        }
-        else {
-            std::cerr << "StoryPlayer: file not found: " << path << "\n";
-            OutputDebugStringA("StoryPlayer: background file not found, aborting load\n");
-            return;
-        }
-    }
-
-    int w = 0, h = 0, channels = 0;
-    unsigned char* pixels = stbi_load(bgPath, &w, &h, &channels, 4);
-    if (!pixels || w <= 0 || h <= 0) {
-        std::cerr << "StoryPlayer: stbi_load failed for: " << bgPath << " (w=" << w << " h=" << h << " channels=" << channels << ")\n";
-        OutputDebugStringA("StoryPlayer: stbi_load failed\n");
-        if (pixels) stbi_image_free(pixels);
+    // TextureManager に任せてロードする（assetRoot を基準とした相対パス）
+    ID3D11ShaderResourceView* srv = TextureManager::LoadTexture(m_bgPath);
+    if (!srv) {
+        std::string msg = "StoryPlayer: TextureManager failed to load: " + m_bgPath + "\n";
+        OutputDebugStringA(msg.c_str());
         return;
     }
 
-    std::cerr << "StoryPlayer: stbi_load OK: " << bgPath << " size=" << w << "x" << h << " channels=" << channels << "\n";
-    OutputDebugStringA("StoryPlayer: stbi_load succeeded\n");
+    // StoryPlayer 側でも保持するので参照カウントを増やす（安全のため）
+    srv->AddRef();
+    SetBackgroundSRV(srv); // m_bgSrv にセット（StoryPlayer が解放を行う）
 
-    D3D11_TEXTURE2D_DESC desc;
-    ZeroMemory(&desc, sizeof(desc));
-    desc.Width = static_cast<UINT>(w);
-    desc.Height = static_cast<UINT>(h);
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-    desc.CPUAccessFlags = 0;
-    desc.MiscFlags = 0;
-
-    D3D11_SUBRESOURCE_DATA initData;
-    ZeroMemory(&initData, sizeof(initData));
-    initData.pSysMem = pixels;
-    initData.SysMemPitch = static_cast<UINT>(w * 4);
-
-    ID3D11Texture2D* tex = nullptr;
-    HRESULT hr = Application::GetDevice()->CreateTexture2D(&desc, &initData, &tex);
-    if (FAILED(hr) || tex == nullptr) {
-        std::cerr << "StoryPlayer: CreateTexture2D failed for: " << bgPath << " hr=0x" << std::hex << hr << std::dec << "\n";
-        OutputDebugStringA("StoryPlayer: CreateTexture2D failed\n");
-        if (tex) tex->Release();
-        stbi_image_free(pixels);
-        return;
-    }
-
-    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-    ZeroMemory(&srvDesc, sizeof(srvDesc));
-    srvDesc.Format = desc.Format;
-    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels = 1;
-    srvDesc.Texture2D.MostDetailedMip = 0;
-
-    ID3D11ShaderResourceView* srv = nullptr;
-    hr = Application::GetDevice()->CreateShaderResourceView(tex, &srvDesc, &srv);
-    if (FAILED(hr) || srv == nullptr) {
-        std::cerr << "StoryPlayer: CreateShaderResourceView failed for: " << bgPath << " hr=0x" << std::hex << hr << std::dec << "\n";
-        OutputDebugStringA("StoryPlayer: CreateShaderResourceView failed\n");
-        if (srv) srv->Release();
-        tex->Release();
-        stbi_image_free(pixels);
-        return;
-    }
-
-    // 成功
-    SetBackgroundSRV(srv); // StoryPlayer が srv を所有する
-    tex->Release();
-    stbi_image_free(pixels);
-
-    std::cerr << "StoryPlayer: background loaded: " << bgPath << " (" << w << "x" << h << ")\n";
-    OutputDebugStringA("StoryPlayer: background loaded successfully\n");
+    OutputDebugStringA(("StoryPlayer: background loaded via TextureManager: " + m_bgPath + "\n").c_str());
 #endif
 }
 
@@ -202,8 +121,8 @@ void StoryPlayer::Initialize() {
         FearEffects::StartShake(shakeIntensity, ev.duration * 0.6f);
     });
 
-    // 背景パスを登録（遅延ロード）
-    m_bgPath = "assets/texture/dark-tunnel2.jpg"; // 実行ディレクトリに合わせて配置してください
+    // 背景パスを登録（遅延ロード） - TextureManager の assetRoot を "assets/texture/" にしているため相対パスで指定
+    m_bgPath = "dark-tunnel2.jpg";
     m_bgLoadedAttempted = false;
 
     Play();

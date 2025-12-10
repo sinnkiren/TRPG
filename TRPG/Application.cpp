@@ -5,6 +5,7 @@
 #include "system/imgui/imgui.h"
 #include "system/imgui/imgui_impl_win32.h"
 #include "SceneManager.h"
+#include "TextureManager.h"
 #include "ImGuiFontLoader.h" // 追加
 
 // 静的メンバ変数の定義
@@ -148,9 +149,11 @@ bool Application::InitApp()
     ImGui_ImplWin32_Init(m_hWnd);
     ImGui_ImplDX11_Init(m_Device, m_DeviceContext);
 
-    // ここで日本語フォントを読み込む（resources/fonts にフォントを置いている前提）
-    // ファイル名は実際に配置したフォントファイル名に合わせてください。
-    ImGuiFontLoader::InitializeImGuiFonts("resources/fonts/NotoSansJP-Regular.ttf");
+    // TextureManager を初期化（assets/texture/ を基準フォルダとする）
+    TextureManager::Initialize(m_Device, "assets/texture/");
+
+    // フォントロード...
+    bool fontOk = ImGuiFontLoader::InitializeImGuiFonts("resources/fonts/NotoSansJP-Regular.ttf");
 
     return true;
 }
@@ -161,6 +164,9 @@ bool Application::InitApp()
  */
 void Application::TermApp()
 {
+    // TextureManager のキャッシュを解放
+    TextureManager::Shutdown();
+
     // DirectXリソース解放
     if (m_SwapChain) { m_SwapChain->Release(); m_SwapChain = nullptr; }
     if (m_DeviceContext) { m_DeviceContext->Release(); m_DeviceContext = nullptr; }

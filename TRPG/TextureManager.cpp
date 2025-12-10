@@ -123,6 +123,12 @@ namespace TextureManager
         return reinterpret_cast<ImTextureID>(srv);
     }
 
+    // 互換用ラッパ: 古い/別名の API 呼び出しをサポートするkyara
+    ImTextureID GetImGuiTextureID(const std::string& relativePath)
+    {
+        return GetImGuiTexture(relativePath);
+    }
+
     void ReleaseTexture(const std::string& relativePath)
     {
         auto it = g_cache.find(relativePath);

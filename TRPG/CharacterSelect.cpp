@@ -2,8 +2,13 @@
 #include "Dice.h"
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
+#include "TextureManager.h"
 #include <regex>
 #include <cstring> // strncpy 用
+#include <vector>
+
+// 各能力ごとの直近ロール（個々のダイスの出目）を保持する（ファイルスコープ）
+static std::vector<std::vector<int>> abilityFaces;
 
 // 簡易初期化：サンプルキャラクターを用意する
 void CharcterScene::Initialize()
@@ -49,6 +54,10 @@ void CharcterScene::Initialize()
     abilities.push_back({"SIZ","2D6+6", charcter.siz, false});
     abilities.push_back({"INT","2D6+6", charcter.int_, false});
     abilities.push_back({"EDU","3D6+3", charcter.edu, false});
+
+    // abilityFaces を能力数に合わせて初期化
+    abilityFaces.clear();
+    abilityFaces.resize(abilities.size());
 }
 
 static int EvalDiceExpr(const std::string& expr)
@@ -65,6 +74,27 @@ static int EvalDiceExpr(const std::string& expr)
     for (int i=0;i<n;++i) total += Dice::RollDie(sides);
     total += add;
     return total;
+}
+
+// 出目の詳細を返すヘルパ: 個々のダイスの出目を配列で返し、合計を outTotal に設定する
+static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal)
+{
+    std::vector<int> faces;
+    outTotal = 0;
+    std::regex re(R"((\d+)D(\d+)(?:\s*\+\s*(\d+))?)", std::regex::icase);
+    std::smatch m;
+    if (!std::regex_match(expr, m, re)) return faces;
+    int n = std::stoi(m[1].str());
+    int sides = std::stoi(m[2].str());
+    int add = 0;
+    if (m.size() >= 4 && m[3].matched) add = std::stoi(m[3].str());
+    for (int i = 0; i < n; ++i) {
+        int r = Dice::RollDie(sides);
+        faces.push_back(r);
+        outTotal += r;
+    }
+    outTotal += add;
+    return faces;
 }
 
 void CharcterScene::Update()
@@ -135,6 +165,8 @@ void CharcterScene::Render()
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
         for (auto &a : abilities) { a.locked=false; a.value=0; }
+        // Reset faces too
+        for (auto &f : abilityFaces) f.clear();
     }
 
     ImGui::Separator();
@@ -142,15 +174,54 @@ void CharcterScene::Render()
         auto &a = abilities[i];
         ImGui::PushID(i);
         ImGui::Text("%s", a.name.c_str()); ImGui::SameLine(120);
+
+        // ロールボタン: 個々の出目を取得して abilityFaces に保存
         if (ImGui::Button(a.expr.c_str())) {
-            int val = EvalDiceExpr(a.expr);
-            a.value = val;
-            lastDiceRoll = val;
+            int total = 0;
+            auto faces = RollDiceDetailed(a.expr, total);
+            a.value = total;
+            lastDiceRoll = total;
+            if (i >= 0 && i < (int)abilityFaces.size()) abilityFaces[i] = faces;
         }
         ImGui::SameLine();
+
         if (ImGui::Checkbox("Lock", &a.locked)) { }
         ImGui::SameLine();
-        ImGui::Text("%d", a.value);
+
+        // ダイス出目画像の表示（アトラス: 3 列 x 2 行 想定）
+        if (i >= 0 && i < (int)abilityFaces.size() && !abilityFaces[i].empty()) {
+            ImTextureID sheet = TextureManager::GetImGuiTextureID("texture/dice.jpg"); // ← 正しい相対パスに変更
+if (!sheet) {
+    OutputDebugStringA("CharacterSelect: TextureManager returned NULL for texture/dice.jpg\n");
+    // フォールバック：数値表示
+    for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+        ImGui::Text("%d ", abilityFaces[i][fi]);
+        ImGui::SameLine();
+    }
+    ImGui::NewLine();
+    ImGui::SameLine(120);
+    ImGui::Text("%d", a.value);
+} else {
+    const float cols = 3.0f;
+    const float rows = 2.0f;
+    for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+        int face = abilityFaces[i][fi];
+        if (face < 1 || face > 6) continue;
+        int idx = face - 1;
+        int col = idx % 3;
+        int row = idx / 3;
+        ImVec2 uv0(col / cols, row / rows);
+        ImVec2 uv1((col + 1) / cols, (row + 1) / rows);
+        ImGui::Image(sheet, ImVec2(28,28), uv0, uv1);
+        ImGui::SameLine();
+    }
+    ImGui::NewLine();
+    ImGui::SameLine(120); // 必要なら調整
+    ImGui::Text("%d", a.value);
+        } else {
+            ImGui::Text("%d", a.value);
+        }
+
         ImGui::PopID();
     }
     ImGui::EndChild();

@@ -149,7 +149,7 @@ bool Application::InitApp()
     ImGui_ImplWin32_Init(m_hWnd);
     ImGui_ImplDX11_Init(m_Device, m_DeviceContext);
 
-    // TextureManager を初期化（assets/texture/ を基準フォルダとする）
+    // TextureManager 初期化（assetRoot はプロジェクト内の実際のフォルダに合わせる）
     TextureManager::Initialize(m_Device, "assets/texture/");
 
     // フォントロード...

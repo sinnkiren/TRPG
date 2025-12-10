@@ -122,7 +122,7 @@ void StoryPlayer::Initialize() {
     });
 
     // 背景パスを登録（遅延ロード） - TextureManager の assetRoot を "assets/texture/" にしているため相対パスで指定
-    m_bgPath = "dark-tunnel2.jpg";
+    m_bgPath = "texture/dark-tunnel2.jpg";
     m_bgLoadedAttempted = false;
 
     Play();

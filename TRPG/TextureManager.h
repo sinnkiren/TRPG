@@ -5,14 +5,20 @@
 #include "system/imgui/imgui.h"
 
 namespace TextureManager {
-	//
-	void Initialize(ID3D11Device* device, const std::string& assetPRoot = "assets/texture");
-	//
-	void Shutdown();
 
-	ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath);
-	//
-	ImTextureID GetImGuiTextureID(const std::string& relativePath);
-	//
-	void Releasetexture(const std::string& relativePath);
+    // Initialize
+    void Initialize(ID3D11Device* device, const std::string& assetRoot = "assets/");
+
+    // Shutdown
+    void Shutdown();
+
+    // Load texture
+    ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath);
+
+    // ImGui —p
+    ImTextureID GetImGuiTexture(const std::string& relativePath);
+    ImTextureID GetImGuiTextureID(const std::string& relativePath);
+
+    // Release
+    void ReleaseTexture(const std::string& relativePath);
 }

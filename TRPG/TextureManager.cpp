@@ -1,46 +1,55 @@
+#pragma once
 #include "TextureManager.h"
 #include "Application.h"
 #include "system/stb_image.h"
 #include <filesystem>
 #include <sstream>
+#include <unordered_map>
 
 namespace TextureManager
 {
+    // Direct3D11 デバイスとアセットルート
     static ID3D11Device* g_device = nullptr;
     static std::string g_assetRoot = "assets/";
     static std::unordered_map<std::string, ID3D11ShaderResourceView*> g_cache;
 
+    // 初期化
     void Initialize(ID3D11Device* device, const std::string& assetRoot)
     {
         g_device = device;
         g_assetRoot = assetRoot;
-        if (!g_assetRoot.empty() && g_assetRoot.back() != '/' && g_assetRoot.back() != '\\') g_assetRoot += "/";
+        if (!g_assetRoot.empty() && g_assetRoot.back() != '/' && g_assetRoot.back() != '\\')
+            g_assetRoot += "/";
     }
 
+    // 終了処理
     void Shutdown()
     {
-        for (auto &p : g_cache) {
+        for (auto& p : g_cache) {
             if (p.second) p.second->Release();
         }
         g_cache.clear();
         g_device = nullptr;
     }
 
+    // ファイルパス解決
     static std::filesystem::path ResolvePath(const std::string& rel)
     {
         std::filesystem::path p1 = std::filesystem::path(g_assetRoot) / rel;
         if (std::filesystem::exists(p1)) return p1;
-        // fallback: current_path + rel
+
         std::filesystem::path p2 = std::filesystem::current_path() / rel;
         if (std::filesystem::exists(p2)) return p2;
-        // exe dir + rel
-        // Application::GetHInstance not needed here; approximate with current_path
-        return p1; // 最終的に p1 を返す（呼び出し側で存在確認）
+
+        return p1; // 最終的に g_assetRoot 配下を返す
     }
 
+    // テクスチャ読み込み
     ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath)
     {
         if (!g_device) return nullptr;
+
+        // キャッシュ確認
         auto it = g_cache.find(relativePath);
         if (it != g_cache.end()) return it->second;
 
@@ -52,9 +61,10 @@ namespace TextureManager
             return nullptr;
         }
 
-        int w=0,h=0,channels=0;
+        // stbi でロード
+        int w = 0, h = 0, channels = 0;
         unsigned char* pixels = stbi_load(p.string().c_str(), &w, &h, &channels, 4);
-        if (!pixels || w<=0 || h<=0) {
+        if (!pixels || w <= 0 || h <= 0) {
             std::ostringstream o; o << "TextureManager: stbi_load failed: " << p.string() << "\n";
             OutputDebugStringA(o.str().c_str());
             if (pixels) stbi_image_free(pixels);
@@ -62,8 +72,8 @@ namespace TextureManager
             return nullptr;
         }
 
-        D3D11_TEXTURE2D_DESC desc;
-        ZeroMemory(&desc, sizeof(desc));
+        // Texture2D 作成
+        D3D11_TEXTURE2D_DESC desc{};
         desc.Width = static_cast<UINT>(w);
         desc.Height = static_cast<UINT>(h);
         desc.MipLevels = 1;
@@ -72,17 +82,15 @@ namespace TextureManager
         desc.SampleDesc.Count = 1;
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        desc.CPUAccessFlags = 0;
-        desc.MiscFlags = 0;
 
-        D3D11_SUBRESOURCE_DATA initData;
-        ZeroMemory(&initData, sizeof(initData));
+        D3D11_SUBRESOURCE_DATA initData{};
         initData.pSysMem = pixels;
         initData.SysMemPitch = static_cast<UINT>(w * 4);
 
         ID3D11Texture2D* tex = nullptr;
         HRESULT hr = g_device->CreateTexture2D(&desc, &initData, &tex);
         stbi_image_free(pixels);
+
         if (FAILED(hr) || !tex) {
             char buf[256];
             sprintf_s(buf, "TextureManager: CreateTexture2D failed 0x%08X for %s\n", (unsigned int)hr, p.string().c_str());
@@ -92,16 +100,16 @@ namespace TextureManager
             return nullptr;
         }
 
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-        ZeroMemory(&srvDesc, sizeof(srvDesc));
+        // ShaderResourceView 作成
+        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.Format = desc.Format;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = 1;
-        srvDesc.Texture2D.MostDetailedMip = 0;
 
         ID3D11ShaderResourceView* srv = nullptr;
         hr = g_device->CreateShaderResourceView(tex, &srvDesc, &srv);
         tex->Release();
+
         if (FAILED(hr) || !srv) {
             char buf[256];
             sprintf_s(buf, "TextureManager: CreateSRV failed 0x%08X for %s\n", (unsigned int)hr, p.string().c_str());
@@ -112,28 +120,31 @@ namespace TextureManager
         }
 
         g_cache[relativePath] = srv;
+
         std::ostringstream ok; ok << "TextureManager: loaded " << p.string() << "\n";
         OutputDebugStringA(ok.str().c_str());
+
         return srv;
     }
 
+    // ImGui 用ラッパー
     ImTextureID GetImGuiTexture(const std::string& relativePath)
     {
         ID3D11ShaderResourceView* srv = LoadTexture(relativePath);
         return reinterpret_cast<ImTextureID>(srv);
     }
 
-    // 互換用ラッパ: 古い/別名の API 呼び出しをサポートするkyara
-    ImTextureID GetImGuiTextureID(const std::string& relativePath)
+    ImTextureID GetImGuiTextureID(const std::string& relativePath) // 互換用
     {
         return GetImGuiTexture(relativePath);
     }
 
+    // 個別解放
     void ReleaseTexture(const std::string& relativePath)
     {
         auto it = g_cache.find(relativePath);
         if (it != g_cache.end()) {
-            if (it->second) { it->second->Release(); }
+            if (it->second) it->second->Release();
             g_cache.erase(it);
         }
     }

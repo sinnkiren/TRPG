@@ -6,6 +6,7 @@
 #include <regex>
 #include <cstring> // strncpy 用
 #include <vector>
+#include <sstream>
 
 // 各能力ごとの直近ロール（個々のダイスの出目）を保持する（ファイルスコープ）
 static std::vector<std::vector<int>> abilityFaces;
@@ -46,14 +47,21 @@ void CharcterScene::Initialize()
 
     // 能力値行の初期化
     abilities.clear();
-    abilities.push_back({"STR","3D6", charcter.str, false});
-    abilities.push_back({"CON","3D6", charcter.con, false});
-    abilities.push_back({"POW","3D6", charcter.pow, false});
-    abilities.push_back({"DEX","3D6", charcter.dex, false});
-    abilities.push_back({"APP","3D6", charcter.app, false});
-    abilities.push_back({"SIZ","2D6+6", charcter.siz, false});
-    abilities.push_back({"INT","2D6+6", charcter.int_, false});
-    abilities.push_back({"EDU","3D6+3", charcter.edu, false});
+    // 表形式で初期データを定義してから一括で abilities に格納する
+    struct AbilityInit { const char* name; const char* expr; int value; bool locked; };
+    AbilityInit initList[] = {
+        {"STR", "3D6",  charcter.str,  false},
+        {"CON", "3D6",  charcter.con,  false},
+        {"POW", "3D6",  charcter.pow,  false},
+        {"DEX", "3D6",  charcter.dex,  false},
+        {"APP", "3D6",  charcter.app,  false},
+        {"SIZ", "2D6+6",charcter.siz,  false},
+        {"INT", "2D6+6",charcter.int_, false},
+        {"EDU", "3D6+3",charcter.edu,  false}
+    };
+    for (const auto &it : initList) {
+        abilities.push_back({ std::string(it.name), std::string(it.expr), it.value, it.locked });
+    }
 
     // abilityFaces を能力数に合わせて初期化
     abilityFaces.clear();
@@ -153,74 +161,117 @@ void CharcterScene::Render()
     ImGui::Columns(2, nullptr, true);
 
     // 左: 能力テーブル
-    ImGui::BeginChild("Abilities", ImVec2(0,0), false);
+    ImGui::BeginChild("Abilities", ImVec2(0, 0), false);
     ImGui::Text("能力");
     ImGui::Separator();
 
     if (ImGui::Button("Roll All")) {
-        for (auto &a : abilities) {
-            if (!a.locked) a.value = EvalDiceExpr(a.expr);
+        // abilityFaces が不足していたら揃える
+        if (abilityFaces.size() < abilities.size()) abilityFaces.resize(abilities.size());
+
+        int lastTotal = 0;
+        for (size_t i = 0; i < abilities.size(); ++i) {
+            auto& a = abilities[i];
+            if (!a.locked) {
+                int total = 0;
+                // 個々の出目を取得して faces を保存（画像表示と数値表示のため）
+                auto faces = RollDiceDetailed(a.expr, total);
+                a.value = total;
+                if (i < abilityFaces.size()) abilityFaces[i] = faces;
+                lastTotal = total;
+            }
         }
+        if (lastTotal != 0) lastDiceRoll = lastTotal;
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
-        for (auto &a : abilities) { a.locked=false; a.value=0; }
+        for (auto& a : abilities) { a.locked = false; a.value = 0; }
         // Reset faces too
-        for (auto &f : abilityFaces) f.clear();
+        for (auto& f : abilityFaces) f.clear();
     }
 
     ImGui::Separator();
-    for (int i=0;i<(int)abilities.size();++i) {
-        auto &a = abilities[i];
-        ImGui::PushID(i);
-        ImGui::Text("%s", a.name.c_str()); ImGui::SameLine(120);
 
-        // ロールボタン: 個々の出目を取得して abilityFaces に保存
-        if (ImGui::Button(a.expr.c_str())) {
+    // レイアウト改良: ボタン幅を固定し絶対位置で配置して重なりを防ぐ
+    for (int i = 0; i < (int)abilities.size(); ++i) {
+        auto& a = abilities[i];
+        ImGui::PushID(i);
+
+        // 名前列
+        ImGui::Text("%s", a.name.c_str());
+        ImGui::SameLine(90); // 名前欄の幅（必要に応じて調整）
+
+        // ダイス式ボタン（固定幅）
+        if (ImGui::Button(a.expr.c_str(), ImVec2(64, 0))) {
             int total = 0;
             auto faces = RollDiceDetailed(a.expr, total);
             a.value = total;
             lastDiceRoll = total;
             if (i >= 0 && i < (int)abilityFaces.size()) abilityFaces[i] = faces;
         }
-        ImGui::SameLine();
 
-        if (ImGui::Checkbox("Lock", &a.locked)) { }
-        ImGui::SameLine();
+        // ロックチェックボックス（位置固定）
+        ImGui::SameLine(170);
+        ImGui::Checkbox("Lock", &a.locked);
 
-        // ダイス出目画像の表示（アトラス: 3 列 x 2 行 想定）
+        // 出目表示領域
+        ImGui::SameLine(240);
         if (i >= 0 && i < (int)abilityFaces.size() && !abilityFaces[i].empty()) {
-            ImTextureID sheet = TextureManager::GetImGuiTextureID("texture/dice.jpg"); // ← 正しい相対パスに変更
-if (!sheet) {
-    OutputDebugStringA("CharacterSelect: TextureManager returned NULL for texture/dice.jpg\n");
-    // フォールバック：数値表示
-    for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
-        ImGui::Text("%d ", abilityFaces[i][fi]);
-        ImGui::SameLine();
-    }
-    ImGui::NewLine();
-    ImGui::SameLine(120);
-    ImGui::Text("%d", a.value);
-} else {
-    const float cols = 3.0f;
-    const float rows = 2.0f;
-    for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
-        int face = abilityFaces[i][fi];
-        if (face < 1 || face > 6) continue;
-        int idx = face - 1;
-        int col = idx % 3;
-        int row = idx / 3;
-        ImVec2 uv0(col / cols, row / rows);
-        ImVec2 uv1((col + 1) / cols, (row + 1) / rows);
-        ImGui::Image(sheet, ImVec2(28,28), uv0, uv1);
-        ImGui::SameLine();
-    }
-    ImGui::NewLine();
-    ImGui::SameLine(120); // 必要なら調整
-    ImGui::Text("%d", a.value);
-        } else {
-            ImGui::Text("%d", a.value);
+            // 出目文字列を作成（例: "1+4+3+6"、加算分があれば末尾に +6 など）
+            int sumFaces = 0;
+            std::string facesStr;
+            {
+                std::ostringstream oss;
+                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+                    if (fi) oss << "+";
+                    oss << abilityFaces[i][fi];
+                    sumFaces += abilityFaces[i][fi];
+                }
+                int add = a.value - sumFaces;
+                if (add > 0) oss << "+" << add;
+                facesStr = oss.str();
+            }
+
+            ImTextureID sheet = TextureManager::GetImGuiTextureID("texture/dice.jpg");
+            if (!sheet) {
+                OutputDebugStringA("CharacterSelect: TextureManager returned NULL for texture/dice.jpg\n");
+                // フォールバック：数値を並べて表示
+                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+                    ImGui::Text("%d", abilityFaces[i][fi]);
+                    ImGui::SameLine();
+                }
+                ImGui::NewLine();
+                ImGui::SameLine(240);
+                ImGui::Text("%s", facesStr.c_str());
+            }
+            else {
+                const float cols = 3.0f;
+                const float rows = 2.0f;
+                // 画像を横並びに表示
+                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+                    int face = abilityFaces[i][fi];
+                    if (face < 1 || face > 6) continue;
+                    int idx = face - 1;
+                    int col = idx % 3;
+                    int row = idx / 3;
+                    ImVec2 uv0(col / cols, row / rows);
+                    ImVec2 uv1((col + 1) / cols, (row + 1) / rows);
+                    ImGui::Image(sheet, ImVec2(20, 20), uv0, uv1);
+                    ImGui::SameLine();
+                }
+                ImGui::SameLine();
+                ImGui::Text("%s", facesStr.c_str());
+            }
         }
+        else {
+            // 未ロール時は出目欄を空けておく（位置合わせ）
+            ImGui::SameLine(240);
+            ImGui::Text("-");
+        }
+
+        // 合計値は常に右端に表示（位置固定）
+        ImGui::SameLine(420);
+        ImGui::Text("%d", a.value);
 
         ImGui::PopID();
     }
@@ -328,4 +379,81 @@ if (!sheet) {
     }
 
     ImGui::End();
+    for (int i=0;i<(int)abilities.size();++i) {
+        auto &a = abilities[i];
+        ImGui::PushID(i);
+        ImGui::Text("%s", a.name.c_str()); ImGui::SameLine(120);
+
+        // ロールボタン: 個々の出目を取得して abilityFaces に保存
+        if (ImGui::Button(a.expr.c_str())) {
+            int total = 0;
+            auto faces = RollDiceDetailed(a.expr, total);
+            a.value = total;
+            lastDiceRoll = total;
+            if (i >= 0 && i < (int)abilityFaces.size()) abilityFaces[i] = faces;
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Checkbox("Lock", &a.locked)) { }
+        ImGui::SameLine();
+
+        // ダイス出目画像の表示（アトラス: 3 列 x 2 行 想定）
+        if (i >= 0 && i < (int)abilityFaces.size() && !abilityFaces[i].empty()) {
+            // 出目文字列を作成（例: "1+4+3+6"、加算分があれば末尾に +6 など）
+            int sumFaces = 0;
+            std::string facesStr;
+            {
+                std::ostringstream oss;
+                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+                    if (fi) oss << "+";
+                    oss << abilityFaces[i][fi];
+                    sumFaces += abilityFaces[i][fi];
+                }
+                int add = a.value - sumFaces;
+                if (add > 0) oss << "+" << add;
+                facesStr = oss.str();
+            }
+
+            ImTextureID sheet = TextureManager::GetImGuiTextureID("texture/dice.jpg"); // ← 正しい相対パスに変更
+            if (!sheet) {
+                OutputDebugStringA("CharacterSelect: TextureManager returned NULL for texture/dice.jpg\n");
+                // フォールバック：数値を並べて表示
+                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+                    ImGui::Text("%d", abilityFaces[i][fi]);
+                    ImGui::SameLine();
+                }
+                ImGui::NewLine();
+                // facesStr も表示（詳細）
+                ImGui::SameLine();
+                ImGui::Text("%s", facesStr.c_str());
+                ImGui::SameLine(120);
+                ImGui::Text("%d", a.value);
+            }
+            else {
+                const float cols = 3.0f;
+                const float rows = 2.0f;
+                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
+                    int face = abilityFaces[i][fi];
+                    if (face < 1 || face > 6) continue;
+                    int idx = face - 1;
+                    int col = idx % 3;
+                    int row = idx / 3;
+                    ImVec2 uv0(col / cols, row / rows);
+                    ImVec2 uv1((col + 1) / cols, (row + 1) / rows);
+                    ImGui::Image(sheet, ImVec2(28, 28), uv0, uv1);
+                    ImGui::SameLine();
+                }
+                // 画像の横に出目の文字列と合計を表示
+                ImGui::SameLine();
+                ImGui::Text("%s", facesStr.c_str());
+                ImGui::SameLine(120); // 必要なら調整
+                ImGui::Text("%d", a.value);
+            }
+        } else {
+            // ダイス出目が無い／未ロールのときは数値のみ表示（位置を合わせる）
+            ImGui::SameLine(120);
+            ImGui::Text("%d", a.value);
+        }
+        ImGui::PopID();
+    }
 }

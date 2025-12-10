@@ -150,7 +150,7 @@ bool Application::InitApp()
     ImGui_ImplDX11_Init(m_Device, m_DeviceContext);
 
     // TextureManager 初期化（assetRoot はプロジェクト内の実際のフォルダに合わせる）
-    TextureManager::Initialize(m_Device, "assets/texture/");
+    TextureManager::Initialize(m_Device, "assets/");
 
     // フォントロード...
     bool fontOk = ImGuiFontLoader::InitializeImGuiFonts("resources/fonts/NotoSansJP-Regular.ttf");

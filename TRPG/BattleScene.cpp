@@ -185,28 +185,46 @@ void BattleScene::Render()
     ImGui::Text("Commands:");
     ImGui::Spacing();
 
-    // コマンドボタン群（既存の処理と同じロジックを呼び出す）
-    if (selectedEnemy >= 0 && selectedEnemy < (int)enemies.size() && enemies[selectedEnemy].hp > 0) {
-        if (ImGui::Button("Attack (POW check, d100)")) {
-            lastRoll = Dice::RollDie(100);
-            bool success = (lastRoll <= player.pow * 5);
-            if (success) {
-                int dmg = 4 + Dice::RollDie(3); //4 + d3 ダメージ
-                enemies[selectedEnemy].hp = std::max(0, enemies[selectedEnemy].hp - dmg);
-            }
-            else {
-                //失敗: 耐久力減少および敵ターンへ
-                player.ApplyEnduranceLoss(enemies[selectedEnemy].fearDamage);
-                phase = Phase::EnemyTurn;
-            }
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Wait")) {
-            phase = Phase::EnemyTurn;
-        }
+    // コマンドボタン群（プレイヤーが行動できるかで無効化／敗北・勝利表示）
+    if (phase == Phase::Defeat) {
+        ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "You are defeated.");
+        ImGui::TextDisabled("戦闘は終了しています。リトライやメニューに戻る処理を追加してください。");
+    }
+    else if (phase == Phase::Victory) {
+        ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Victory!");
+        ImGui::TextDisabled("勝利しました。次の処理を追加してください。");
     }
     else {
-        ImGui::TextDisabled("Please select a valid target");
+        // プレイヤーが実際に行動可能か判定（ターンがプレイヤーで、HP>0）
+        bool canAct = (phase == Phase::PlayerTurn) && (player.endurance > 0);
+
+        // 有効なターゲットが選択されているか
+        bool validTarget = (selectedEnemy >= 0 && selectedEnemy < (int)enemies.size() && enemies[selectedEnemy].hp > 0);
+
+        if (validTarget) {
+            ImGui::BeginDisabled(!canAct);
+            if (ImGui::Button("Attack (POW check, d100)")) {
+                lastRoll = Dice::RollDie(100);
+                bool success = (lastRoll <= player.pow * 5);
+                if (success) {
+                    int dmg = 4 + Dice::RollDie(3); //4 + d3 ダメージ
+                    enemies[selectedEnemy].hp = std::max(0, enemies[selectedEnemy].hp - dmg);
+                }
+                else {
+                    //失敗: 耐久力減少および敵ターンへ
+                    player.ApplyEnduranceLoss(enemies[selectedEnemy].fearDamage);
+                    phase = Phase::EnemyTurn;
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Wait")) {
+                phase = Phase::EnemyTurn;
+            }
+            ImGui::EndDisabled();
+        }
+        else {
+            ImGui::TextDisabled("Please select a valid target");
+        }
     }
 
     ImGui::Separator();

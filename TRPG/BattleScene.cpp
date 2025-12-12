@@ -90,7 +90,10 @@ void BattleScene::Render()
     ImGui::BeginChild("TopArea", ImVec2(0, -cmdHeight), false);
 
     // 左：敵表示領域（残り幅 - rightPanelWidth）
-    ImGui::BeginChild("EnemiesArea", ImVec2(disp.x - rightPanelWidth - 10.0f, 0), true);
+    float availW = ImGui::GetContentRegionAvail().x;
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float enemiesW = std::max(0.0f, availW - rightPanelWidth - spacing - 200.0f);
+    ImGui::BeginChild("EnemiesArea", ImVec2(enemiesW, 0), true);
 
     ImGui::Text("Enemies:");
     ImGui::Separator();

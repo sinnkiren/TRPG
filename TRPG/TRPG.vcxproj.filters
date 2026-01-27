@@ -25,6 +25,9 @@
     <Filter Include="system\json">
       <UniqueIdentifier>{1c4107fd-3ea2-4228-8687-28dadb995540}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\DIrectX">
+      <UniqueIdentifier>{6c1f2b46-7282-420c-a356-b774bed1a613}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp">
@@ -169,6 +172,21 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="TextureManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectX.cpp">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshBuffer.cpp">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader.cpp">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClCompile>
+    <ClCompile Include="AtlasTools.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -369,6 +387,21 @@
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
     <ClInclude Include="TextureManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX.h">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshBuffer.h">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader.h">
+      <Filter>ソース ファイル\DIrectX</Filter>
+    </ClInclude>
+    <ClInclude Include="AtlasTools.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

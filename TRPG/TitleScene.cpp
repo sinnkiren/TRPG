@@ -1,8 +1,20 @@
 #include "TitleScene.h"
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
+#include "TextureManager.h"
+#include <random>
+#include <algorithm>
 
-// タイトルフェード用ステート（ウィンドウ内表示）
+// Local helpers ? avoid relying on std::min/std::max/std::clamp which may be
+// unavailable or macro-shadowed in some build environments.
+template<typename T>
+static inline T clamp_t(T v, T lo, T hi) { if (v < lo) return lo; if (v > hi) return hi; return v; }
+template<typename T>
+static inline T max_t(T a, T b) { return (a > b) ? a : b; }
+template<typename T>
+static inline T min_t(T a, T b) { return (a < b) ? a : b; }
+
+// ===== フェード関連 =====
 static float s_titleAlpha = 0.0f;
 static float s_titleFadeInDuration = 1.0f;
 static float s_titleFadeOutDuration = 0.8f;
@@ -10,61 +22,93 @@ static float s_titleFadeElapsed = 0.0f;
 static bool  s_fadingIn = true;
 static bool  s_fadingOut = false;
 
-// 画面全体フェード用ステート（フルスクリーン）
+// ===== フルスクリーンフェード =====
 static float s_fsFadeAlpha = 0.0f;
-static float s_fsFadeDurationIn = 1.0f;   // 起動時に黒→画面 の時間
-static float s_fsFadeDurationOut = 0.8f;  // 終了時に画面→黒 の時間
+static float s_fsFadeDurationIn = 1.0f;
+static float s_fsFadeDurationOut = 0.8f;
 static float s_fsFadeElapsed = 0.0f;
 static bool  s_fsFadingOut = false;
 static bool  s_fsFadingIn = true;
 
+// ===== タイトル画像 =====
+static ImTextureID s_titleTex = nullptr;
+static bool s_titleLoadAttempted = false;
+
+// ===== ノイズ演出 =====
+static bool s_noiseActive = false;
+static float s_noiseDuration = 1.0f;
+static float s_noiseElapsed = 0.0f;
+static unsigned int s_noiseSeed = 0;
+static float s_noiseIntensity = 1.0f;
+
+
 void TitleScene::Initialize()
 {
-    // ウィンドウ内タイトルフェード
+    // フェード初期化
     s_titleAlpha = 0.0f;
     s_titleFadeElapsed = 0.0f;
     s_fadingIn = true;
     s_fadingOut = false;
 
     // フルスクリーンフェード（起動時は黒→表示）
-    s_fsFadeAlpha = 1.0f; // 黒で覆う状態からスタート
+    s_fsFadeAlpha = 1.0f;
     s_fsFadeElapsed = 0.0f;
     s_fsFadingIn = true;
     s_fsFadingOut = false;
+
+    // 画像は Render 時に遅延ロードする（TextureManager が初期化済みであることを期待）
+    s_titleTex = nullptr;
+    s_titleLoadAttempted = false;
+
+    // ノイズ状態リセット
+    s_noiseActive = false;
+    s_noiseElapsed = 0.0f;
+    s_noiseSeed = 0;
 }
 
 void TitleScene::Update()
 {
     float dt = ImGui::GetIO().DeltaTime;
 
-    // ウィンドウ内タイトルフェード更新（既存挙動）
     if (s_fadingIn) {
         s_titleFadeElapsed += dt;
         float r = (s_titleFadeInDuration > 0.0f) ? (s_titleFadeElapsed / s_titleFadeInDuration) : 1.0f;
-        s_titleAlpha = (r >= 1.0f) ? 1.0f : (r < 0.0f ? 0.0f : r);
+        s_titleAlpha = std::clamp(r, 0.0f, 1.0f);
         if (r >= 1.0f) s_fadingIn = false;
-    } else if (s_fadingOut) {
+    }
+    else if (s_fadingOut) {
         s_titleFadeElapsed += dt;
         float r = (s_titleFadeOutDuration > 0.0f) ? (s_titleFadeElapsed / s_titleFadeOutDuration) : 1.0f;
-        s_titleAlpha = 1.0f - (r >= 1.0f ? 1.0f : (r < 0.0f ? 0.0f : r));
+        s_titleAlpha = 1.0f - std::clamp(r, 0.0f, 1.0f);
         if (r >= 1.0f) {
             s_fadingOut = false;
             s_titleAlpha = 0.0f;
         }
     }
 
-    // フルスクリーンフェード（起動時フェードイン：黒 -> 透明）
+    // ノイズタイマー（ノイズ完了後にフェードアウトを開始）
+    if (s_noiseActive) {
+        s_noiseElapsed += dt;
+        if (s_noiseElapsed >= s_noiseDuration) {
+            s_noiseActive = false;
+            s_noiseElapsed = 0.0f;
+            // ノイズ終了 → フルスクリーンフェードアウト開始
+            s_fsFadingOut = true;
+            s_fsFadingIn = false;
+            s_fsFadeElapsed = 0.0f;
+            // 画面内タイトルもフェードアウトさせる
+            s_fadingOut = true;
+            s_titleFadeElapsed = 0.0f;
+        }
+    }
+
     if (s_fsFadingIn) {
         s_fsFadeElapsed += dt;
         float r = (s_fsFadeDurationIn > 0.0f) ? (s_fsFadeElapsed / s_fsFadeDurationIn) : 1.0f;
         s_fsFadeAlpha = 1.0f - std::clamp(r, 0.0f, 1.0f);
-        if (r >= 1.0f) {
-            s_fsFadingIn = false;
-            s_fsFadeAlpha = 0.0f;
-        }
+        if (r >= 1.0f) { s_fsFadingIn = false; s_fsFadeAlpha = 0.0f; }
     }
 
-    // フルスクリーンフェードアウト（Start 押下で開始）
     if (s_fsFadingOut) {
         s_fsFadeElapsed += dt;
         float r = (s_fsFadeDurationOut > 0.0f) ? (s_fsFadeElapsed / s_fsFadeDurationOut) : 1.0f;
@@ -72,7 +116,6 @@ void TitleScene::Update()
         if (r >= 1.0f) {
             s_fsFadingOut = false;
             s_fsFadeAlpha = 1.0f;
-            // フェードアウト完了：シーン切替（プロジェクトの API に合わせて修正）
             g_SceneManager.ChangeScene(SceneType::TRPG_SELECT);
         }
     }
@@ -80,37 +123,75 @@ void TitleScene::Update()
 
 void TitleScene::Render()
 {
-    ImGui::Begin("Title");
+    // フルスクリーンで画像のみ表示する実装。
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    if (!vp) return;
 
-    // 中央に大きなタイトルを描画（アルファ適用）
-    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("MY GAME TITLE").x) * 0.5f);
-    float a = s_titleAlpha;
-    ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.6f, a), "MY GAME TITLE");
-
-    ImGui::Spacing();
-
-    // 開始ボタン（押したらフルスクリーン フェードアウトを開始）
-    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Start").x) * 0.5f);
-    if (ImGui::Button("Start")) {
-        // ウィンドウ内タイトルもフェードアウトさせる（任意）
-        s_fadingOut = true;
-        s_titleFadeElapsed = 0.0f;
-        // フルスクリーンのフェードアウトを開始
-        s_fsFadingOut = true;
-        s_fsFadingIn = false;
-        s_fsFadeElapsed = 0.0f;
+    // 遅延ロード（TextureManager が初期化されているタイミングで試行）
+    if (!s_titleTex && !s_titleLoadAttempted) {
+        s_titleLoadAttempted = true;
+        s_titleTex = TextureManager::GetImGuiTextureID("texture/title.png");
+        if (!s_titleTex) s_titleTex = TextureManager::GetImGuiTextureID("texture/title.jpg");
+        if (!s_titleTex) OutputDebugStringA("TitleScene: title image not found: texture/title.png/.jpg\n");
     }
 
-    ImGui::End();
-
-    // フルスクリーン矩形をフォアグラウンドに描画して画面全体をフェードさせる
-    const ImGuiViewport* vp = ImGui::GetMainViewport();
-    if (vp) {
-        ImDrawList* dl = ImGui::GetForegroundDrawList();
-        if (dl) {
-            // 黒で覆う。alpha = s_fsFadeAlpha（0: 透明, 1: 黒）
-            ImU32 col = ImGui::GetColorU32(ImVec4(0.0f, 0.0f, 0.0f, s_fsFadeAlpha));
-            dl->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
+    // 背景レイヤに画像をフルスクリーンで描画（縦横比は画像により伸縮される）
+    ImDrawList* bg = ImGui::GetBackgroundDrawList();
+    if (bg) {
+        if (s_titleTex) {
+            bg->AddImage(s_titleTex, vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y));
         }
+        else {
+            ImU32 clearCol = ImGui::GetColorU32(ImVec4(0.06f, 0.06f, 0.06f, 1.0f));
+            bg->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), clearCol);
+        }
+    }
+
+    // ---- ノイズ描画（前景レイヤ） ----
+    if (s_noiseActive) {
+        ImDrawList* fg = ImGui::GetForegroundDrawList();
+        if (fg) {
+            // ノイズパラメータ
+            float progress = s_noiseElapsed / max_t(0.0001f, s_noiseDuration);
+            float inv = 1.0f - progress;
+            float alphaBase = s_noiseIntensity * inv; // 徐々に弱まる
+            int screenW = (int)vp->Size.x;
+            int screenH = (int)vp->Size.y;
+
+            // 描画数は画面サイズに合わせてスケール（重すぎない程度に抑える）
+            int approxCells = (int)clamp_t((screenW * screenH) / (128 * 128), 80, 800);
+            std::mt19937 rng(s_noiseSeed + (unsigned int)(s_noiseElapsed * 1000.0f));
+            std::uniform_int_distribution<int> dx(0, screenW - 1);
+            std::uniform_int_distribution<int> dy(0, screenH - 1);
+            std::uniform_real_distribution<float> ds(1.0f, 12.0f);
+            std::uniform_real_distribution<float> da(0.2f, 1.0f);
+
+            for (int i = 0; i < approxCells; ++i) {
+                int x = dx(rng);
+                int y = dy(rng);
+                float size = ds(rng);
+                float a = da(rng) * alphaBase;
+                ImU32 col = ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, a));
+                fg->AddRectFilled(ImVec2(vp->Pos.x + x, vp->Pos.y + y),
+                    ImVec2(vp->Pos.x + x + size, vp->Pos.y + y + size),
+                    col);
+            }
+        }
+    }
+
+    // 入力: 画面どこかをクリックしたらノイズ→フェードのシーケンスを開始
+    if (!s_noiseActive && !s_fsFadingOut && ImGui::IsMouseClicked(0)) {
+        s_noiseActive = true;
+        s_noiseElapsed = 0.0f;
+        // ランダム種を生成（毎回異なるノイズ）
+        std::random_device rd;
+        s_noiseSeed = rd();
+    }
+
+    // フルスクリーンの黒矩形でフェード（最前景）
+    ImDrawList* fg2 = ImGui::GetForegroundDrawList();
+    if (fg2) {
+        ImU32 col = ImGui::GetColorU32(ImVec4(0, 0, 0, s_fsFadeAlpha));
+        fg2->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
     }
 }

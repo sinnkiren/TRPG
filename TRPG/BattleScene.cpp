@@ -3,6 +3,7 @@
 #include "FearEffects.h"
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
+#include "TextureManager.h"
 #include <algorithm>
 
 // --- 先頭付近の Initialize() を次のように修正 ---
@@ -27,6 +28,24 @@ void BattleScene::Initialize()
     damageFlashTimer = 0.0f;
     persistentStage = 0;
     persistentTimer = 0.0f;
+
+    // UI アトラス読み込み（TextureManager 経由）。assetRoot は TextureManager で設定している想定
+    // ファイルは assets/texture/UIblok.png を想定しています。存在しない場合は nullptr のまま。
+    uiAtlas = TextureManager::GetImGuiTexture("texture/UIblok.png");
+
+    // 背景テクスチャ読み込み
+    bgTexture = TextureManager::GetImGuiTexture("texture/dark-tunnel2.jpg");
+
+    // Optional: automatically analyze atlas to get recommended UVs (used later)
+    // This uses AtlasTools to heuristically split the atlas into regions.
+    // If assets/texture/UIblok.png exists, the analysis will run and we may override hardcoded UVs.
+    {
+        AtlasTools::AtlasMap am = AtlasTools::AnalyzeAtlas("texture/UIblok.png");
+        if (am.valid) {
+            // store into members for use in Render()
+            atlasMap = am;
+        }
+    }
 }
 void BattleScene::Update()
 {
@@ -78,13 +97,31 @@ void BattleScene::Render()
     // フルスクリーン風に扱うメインウィンドウ
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    // Make the window background transparent so the full-screen background image is visible
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
     ImGui::Begin("Battle", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+    // --- ここで全体のテキスト色をより濃く設定して視認性を上げる ---
+    // 既存の UI の多くは ImGui::Text() を使っているため、ここで色を変えるだけで
+    // 背景に負けない見た目になります。明示的に色を渡している箇所はそのまま優先されます。
+    // Use fully opaque white for maximum contrast over textured background.
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
     // 全体サイズと下部コマンド領域の高さ
     ImVec2 disp = ImGui::GetIO().DisplaySize;
     const float cmdHeight = 160.0f;
     const float rightPanelWidth = 260.0f; // キャラステータスの幅
+
+    // 背景描画（画面全体に1枚絵を敷く）
+    if (bgTexture) {
+        // Use background draw list so the image is behind all ImGui windows
+        ImDrawList* dl = ImGui::GetBackgroundDrawList();
+        ImVec2 dispSize = ImGui::GetIO().DisplaySize;
+        ImVec2 a(0, 0), b(dispSize.x, dispSize.y);
+        // use full texture UVs
+        dl->AddImage(bgTexture, a, b, ImVec2(0, 0), ImVec2(1, 1), IM_COL32(255, 255, 255, 255));
+    }
 
     // --- 上段（敵領域 + 右側キャラステータス） ---
     ImGui::BeginChild("TopArea", ImVec2(0, -cmdHeight), false);
@@ -165,8 +202,39 @@ void BattleScene::Render()
     // HP 表示
     float enduranceRatio = (player.maxEndurance > 0) ? float(player.endurance) / float(player.maxEndurance) : 0.0f;
     ImGui::Text("HP");
-    ImGui::ProgressBar(enduranceRatio, ImVec2(-1, 0));
-    ImGui::Text("%d / %d", player.endurance, player.maxEndurance);
+    // If we have an atlas, draw the stylized bar from atlas and overlay a filled rect to represent the current value.
+    if (uiAtlas) {
+        // size of the bar we want on screen
+        ImVec2 barSize(200, 16);
+        ImVec2 barPos = ImGui::GetCursorScreenPos();
+
+        // Choose UVs from analyzed atlas if available, otherwise fall back to hardcoded coordinates.
+        ImVec2 red_uv0(0.02f, 0.50f), red_uv1(0.72f, 0.55f);
+        if (atlasMap.valid) {
+            red_uv0 = atlasMap.redBar.uv0;
+            red_uv1 = atlasMap.redBar.uv1;
+        }
+        // Draw the bar background (atlas image). Using Image will advance the layout, so call it and then overlay.
+        ImGui::Image(uiAtlas, barSize, red_uv0, red_uv1);
+
+        // Overlay filled rect (use draw list so it stays on top of the image)
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        ImU32 fillCol = ImGui::GetColorU32(ImVec4(0.85f, 0.15f, 0.15f, 1.0f)); // red tint
+        ImVec2 fillA(barPos.x + 2.0f, barPos.y + 2.0f);
+        ImVec2 fillB(barPos.x + 2.0f + (barSize.x - 4.0f) * enduranceRatio, barPos.y + barSize.y - 2.0f);
+        dl->AddRectFilled(fillA, fillB, fillCol);
+
+        // Text on the right of the bar showing numeric value
+        ImGui::SameLine();
+        ImGui::SetCursorScreenPos(ImVec2(barPos.x + barSize.x + 8.0f, barPos.y));
+        ImGui::Text("%d / %d", player.endurance, player.maxEndurance);
+        // advance cursor to below the image
+        ImGui::SetCursorScreenPos(ImVec2(barPos.x, barPos.y + barSize.y + 6.0f));
+    }
+    else {
+        ImGui::ProgressBar(enduranceRatio, ImVec2(-1, 0));
+        ImGui::Text("%d / %d", player.endurance, player.maxEndurance);
+    }
 
     ImGui::Separator();
     ImGui::Text("Stats");
@@ -177,6 +245,9 @@ void BattleScene::Render()
     // デバッグ情報等
     ImGui::Text("Last roll: %d", lastRoll);
 
+    // Atlas preview disabled per user request: no images drawn under "Last roll".
+    // (HP bar and other UI still use the atlas where applicable.)
+
     ImGui::EndChild(); // StatusArea
 
     ImGui::EndChild(); // TopArea
@@ -184,18 +255,38 @@ void BattleScene::Render()
     // --- 下段：戦闘コマンド領域 ---
     ImGui::BeginChild("CommandArea", ImVec2(0, cmdHeight), false);
 
+    // Draw command area background from atlas (replace with the medium rectangle from the atlas).
+    if (uiAtlas) {
+        ImVec2 bgPos = ImGui::GetCursorScreenPos();
+        ImVec2 bgAvail = ImGui::GetContentRegionAvail();
+        // Use detected buttonBox region if available, otherwise fall back to a reasonable UV.
+        ImVec2 cmd_uv0(0.62f, 0.02f), cmd_uv1(0.88f, 0.24f);
+        if (atlasMap.valid) { cmd_uv0 = atlasMap.buttonBox.uv0; cmd_uv1 = atlasMap.buttonBox.uv1; }
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        ImVec2 pmin = bgPos;
+        ImVec2 pmax = ImVec2(bgPos.x + bgAvail.x, bgPos.y + bgAvail.y);
+        dl->AddImage(uiAtlas, pmin, pmax, cmd_uv0, cmd_uv1, IM_COL32(255, 255, 255, 255));
+        // leave cursor where it is; subsequent UI will be drawn on top
+    }
+
     ImGui::Separator();
+    // Make command-area text more visible over textured background
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
     ImGui::Text("Commands:");
     ImGui::Spacing();
 
     // コマンドボタン群（プレイヤーが行動できるかで無効化／敗北・勝利表示）
     if (phase == Phase::Defeat) {
         ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "You are defeated.");
-        ImGui::TextDisabled("戦闘は終了しています。リトライやメニューに戻る処理を追加してください。");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+        ImGui::Text("戦闘は終了しています。リトライやメニューに戻る処理を追加してください。");
+        ImGui::PopStyleColor();
     }
     else if (phase == Phase::Victory) {
         ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Victory!");
-        ImGui::TextDisabled("勝利しました。次の処理を追加してください。");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+        ImGui::Text("勝利しました。次の処理を追加してください。");
+        ImGui::PopStyleColor();
     }
     else {
         // プレイヤーが実際に行動可能か判定（ターンがプレイヤーで、HP>0）
@@ -206,6 +297,10 @@ void BattleScene::Render()
 
         if (validTarget) {
             ImGui::BeginDisabled(!canAct);
+            // increase text contrast for buttons when on textured background
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 0.8f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.25f, 0.25f, 0.9f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.35f, 0.35f, 0.35f, 1.0f));
             if (ImGui::Button("Attack (POW check, d100)")) {
                 lastRoll = Dice::RollDie(100);
                 bool success = (lastRoll <= player.pow * 5);
@@ -219,6 +314,7 @@ void BattleScene::Render()
                     phase = Phase::EnemyTurn;
                 }
             }
+            ImGui::PopStyleColor(3);
             ImGui::SameLine();
             if (ImGui::Button("Wait")) {
                 phase = Phase::EnemyTurn;
@@ -226,7 +322,9 @@ void BattleScene::Render()
             ImGui::EndDisabled();
         }
         else {
-            ImGui::TextDisabled("Please select a valid target");
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
+            ImGui::Text("Please select a valid target");
+            ImGui::PopStyleColor();
         }
     }
 
@@ -247,9 +345,14 @@ void BattleScene::Render()
         phase = Phase::PlayerTurn;
     }
 
+    ImGui::PopStyleColor(); // restore text color pushed for Commands label
     ImGui::EndChild(); // CommandArea
 
+    // --- ここで先に全体テキスト色の Push を戻す ---
+    ImGui::PopStyleColor(); // restore global text color pushed after Begin()
+
     ImGui::End(); // Battle window
+    ImGui::PopStyleColor();
 
     // --- 画面エフェクト（フラッシュ／残痕） ---
     float intensity = 1.0f - ((player.maxEndurance > 0) ? float(player.endurance) / float(player.maxEndurance) : 0.0f);

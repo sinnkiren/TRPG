@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <string>
+#include "system/imgui/imgui.h"
+#include "AtlasTools.h"
 
 class BattleScene : public IScene {
 public:
@@ -48,4 +50,10 @@ private:
 
     int persistentStage =0; // 傷の残り段階（0..4）
     float persistentTimer =0.0f; // 傷が残る時間
+
+    // ImGui 用の UI アトラステクスチャ
+    ImTextureID uiAtlas = nullptr;
+    AtlasTools::AtlasMap atlasMap;
+    // 背景用テクスチャ
+    ImTextureID bgTexture = nullptr;
 };

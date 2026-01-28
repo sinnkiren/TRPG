@@ -35,6 +35,8 @@ public:
         // V: ‘Ï‹v—ÍiHPj
         int endurance =0;
         int maxEndurance = 0;
+        // Path to portrait image (relative to asset root or absolute)
+        std::string portraitPath;
 
         bool ApplySanityLoss(int amount) {
             sanity = static_cast<int>(trpg::clamp(sanity - amount, 0, maxSanity));

@@ -33,6 +33,11 @@ public:
     CharcterScene::CharcterDate& GetPlayer();
     const CharcterScene::CharcterDate& GetPlayer() const;
 
+    // Development mode flag: guard dev-only features (drag/drop, detailed logs, tools)
+    // Default: enabled in debug builds, disabled in release builds.
+    bool IsDevMode() const { return m_devMode; }
+    void SetDevMode(bool v) { m_devMode = v; }
+
 private:
     // フレーム処理の補助（SceneManager.cpp で実装）
     void HandleInput();
@@ -55,6 +60,9 @@ private:
 
     // SceneManager が所有するプレイヤーデータ（値で保持）
     CharcterScene::CharcterDate playerData;
+
+    // Dev mode flag (actual default set at runtime in Initialize)
+    bool m_devMode = false;
 
     // ペンディング遷移フラグ
     bool pendingChange = false;

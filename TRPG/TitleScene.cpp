@@ -194,4 +194,19 @@ void TitleScene::Render()
         ImU32 col = ImGui::GetColorU32(ImVec4(0, 0, 0, s_fsFadeAlpha));
         fg2->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
     }
+
+    // Dev mode toggle (runtime) - small overlay in the top-right corner
+    // Allows switching dev/play modes without rebuilding.
+    if (ImGui::GetCurrentContext() != nullptr) {
+        ImVec2 winPos(vp->Pos.x + vp->Size.x - 220.0f, vp->Pos.y + 8.0f);
+        ImGui::SetNextWindowPos(winPos, ImGuiCond_Always);
+        ImGui::SetNextWindowBgAlpha(0.35f);
+        ImGui::Begin("DevToggle", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
+        bool dev = g_SceneManager.IsDevMode();
+        if (ImGui::Checkbox("Dev Mode", &dev)) {
+            g_SceneManager.SetDevMode(dev);
+        }
+        ImGui::End();
+    }
 }

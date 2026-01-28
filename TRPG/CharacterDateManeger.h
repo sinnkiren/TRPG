@@ -9,6 +9,8 @@ struct CharacterData {
     std::string job;
     int str, con, dex, int_, pow, app, siz, edu;
     int san, ruk, ide, kow, dur;
+    // Portrait path (relative to asset root or absolute)
+    std::string portrait;
 };
 
 class CharacterDataManager {
@@ -46,6 +48,7 @@ public:
                 {"ide", c.ide},
                 {"kow", c.kow},
                 {"dur", c.dur}
+                ,{"portrait", c.portrait}
                 });
         }
         std::ofstream file(failname);
@@ -78,6 +81,7 @@ public:
             c.ide = elem["ide"];
             c.kow = elem["kow"];
             c.dur = elem["dur"];
+            if (elem.contains("portrait")) c.portrait = elem["portrait"].get<std::string>();
             characters.push_back(c);
         }
     }

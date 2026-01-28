@@ -27,10 +27,20 @@
 
 SceneManager g_SceneManager; // À‘Ì’è‹`‚Í‚±‚±‚¾‚¯I
 
+// Set default dev mode based on build type
+static bool s_defaultDevMode =
+#ifdef NDEBUG
+    false;
+#else
+    true;
+#endif
+
 void SceneManager::Initialize() {
     currentType = SceneType::TITLE;
     currentScene = std::make_unique<TitleScene>();
     if (currentScene) currentScene->Initialize();
+    // Set dev mode default (enabled in debug builds, disabled in release builds)
+    m_devMode = s_defaultDevMode;
 }
 
 void SceneManager::Update() {

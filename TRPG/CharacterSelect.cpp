@@ -331,6 +331,21 @@ void CharcterScene::Render()
             charcter.endurance, charcter.maxEndurance, charcter.con, charcter.siz);
     }
 
+    // Portrait selection (Dev-only convenience): allow entering a path to an image
+    ImGui::Separator();
+    ImGui::Text("Portrait:");
+    char bufPath[512] = {};
+    if (!charcter.portraitPath.empty()) strncpy_s(bufPath, sizeof(bufPath), charcter.portraitPath.c_str(), _TRUNCATE);
+    if (ImGui::InputText("Portrait Path", bufPath, sizeof(bufPath))) {
+        charcter.portraitPath = std::string(bufPath);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Load Portrait")) {
+        // Try to load via TextureManager to warm cache; store path regardless
+        g_SceneManager.SetPlayer(charcter); // ensure SceneManager has latest
+        TextureManager::LoadTexture(charcter.portraitPath);
+    }
+
     ImGui::EndChild();
     ImGui::Columns(1);
 

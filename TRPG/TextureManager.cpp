@@ -33,32 +33,46 @@ namespace TextureManager
     }
 
     // ファイルパス解決
+    // Accepts absolute paths as-is. For relative paths, try assetRoot first, then current_path.
     static std::filesystem::path ResolvePath(const std::string& rel)
     {
+        std::filesystem::path req(rel);
+        // If caller passed an absolute path, use it directly
+        if (req.is_absolute()) return req;
+
         std::filesystem::path p1 = std::filesystem::path(g_assetRoot) / rel;
         if (std::filesystem::exists(p1)) return p1;
 
         std::filesystem::path p2 = std::filesystem::current_path() / rel;
         if (std::filesystem::exists(p2)) return p2;
 
-        return p1; // 最終的に g_assetRoot 配下を返す
+        // Fallback: return asset-root based path (may not exist)
+        return p1;
     }
 
     // テクスチャ読み込み
     ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath)
     {
         if (!g_device) return nullptr;
+        // Resolve path (accepts absolute). Use resolved absolute path string as cache key.
+        auto p = ResolvePath(relativePath);
+        std::string key = p.string();
 
-        // キャッシュ確認
-        auto it = g_cache.find(relativePath);
+        // Cache check
+        auto it = g_cache.find(key);
         if (it != g_cache.end()) return it->second;
 
-        auto p = ResolvePath(relativePath);
         if (!std::filesystem::exists(p)) {
             std::ostringstream o; o << "TextureManager: file not found: " << p.string() << "\n";
             OutputDebugStringA(o.str().c_str());
-            g_cache[relativePath] = nullptr;
+            g_cache[key] = nullptr;
             return nullptr;
+        }
+
+        // Log when an absolute path is used
+        if (std::filesystem::path(relativePath).is_absolute()) {
+            std::ostringstream o; o << "TextureManager: loading absolute path: " << p.string() << "\n";
+            OutputDebugStringA(o.str().c_str());
         }
 
         // stbi でロード
@@ -119,7 +133,7 @@ namespace TextureManager
             return nullptr;
         }
 
-        g_cache[relativePath] = srv;
+        g_cache[key] = srv;
 
         std::ostringstream ok; ok << "TextureManager: loaded " << p.string() << "\n";
         OutputDebugStringA(ok.str().c_str());
@@ -142,7 +156,10 @@ namespace TextureManager
     // 個別解放
     void ReleaseTexture(const std::string& relativePath)
     {
-        auto it = g_cache.find(relativePath);
+        // Resolve and use same keying as LoadTexture
+        auto p = ResolvePath(relativePath);
+        std::string key = p.string();
+        auto it = g_cache.find(key);
         if (it != g_cache.end()) {
             if (it->second) it->second->Release();
             g_cache.erase(it);

@@ -130,9 +130,9 @@ void TitleScene::Render()
     // 遅延ロード（TextureManager が初期化されているタイミングで試行）
     if (!s_titleTex && !s_titleLoadAttempted) {
         s_titleLoadAttempted = true;
-        s_titleTex = TextureManager::GetImGuiTextureID("texture/title.png");
-        if (!s_titleTex) s_titleTex = TextureManager::GetImGuiTextureID("texture/title.jpg");
-        if (!s_titleTex) OutputDebugStringA("TitleScene: title image not found: texture/title.png/.jpg\n");
+        s_titleTex = TextureManager::GetImGuiTextureID("texture/dark-tunnel2.png");
+        if (!s_titleTex) s_titleTex = TextureManager::GetImGuiTextureID("texture/dark-tunnel2.png");
+        if (!s_titleTex) OutputDebugStringA("TitleScene: title image not found: texturedark-tunnel2.png/.jpg\n");
     }
 
     // 背景レイヤに画像をフルスクリーンで描画（縦横比は画像により伸縮される）

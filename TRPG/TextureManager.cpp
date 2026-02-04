@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <sstream>
 #include <unordered_map>
+#include "Logging.h"
 
 namespace TextureManager
 {
@@ -63,26 +64,26 @@ namespace TextureManager
         if (it != g_cache.end()) return it->second;
 
         if (!std::filesystem::exists(p)) {
-            std::ostringstream o; o << "TextureManager: file not found: " << p.string() << "\n";
-            OutputDebugStringA(o.str().c_str());
+            std::ostringstream o; o << "TextureManager: file not found: " << p.string();
+            Log::Log(Log::Level::Warning, o.str());
             g_cache[key] = nullptr;
             return nullptr;
         }
 
         // Log when an absolute path is used
         if (std::filesystem::path(relativePath).is_absolute()) {
-            std::ostringstream o; o << "TextureManager: loading absolute path: " << p.string() << "\n";
-            OutputDebugStringA(o.str().c_str());
+            std::ostringstream o; o << "TextureManager: loading absolute path: " << p.string();
+            Log::Log(Log::Level::Info, o.str());
         }
 
         // stbi ‚Åƒ[ƒh
         int w = 0, h = 0, channels = 0;
         unsigned char* pixels = stbi_load(p.string().c_str(), &w, &h, &channels, 4);
         if (!pixels || w <= 0 || h <= 0) {
-            std::ostringstream o; o << "TextureManager: stbi_load failed: " << p.string() << "\n";
-            OutputDebugStringA(o.str().c_str());
+            std::ostringstream o; o << "TextureManager: stbi_load failed: " << p.string();
+            Log::Log(Log::Level::Error, o.str());
             if (pixels) stbi_image_free(pixels);
-            g_cache[relativePath] = nullptr;
+            g_cache[key] = nullptr;
             return nullptr;
         }
 
@@ -106,11 +107,10 @@ namespace TextureManager
         stbi_image_free(pixels);
 
         if (FAILED(hr) || !tex) {
-            char buf[256];
-            sprintf_s(buf, "TextureManager: CreateTexture2D failed 0x%08X for %s\n", (unsigned int)hr, p.string().c_str());
-            OutputDebugStringA(buf);
+            std::ostringstream o; o << "TextureManager: CreateTexture2D failed 0x" << std::hex << (unsigned int)hr << " for " << p.string();
+            Log::Log(Log::Level::Error, o.str());
             if (tex) tex->Release();
-            g_cache[relativePath] = nullptr;
+            g_cache[key] = nullptr;
             return nullptr;
         }
 
@@ -125,18 +125,17 @@ namespace TextureManager
         tex->Release();
 
         if (FAILED(hr) || !srv) {
-            char buf[256];
-            sprintf_s(buf, "TextureManager: CreateSRV failed 0x%08X for %s\n", (unsigned int)hr, p.string().c_str());
-            OutputDebugStringA(buf);
+            std::ostringstream o; o << "TextureManager: CreateSRV failed 0x" << std::hex << (unsigned int)hr << " for " << p.string();
+            Log::Log(Log::Level::Error, o.str());
             if (srv) srv->Release();
-            g_cache[relativePath] = nullptr;
+            g_cache[key] = nullptr;
             return nullptr;
         }
 
         g_cache[key] = srv;
 
-        std::ostringstream ok; ok << "TextureManager: loaded " << p.string() << "\n";
-        OutputDebugStringA(ok.str().c_str());
+        std::ostringstream ok; ok << "TextureManager: loaded " << p.string();
+        Log::Log(Log::Level::Info, ok.str());
 
         return srv;
     }

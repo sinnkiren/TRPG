@@ -12,9 +12,9 @@ static bool g_texturesLoaded = false;
 static int g_selectedIndex = -1; // 0 = クトゥルフ, 1 = SW2.5
 
 void TRPGSelectScene::Initialize() {
-    // assets/texture/ から表紙画像を読み込もうとします。画像は任意で、無ければ代替表示になります。
-    g_tex_cthulhu = TextureManager::GetImGuiTexture("texture/kuto.jpg");
-    g_tex_sw25 = TextureManager::GetImGuiTexture("texture/sw.jpg");
+     //assets/texture/ から表紙画像を読み込もうとします。画像は任意で、無ければ代替表示になります。
+    g_tex_cthulhu = TextureManager::GetImGuiTexture("texture/buki.png");
+    g_tex_sw25 = TextureManager::GetImGuiTexture("texture/funpng.png");
     g_texturesLoaded = true;
     g_selectedIndex = -1;
 }

@@ -7,6 +7,7 @@
 #include "SceneManager.h"
 #include "TextureManager.h"
 #include "ImGuiFontLoader.h" // 追加
+#include "Logging.h"
 
 // 静的メンバ変数の定義
 HINSTANCE  Application::m_hInst = nullptr;
@@ -149,6 +150,30 @@ bool Application::InitApp()
     ImGui_ImplWin32_Init(m_hWnd);
     ImGui_ImplDX11_Init(m_Device, m_DeviceContext);
 
+    // Initialize logging subsystem and install global handlers
+    Log::Initialize(2000);
+    Log::InstallGlobalHandlers();
+
+    // Install invalid parameter handler to capture CRT invalid-parameter errors
+    // This prevents the CRT from calling abort() without useful diagnostics.
+    _set_invalid_parameter_handler([](const wchar_t* expression,
+                                      const wchar_t* function,
+                                      const wchar_t* file,
+                                      unsigned int line,
+                                      uintptr_t pReserved) {
+        // Compose a short message and send to debug output
+        std::wstring msg = L"Invalid parameter detected:\n";
+        if (expression) { msg += L"Expression: "; msg += expression; msg += L"\n"; }
+        if (function) { msg += L"Function: "; msg += function; msg += L"\n"; }
+        if (file) { msg += L"File: "; msg += file; msg += L"\n"; }
+        {
+            // OutputDebugStringW expects a null-terminated string
+            OutputDebugStringW(msg.c_str());
+        }
+        // Trigger a debug break so developer can inspect call stack
+        __debugbreak();
+    });
+
     // TextureManager 初期化（assetRoot はプロジェクト内の実際のフォルダに合わせる）
     TextureManager::Initialize(m_Device, "assets/");
 
@@ -217,6 +242,9 @@ bool Application::InitWnd()
     ShowWindow(m_hWnd, SW_SHOWNORMAL);
     UpdateWindow(m_hWnd);
 
+    // Enable drag & drop of files from Explorer
+    DragAcceptFiles(m_hWnd, TRUE);
+
     return true;
 }
 
@@ -240,6 +268,8 @@ void Application::MainLoop()
     MSG msg = {};
 
     // ImGui 初期化が済んでいる前提
+    using clock = std::chrono::steady_clock;
+    const std::chrono::duration<double, std::milli> kTargetFrameTimeMs(1000.0 / 60.0); // 60 FPS
 
     while (WM_QUIT != msg.message)
     {
@@ -248,6 +278,8 @@ void Application::MainLoop()
             DispatchMessage(&msg);
         }
         else {
+            auto frameStart = clock::now();
+
             // -----------------------------
             // 1. 画面クリア
             // -----------------------------
@@ -264,8 +296,32 @@ void Application::MainLoop()
             // -----------------------------
             // 3. シーン更新＆描画
             // -----------------------------
-            g_SceneManager.Update();
-            g_SceneManager.Render();
+            try {
+                // Debug: log current scene type when in dev mode (SceneManager logs separately)
+                g_SceneManager.Update();
+            }
+            catch (const std::exception& ex) {
+                Log::Log(Log::Level::Error, std::string("Application: exception during SceneManager::Update: ") + ex.what());
+                __debugbreak();
+            }
+            catch (...) {
+                Log::Log(Log::Level::Error, "Application: unknown exception during SceneManager::Update");
+                __debugbreak();
+            }
+
+            try {
+                g_SceneManager.Render();
+            }
+            catch (const std::exception& ex) {
+                Log::Log(Log::Level::Error, std::string("Application: exception during SceneManager::Render: ") + ex.what());
+                __debugbreak();
+            }
+            catch (...) {
+                Log::Log(Log::Level::Error, "Application: unknown exception during SceneManager::Render");
+                __debugbreak();
+            }
+            // Update and Render are called once above inside try/catch blocks.
+            // Do not call them again to avoid operating on destroyed scenes.
 
             // -----------------------------
             // 4. ImGui 描画
@@ -277,6 +333,17 @@ void Application::MainLoop()
             // 5. 画面表示
             // -----------------------------
             m_SwapChain->Present(1, 0);
+
+            // Frame pacing: sleep until target frame time is reached
+            auto frameEnd = clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(frameEnd - frameStart);
+            if (elapsed < kTargetFrameTimeMs) {
+                auto sleepFor = kTargetFrameTimeMs - elapsed;
+                // Sleep for the bulk, then spin for precision
+                if (sleepFor > std::chrono::milliseconds(2))
+                    std::this_thread::sleep_for(std::chrono::duration_cast<std::chrono::milliseconds>(sleepFor) - std::chrono::milliseconds(1));
+                while (std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(clock::now() - frameStart) < kTargetFrameTimeMs) {}
+            }
         }
     }
 }
@@ -291,6 +358,34 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 
     switch (msg)
     {
+    case WM_DROPFILES:
+    {
+        // Handle file dropped from Explorer (use wide APIs for Unicode paths)
+        HDROP hDrop = (HDROP)wp;
+        UINT fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
+        if (fileCount > 0) {
+            wchar_t wfilename[MAX_PATH];
+            if (DragQueryFileW(hDrop, 0, wfilename, MAX_PATH)) {
+                // Convert wide path (UTF-16) to UTF-8 std::string
+                int required = ::WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, nullptr, 0, nullptr, nullptr);
+                if (required > 0) {
+                    // required includes space for terminating null. Reserve that many, then strip the null.
+                    std::string utf8;
+                    utf8.resize(required);
+                    int wrote = ::WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, utf8.data(), required, nullptr, nullptr);
+                    if (wrote > 0) {
+                        // Remove terminating null from std::string so it contains the path only
+                        if (!utf8.empty() && utf8.back() == '\0') utf8.pop_back();
+                        // Forward to SceneManager
+                        g_SceneManager.HandleFileDrop(utf8);
+                    }
+                }
+            }
+        }
+        DragFinish(hDrop);
+        return 0;
+    }
+
     case WM_DESTROY:
     {
         PostQuitMessage(0);

@@ -2,16 +2,25 @@
 #include "IScene.h"
 #include "CharacterSelect.h"
 #include <vector>
+#include <deque>
 #include <functional>
 #include <string>
 #include "system/imgui/imgui.h"
 #include "AtlasTools.h"
+#include <chrono>
 
 class BattleScene : public IScene {
 public:
     void Initialize() override;
     void Update() override;
     void Render() override;
+    // Dev-only UI/log: excluded from Release builds
+#ifndef NDEBUG
+    // Render Dev-only battle log window (toggled from in-scene UI)
+    void RenderBattleLogWindow();
+    // Render contents for centralized Dev panel (does not call ImGui::Begin/End)
+    void RenderDevPanelContents();
+#endif
 
     BattleScene() = default;
 
@@ -37,11 +46,14 @@ private:
 
     enum class Phase { PlayerTurn, EnemyTurn, Victory, Defeat } phase = Phase::PlayerTurn;
 
-    int selectedEnemy = 0;
+    int selectedEnemy = -1;
     int lastRoll = 0;
 
     // UI / 時間管理
     float timeAccum = 0.0f;
+
+    // 表示用耐久力（バーのアニメ用）
+    float displayedEndurance = 0.0f;
 
     // ダメージ閃光・残痕管理
     int prevEndurance = -1; // 前フレームの耐久力（HP）
@@ -58,8 +70,16 @@ private:
     ImTextureID bgTexture = nullptr;
 
     // --- ログ表示用 ---
-    std::vector<std::string> logLines;
+    // msg: text to append. level: 0=Error,1=Info,2=Debug (higher is more verbose)
+    void PushLog(const std::string& msg, int level = 1);
+#ifndef NDEBUG
+    std::deque<std::string> logLines;
     size_t maxLogLines = 6;
     bool scrollLogToBottom = false;
-    void PushLog(const std::string& msg);
+    // Dev-only: toggle separate Battle Log window
+    bool m_showBattleLog = false;
+#endif
+
+    // Timekeeping for Update() to avoid ImGui dependency
+    std::chrono::steady_clock::time_point m_lastTick = std::chrono::steady_clock::now();
 };

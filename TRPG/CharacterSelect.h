@@ -58,6 +58,9 @@ public:
     // シーンマネージャへシーン遷移要求を出すコールバック
     std::function<void(int)> RequestSceneChange;
 
+    // Dev-only helper to set portrait path from external input (drag & drop)
+    void SetPortraitPath(const std::string& path);
+
 private:
     CharcterDate charcter;
 

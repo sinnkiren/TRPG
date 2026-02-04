@@ -54,17 +54,17 @@ AtlasMap AnalyzeAtlas(const std::string& relativePath, int alphaThreshold) {
         // assume largest is dialog box at bottom -> status box is second largest; bars are smaller long rectangles
         auto r0 = regs[0]; // largest
         auto r1 = regs[1];
-        map.dialogBox.uv0 = ImVec2(double(r0[0]) / w, double(r0[1]) / h);
-        map.dialogBox.uv1 = ImVec2(double(r0[0] + r0[2]) / w, double(r0[1] + r0[3]) / h);
-        map.statusBox.uv0 = ImVec2(double(r1[0]) / w, double(r1[1]) / h);
-        map.statusBox.uv1 = ImVec2(double(r1[0] + r1[2]) / w, double(r1[1] + r1[3]) / h);
+        map.dialogBox.uv0 = ImVec2(static_cast<float>(r0[0]) / static_cast<float>(w), static_cast<float>(r0[1]) / static_cast<float>(h));
+        map.dialogBox.uv1 = ImVec2(static_cast<float>(r0[0] + r0[2]) / static_cast<float>(w), static_cast<float>(r0[1] + r0[3]) / static_cast<float>(h));
+        map.statusBox.uv0 = ImVec2(static_cast<float>(r1[0]) / static_cast<float>(w), static_cast<float>(r1[1]) / static_cast<float>(h));
+        map.statusBox.uv1 = ImVec2(static_cast<float>(r1[0] + r1[2]) / static_cast<float>(w), static_cast<float>(r1[1] + r1[3]) / static_cast<float>(h));
         // find long thin regions for bars
         int found = 0;
         for (size_t i=2;i<regs.size() && found<3;++i) {
             auto r = regs[i];
             if (r[2] > r[3] * 6) {
-                ImVec2 uv0(double(r[0])/w,double(r[1])/h);
-                ImVec2 uv1(double(r[0]+r[2])/w,double(r[1]+r[3])/h);
+                ImVec2 uv0(static_cast<float>(r[0]) / static_cast<float>(w), static_cast<float>(r[1]) / static_cast<float>(h));
+                ImVec2 uv1(static_cast<float>(r[0]+r[2]) / static_cast<float>(w), static_cast<float>(r[1]+r[3]) / static_cast<float>(h));
                 if (found==0) map.redBar = {uv0,uv1};
                 else if (found==1) map.blueBar = {uv0,uv1};
                 else map.greenBar = {uv0,uv1};
@@ -74,7 +74,7 @@ AtlasMap AnalyzeAtlas(const std::string& relativePath, int alphaThreshold) {
         // pick a medium box for button area
         for (size_t i=2;i<regs.size(); ++i) {
             auto r = regs[i];
-            if (r[2] > 80 && r[3] > 40 && !(r[2] > r[3]*6)) { map.buttonBox.uv0 = ImVec2(double(r[0])/w,double(r[1])/h); map.buttonBox.uv1 = ImVec2(double(r[0]+r[2])/w,double(r[1]+r[3])/h); break; }
+            if (r[2] > 80 && r[3] > 40 && !(r[2] > r[3]*6)) { map.buttonBox.uv0 = ImVec2(static_cast<float>(r[0]) / static_cast<float>(w), static_cast<float>(r[1]) / static_cast<float>(h)); map.buttonBox.uv1 = ImVec2(static_cast<float>(r[0]+r[2]) / static_cast<float>(w), static_cast<float>(r[1]+r[3]) / static_cast<float>(h)); break; }
         }
         map.valid = true;
     }

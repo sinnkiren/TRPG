@@ -29,6 +29,7 @@
     <ClCompile Include="ImGuiFontLoader.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Logging.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshBuffer.cpp" />
     <ClCompile Include="Result.cpp" />
@@ -90,7 +91,9 @@
     <ClInclude Include="ImGuiFontLoader.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="ImGuiScope.h" />
     <ClInclude Include="IScene.h" />
+    <ClInclude Include="Logging.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="MeshBuffer.h" />
     <ClInclude Include="Result.h" />

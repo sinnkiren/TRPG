@@ -4,8 +4,11 @@
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
+#include "Logging.h"
 #include <algorithm>
-#include <stdio.h>
+#include <string>
+#include <cmath>
+#include <cstdint>
 
 void BattleScene::Initialize()
 {
@@ -28,71 +31,107 @@ void BattleScene::Initialize()
     damageFlashTimer = 0.0f;
     persistentStage = 0;
     persistentTimer = 0.0f;
+    // 表示用耐久力を初期化（バーのアニメーション用）
+    displayedEndurance = static_cast<float>(player.endurance);
 
     // ImGui ログ初期化（空）
     logLines.clear();
     // reserve して頻繁な再割当を防ぐ（maxLogLines はクラスメンバ想定）
-    if (maxLogLines > 0) logLines.reserve(static_cast<size_t>(maxLogLines));
+    // deque does not support reserve; no-op
     scrollLogToBottom = false;
 
     // UI アトラス読み込み（TextureManager 経由）。assetRoot は TextureManager で設定している想定
     // ファイルは assets/texture/UIblok.png を想定しています。存在しない場合は nullptr のまま。
-    uiAtlas = TextureManager::GetImGuiTexture("texture/UIblok.png");
+    // Load UI atlas and background texture with null checks
+    uiAtlas = nullptr;
+    try {
+        uiAtlas = TextureManager::GetImGuiTexture("texture/UIblok.png");
+    }
+    catch (...) { uiAtlas = nullptr; }
 
     // 背景テクスチャ読み込み
-    bgTexture = TextureManager::GetImGuiTexture("texture/dark-tunnel2.jpg");
+    bgTexture = nullptr;
+    try {
+        bgTexture = TextureManager::GetImGuiTexture("texture/dark-tunnel2.jpg");
+    }
+    catch (...) { bgTexture = nullptr; }
 
     // Optional: automatically analyze atlas to get recommended UVs (used later)
     // This uses AtlasTools to heuristically split the atlas into regions.
     // If assets/texture/UIblok.png exists, the analysis will run and we may override hardcoded UVs.
     {
-        AtlasTools::AtlasMap am = AtlasTools::AnalyzeAtlas("texture/UIblok.png");
-        if (am.valid) {
-            // store into members for use in Render()
-            atlasMap = am;
+        try {
+            AtlasTools::AtlasMap am = AtlasTools::AnalyzeAtlas("texture/UIblok.png");
+            if (am.valid) {
+                // store into members for use in Render()
+                atlasMap = am;
+            }
+        }
+        catch (const std::exception &ex) {
+            if (g_SceneManager.IsDevMode()) {
+                std::string s = std::string("BattleScene: AtlasTools::AnalyzeAtlas threw: ") + ex.what();
+                ::Log::Log(::Log::Level::Debug, s);
+            }
+            // leave atlasMap invalid; Render will gracefully fallback
         }
     }
 
     // Debug: report initialization and texture load status in Dev mode
     if (g_SceneManager.IsDevMode()) {
-        char buf[512];
-        sprintf_s(buf, sizeof(buf), "BattleScene::Initialize player=%s endurance=%d/%d uiAtlas=%p bgTexture=%p\n",
-            player.name.c_str(), player.endurance, player.maxEndurance,
-            static_cast<void*>(uiAtlas), static_cast<void*>(bgTexture));
-        OutputDebugStringA(buf);
-        if (!uiAtlas) OutputDebugStringA("BattleScene: warning - uiAtlas not loaded\n");
-        if (!bgTexture) OutputDebugStringA("BattleScene: warning - bgTexture not loaded\n");
+        std::string s = "BattleScene::Initialize player=" + player.name
+            + " endurance=" + std::to_string(player.endurance) + "/" + std::to_string(player.maxEndurance)
+            + " uiAtlas=" + (uiAtlas ? std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(uiAtlas))) : std::string("(null)"))
+            + " bgTexture=" + (bgTexture ? std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(bgTexture))) : std::string("(null)"))
+            ;
+        ::Log::Log(::Log::Level::Debug, s);
+        if (!uiAtlas) ::Log::Log(::Log::Level::Warning, "BattleScene: warning - uiAtlas not loaded");
+        if (!bgTexture) ::Log::Log(::Log::Level::Warning, "BattleScene: warning - bgTexture not loaded");
     }
 }
 
-void BattleScene::PushLog(const std::string& msg)
+void BattleScene::PushLog(const std::string& msg, int level)
 {
-    // Echo logs to OutputDebugString in Dev mode for easier debugging
-    if (g_SceneManager.IsDevMode()) {
-        char buf[1024];
-        sprintf_s(buf, sizeof(buf), "[BattleLog] %s\n", msg.c_str());
-        OutputDebugStringA(buf);
-    }
+    // level: 0 = Error, 1 = Info, 2 = Debug (verbose)
+    // Decide whether to emit to debug output based on dev mode and level
+    // Route to central logging system and keep in local UI buffer
+    if (level == 0) ::Log::Log(::Log::Level::Error, std::string("[BattleLog] ") + msg);
+    else if (level == 1) ::Log::Log(::Log::Level::Info, std::string("[BattleLog] ") + msg);
+    else ::Log::Log(::Log::Level::Debug, std::string("[BattleLog] ") + msg);
+
+    // Maintain ring buffer of stored log lines (deque allows efficient pop_front)
+#ifndef NDEBUG
     if (maxLogLines > 0) {
-        while (logLines.size() >= maxLogLines) {
-            logLines.erase(logLines.begin());
-        }
+        while (logLines.size() >= maxLogLines) logLines.pop_front();
     }
 
-    logLines.push_back(msg);
-    scrollLogToBottom = true;
+    // Only store debug-level logs when in Dev mode
+    if (g_SceneManager.IsDevMode() || level <= 1) {
+        logLines.push_back(msg);
+        scrollLogToBottom = true;
+    }
+#else
+    // In Release builds, don't keep per-scene logs in memory; they are forwarded to central log only.
+    (void)msg; (void)level;
+#endif
 }
 
 void BattleScene::Update()
 {
-    // ImGui が初期化されていなければ安全に早期リターン
-    if (ImGui::GetCurrentContext() == nullptr) {
-        return;
-    }
-
-    // オーバーレイ等で使う時間を加算
-    float dt = ImGui::GetIO().DeltaTime;
+    // Use steady clock for Update delta-time to decouple from ImGui
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<float> delta = now - m_lastTick;
+    m_lastTick = now;
+    float dt = delta.count();
+    // If dt is too large (e.g. paused or resumed), clamp to reasonable max
+    if (dt > 0.5f) dt = 0.5f;
     timeAccum += dt;
+
+    // 表示用耐久力を滑らかにプレイヤー耐久力へ追従させる（簡易イージング）
+    {
+        float target = static_cast<float>(player.endurance);
+        float alpha = std::clamp(dt * 6.0f, 0.0f, 1.0f); // スムージング係数（調整可）
+        displayedEndurance += (target - displayedEndurance) * alpha;
+    }
 
     // ダメージ閃光と残痕のタイマー処理
     if (damageFlashTimer > 0.0f) {
@@ -113,8 +152,8 @@ void BattleScene::Update()
 
         //失った割合に基づき段階を決定（4等分)
         if (player.maxEndurance > 0) {
-            float lostPercent = (float)(player.maxEndurance - player.endurance) / (float)player.maxEndurance; //0..1
-            int stage = std::min(4, std::max(0, int(lostPercent * 4.0f)));
+            float lostPercent = static_cast<float>(player.maxEndurance - player.endurance) / static_cast<float>(player.maxEndurance); //0..1
+            int stage = std::min(4, std::max(0, static_cast<int>(lostPercent * 4.0f)));
             // ステージ1以上なら残痕を設定
             if (stage >= 1) {
                 persistentStage = stage;
@@ -126,9 +165,8 @@ void BattleScene::Update()
     prevEndurance = player.endurance;
 
     if (g_SceneManager.IsDevMode()) {
-        char buf[256];
-        sprintf_s(buf, sizeof(buf), "BattleScene::Update dt=%f timeAccum=%f player.endurance=%d\n", ImGui::GetIO().DeltaTime, timeAccum, player.endurance);
-        OutputDebugStringA(buf);
+        std::string s = "BattleScene::Update dt=" + std::to_string(dt) + " timeAccum=" + std::to_string(timeAccum) + " player.endurance=" + std::to_string(player.endurance);
+        ::Log::Log(::Log::Level::Debug, s);
     }
 
     // 全ての敵が倒されたか判定
@@ -143,32 +181,42 @@ void BattleScene::Render()
 {
     // ImGui が初期化されていなければ安全に早期リターン
     if (ImGui::GetCurrentContext() == nullptr) {
-        if (g_SceneManager.IsDevMode()) OutputDebugStringA("BattleScene::Render skipped - ImGui context not initialized\n");
+        if (g_SceneManager.IsDevMode()) ::Log::Log(::Log::Level::Warning, "BattleScene::Render skipped - ImGui context not initialized");
         return;
     }
 
     // フルスクリーン風に扱うメインウィンドウ
-    ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_Always);
+    const ImGuiIO& io = ImGui::GetIO();
+    ImVec2 disp = io.DisplaySize;
+    ImGui::SetNextWindowSize(disp, ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     // Make the window background transparent so the full-screen background image is visible
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
-    ImGui::Begin("Battle", nullptr,
+    bool beginDraw = ImGui::Begin("Battle", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    // --- ここで全体のテキスト色をより濃く設定して視認性を上げる ---
-    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.95f, 0.98f, 1.0f));
+    // Only push the global text color if we're actually going to draw the window contents.
+    if (beginDraw) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.95f, 0.98f, 1.0f));
+    }
+
+    // If Begin() returned false, we must call End() and avoid submitting UI, but still pop the WindowBg we pushed.
+    if (!beginDraw) {
+        ImGui::End();
+        ImGui::PopStyleColor(); // pop WindowBg
+        return;
+    }
 
     // 全体サイズと下部コマンド領域の高さ
-    ImVec2 disp = ImGui::GetIO().DisplaySize;
     const float cmdHeight = 160.0f;
-    const float rightPanelWidth = 260.0f; // キャラステータスの幅
+    // Responsive right panel width: scale with display width but clamp to reasonable range
+    const float rightPanelWidth = std::clamp(disp.x * 0.22f, 220.0f, 340.0f);
 
     // 背景描画（画面全体に1枚絵を敷く）
     if (bgTexture) {
         ImDrawList* dl = ImGui::GetBackgroundDrawList();
         if (dl) {
-            ImVec2 dispSize = ImGui::GetIO().DisplaySize;
-            ImVec2 a(0, 0), b(dispSize.x, dispSize.y);
+            ImVec2 a(0, 0), b(disp.x, disp.y);
             // use full texture UVs
             dl->AddImage(bgTexture, a, b, ImVec2(0, 0), ImVec2(1, 1), IM_COL32(255, 255, 255, 255));
         }
@@ -251,7 +299,7 @@ void BattleScene::Render()
     ImGui::Separator();
 
     // HP 表示
-    float enduranceRatio = (player.maxEndurance > 0) ? float(player.endurance) / float(player.maxEndurance) : 0.0f;
+    float enduranceRatio = (player.maxEndurance > 0) ? float(displayedEndurance) / float(player.maxEndurance) : 0.0f;
     ImGui::Text("HP");
     // If we have an atlas, draw the stylized bar from atlas and overlay a filled rect to represent the current value.
     if (uiAtlas) {
@@ -271,10 +319,19 @@ void BattleScene::Render()
         // Overlay filled rect (use draw list so it stays on top of the image)
         ImDrawList* dl = ImGui::GetWindowDrawList();
         if (dl) {
-            ImU32 fillCol = ImGui::GetColorU32(ImVec4(0.85f, 0.15f, 0.15f, 1.0f)); // red tint
+            // Use a saturated red depending on missing HP
+            ImVec4 tint(0.85f, 0.15f, 0.15f, 1.0f);
+            ImU32 fillCol = ImGui::GetColorU32(tint);
             ImVec2 fillA(barPos.x + 2.0f, barPos.y + 2.0f);
             ImVec2 fillB(barPos.x + 2.0f + (barSize.x - 4.0f) * enduranceRatio, barPos.y + barSize.y - 2.0f);
             dl->AddRectFilled(fillA, fillB, fillCol);
+
+            // Draw animated overlay (subtle gradient/shine)
+            ImU32 shineCol = ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, 0.06f));
+            float shineW = (barSize.x - 4.0f) * std::fmod(timeAccum * 0.2f, 1.0f);
+            ImVec2 sA(fillA.x + shineW, fillA.y);
+            ImVec2 sB(std::min(fillB.x, sA.x + 24.0f), fillB.y);
+            if (sB.x > sA.x) dl->AddRectFilled(sA, sB, shineCol);
         }
 
         // Text on the right of the bar showing numeric value
@@ -367,23 +424,23 @@ void BattleScene::Render()
                     int dmg = 4 + Dice::RollDie(3); //4 + d3 ダメージ
                     target->hp = std::max(0, target->hp - dmg);
                     // ログ追加
-                    PushLog(player.name + " は " + target->name + " に " + std::to_string(dmg) + " のダメージを与えた。");
+                    PushLog(player.name + " は " + target->name + " に " + std::to_string(dmg) + " のダメージを与えた。", 1);
                     if (target->hp == 0) {
-                        PushLog(target->name + " を倒した！");
+                        PushLog(target->name + " を倒した！", 1);
                     }
                 }
                 else {
                     //失敗: 耐久力減少および敵ターンへ
                     int dmg = target->fearDamage;
                     player.ApplyEnduranceLoss(dmg);
-                    PushLog(player.name + " の攻撃は失敗した。耐久力が " + std::to_string(dmg) + " 減少した。");
+                    PushLog(player.name + " の攻撃は失敗した。耐久力が " + std::to_string(dmg) + " 減少した。", 1);
                     phase = Phase::EnemyTurn;
                 }
             }
             ImGui::PopStyleColor(3);
             ImGui::SameLine();
             if (ImGui::Button("Wait")) {
-                PushLog(player.name + " は行動を遅らせた。");
+                PushLog(player.name + " は行動を遅らせた。", 1);
                 phase = Phase::EnemyTurn;
             }
             ImGui::EndDisabled();
@@ -408,32 +465,30 @@ void BattleScene::Render()
             int hit = Dice::RollDie(20);
             int dmg = (hit >= 6) ? attacker->atk : 1;
             player.ApplyEnduranceLoss(dmg);
-            PushLog(attacker->name + " が攻撃し " + std::to_string(dmg) + " の耐久力を奪った。");
+            PushLog(attacker->name + " が攻撃し " + std::to_string(dmg) + " の耐久力を奪った。", 1);
         }
         phase = Phase::PlayerTurn;
     }
 
-    // --- ここでログ表示領域を追加（コマンド領域の下） ---
-    ImGui::Separator();
-    ImGui::Text("Battle Log:");
-    ImGui::BeginChild("BattleLog", ImVec2(0, 80), true);
-    for (const auto& line : logLines) {
-        ImGui::TextWrapped("%s", line.c_str());
+    // --- Battle Log: moved to separate Dev-only window. Provide toggle button here when in Dev mode ---
+    if (g_SceneManager.IsDevMode()) {
+        ImGui::SameLine();
+        if (ImGui::Button("Toggle Battle Log Window")) {
+            m_showBattleLog = !m_showBattleLog;
+        }
     }
-    if (scrollLogToBottom) {
-        ImGui::SetScrollHereY(1.0f);
-        scrollLogToBottom = false;
+
+    if (beginDraw) {
+        ImGui::PopStyleColor(); // restore text color pushed for Commands label
+        ImGui::EndChild(); // CommandArea
+
+        // --- ここで先に全体テキスト色の Push を戻す ---
+        ImGui::PopStyleColor(); // restore global text color pushed after Begin()
     }
-    ImGui::EndChild();
-
-    ImGui::PopStyleColor(); // restore text color pushed for Commands label
-    ImGui::EndChild(); // CommandArea
-
-    // --- ここで先に全体テキスト色の Push を戻す ---
-    ImGui::PopStyleColor(); // restore global text color pushed after Begin()
 
     ImGui::End(); // Battle window
-    ImGui::PopStyleColor();
+    // Note: We popped the global text color only if beginDraw was true; now pop the WindowBg color we pushed at the top.
+    ImGui::PopStyleColor(); // pop WindowBg
 
     // --- 画面エフェクト（フラッシュ／残痕） ---
     float intensity = 1.0f - ((player.maxEndurance > 0) ? float(player.endurance) / float(player.maxEndurance) : 0.0f);
@@ -448,4 +503,36 @@ void BattleScene::Render()
 
     // Story 側や他から開始した FearEffects オーバーレイを描画
     FearEffects::RenderOverlay();
+}
+
+// Added: Render Dev-only battle log window
+void BattleScene::RenderBattleLogWindow()
+{
+    if (!g_SceneManager.IsDevMode() || !m_showBattleLog) return;
+    if (ImGui::GetCurrentContext() == nullptr) return;
+
+    ImGui::Begin("Battle Log", &m_showBattleLog, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text("Battle Log (Dev)");
+    ImGui::Separator();
+    ImGui::BeginChild("BattleLogWindow", ImVec2(400, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const auto& line : logLines) {
+        ImGui::TextWrapped("%s", line.c_str());
+    }
+    if (scrollLogToBottom) {
+        ImGui::SetScrollHereY(1.0f);
+        scrollLogToBottom = false;
+    }
+    ImGui::EndChild();
+    ImGui::End();
+}
+
+// Embedded dev contents renderer for centralized Dev Panel
+void BattleScene::RenderDevPanelContents()
+{
+    ImGui::Text("Battle Log (embedded)");
+    ImGui::Separator();
+    ImGui::BeginChild("BattleLogEmbedded", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const auto& line : logLines) ImGui::TextWrapped("%s", line.c_str());
+    if (scrollLogToBottom) { ImGui::SetScrollHereY(1.0f); scrollLogToBottom = false; }
+    ImGui::EndChild();
 }

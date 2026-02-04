@@ -7,6 +7,7 @@
 #include "system/json.hpp"
 #include "system/imgui/imgui.h"
 #include <d3d11.h>
+#include <chrono>
 
 using json = nlohmann::json;
 
@@ -27,10 +28,12 @@ public:
 	void Initialize() override;
 	void Update() override;   // 未使用
 	void Render() override;
+	void RenderUI() override;
 
 	void UpdateImpl(float dt); // float dt を受け取る更新
 
 	bool LoadFromFile(const std::string& path);
+	bool SaveToFile(const std::string& path) const;
 	void Play();//再生
 	void Pause();//一時停止
 	void Next();//次へ
@@ -87,4 +90,19 @@ private:
 
 	// フェード開始
 	void StartFadeToBattle(float duration = 0.8f);
+
+    // 最後のロード/保存エラーを保持（UI表示用）
+    std::string m_lastLoadError;
+
+    // 遅延ロード再試行制御
+    int m_bgLoadAttempts = 0;          // 試行回数
+    int m_bgMaxLoadAttempts = 8;       // 最大試行回数（-1 で無制限）
+    float m_bgLastAttemptTime = 0.0f;  // 最終試行時刻 (ImGui::GetTime())
+    float m_bgRetryInterval = 2.0f;    // 再試行間隔（秒）
+
+	// Dev UI: toggle for overlay/debug window
+	bool m_showDevWindow = false;
+    // Expose some info to centralized dev panel
+public:
+    void RenderDevPanelContents();
 };

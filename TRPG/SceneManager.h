@@ -33,10 +33,24 @@ public:
     CharcterScene::CharcterDate& GetPlayer();
     const CharcterScene::CharcterDate& GetPlayer() const;
 
+    // Handle file dropped from OS (Dev mode only)
+    void HandleFileDrop(const std::string& path);
+
     // Development mode flag: guard dev-only features (drag/drop, detailed logs, tools)
     // Default: enabled in debug builds, disabled in release builds.
     bool IsDevMode() const { return m_devMode; }
-    void SetDevMode(bool v) { m_devMode = v; }
+    void SetDevMode(bool v);
+    bool IsPlayMode() const { return !m_devMode; }
+
+    // In Release builds, Dev features are unavailable. Helper to query at compile-time.
+    static constexpr bool DevFeaturesCompiledIn()
+    {
+#ifndef NDEBUG
+        return true;
+#else
+        return false;
+#endif
+    }
 
 private:
     // フレーム処理の補助（SceneManager.cpp で実装）
@@ -63,6 +77,11 @@ private:
 
     // Dev mode flag (actual default set at runtime in Initialize)
     bool m_devMode = false;
+    // F12 toggle edge detector
+    bool f12PressedLastFrame = false;
+
+    // Update window title to reflect current scene and dev/play mode
+    void UpdateWindowTitle();
 
     // ペンディング遷移フラグ
     bool pendingChange = false;

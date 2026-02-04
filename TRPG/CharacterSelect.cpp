@@ -110,17 +110,43 @@ void CharcterScene::Update()
     // 必要ならここに入力処理や状態更新を記述する
 }
 
+void CharcterScene::SetPortraitPath(const std::string& path)
+{
+    // Only allow in dev mode
+    if (!g_SceneManager.IsDevMode()) return;
+    if (path.empty()) return;
+    charcter.portraitPath = path;
+    // Warm the texture cache
+    TextureManager::LoadTexture(charcter.portraitPath);
+    // Also update SceneManager's copy
+    g_SceneManager.SetPlayer(charcter);
+}
+
 void CharcterScene::Render()
 {
+    // 安全: ImGui が初期化されていなければ何もしない
+    if (ImGui::GetCurrentContext() == nullptr) {
+        if (g_SceneManager.IsDevMode()) OutputDebugStringA("CharacterSelect::Render skipped - ImGui context not initialized\n");
+        return;
+    }
     ImGui::Begin("Character Sheet");
+
+    // Accept drag and drop files onto the main window (Dev mode only)
+    if (g_SceneManager.IsDevMode()) {
+        // ImGui built-in drag and drop accepts payloads from ImGui widgets, not OS.
+        // We provide a small helper UI to show a drop target and, when activated, ask the
+        // platform layer (Application WndProc) to perform the file drop via WM_DROPFILES.
+        ImGui::Text("(Dev) You can drag image files from Explorer onto the application window to set Portrait.");
+    }
 
     // サンプルの簡易選択コンボ
     if (!sampleCharacters.empty()) {
         const char* names[16];
-        int count = (int)sampleCharacters.size();
-        for (int i =0; i < count; ++i) names[i] = sampleCharacters[i].name.c_str();
+        int total = (int)sampleCharacters.size();
+        int count = std::min(total, 16);
+        for (int i = 0; i < count; ++i) names[i] = sampleCharacters[i].name.c_str();
         if (ImGui::Combo("Quick Samples", &selectedSampleIndex, names, count)) {
-            if (selectedSampleIndex >=0 && selectedSampleIndex < (int)sampleCharacters.size()) {
+            if (selectedSampleIndex >= 0 && selectedSampleIndex < (int)sampleCharacters.size()) {
                 charcter = sampleCharacters[selectedSampleIndex];
             }
         }
@@ -300,7 +326,38 @@ void CharcterScene::Render()
     ImGui::Text("SAN (Sanity): %d", POW*5);//正気度
     ImGui::Text("Luck: %d", POW*5);//幸運
     ImGui::Text("Idea: %d", INT*5);//アイデア
-    ImGui::Text("Knowledge: %d", EDU*5);//知識
+    ImGui::Text("Occupational Skill Points: %d", EDU*20);
+    ImGui::Text("Hobby Skill Points: %d", EDU*10);
+
+    // Apply derived values to the character and notify SceneManager
+    if (ImGui::Button("Apply to Character")) {
+        for (auto &a : abilities) {
+            if (a.name == "STR") charcter.str = a.value;
+            else if (a.name == "CON") charcter.con = a.value;
+            else if (a.name == "POW") charcter.pow = a.value;
+            else if (a.name == "DEX") charcter.dex = a.value;
+            else if (a.name == "APP") charcter.app = a.value;
+            else if (a.name == "SIZ") charcter.siz = a.value;
+            else if (a.name == "INT") charcter.int_ = a.value;
+            else if (a.name == "EDU") charcter.edu = a.value;
+        }
+
+        // simple derived updates
+        charcter.sanity = static_cast<int>(trpg::clamp(charcter.pow * 5, 0, 9999));
+        charcter.maxSanity = 100;
+        charcter.endurance = (charcter.con + charcter.siz) / 2;
+        charcter.maxEndurance = charcter.endurance;
+
+        g_SceneManager.SetPlayer(charcter);
+    }
+
+    ImGui::EndChild();
+
+    // restore single column layout
+    ImGui::Columns(1);
+
+    ImGui::Separator();
+    ImGui::Text("Last Dice Roll: %d", lastDiceRoll);
     ImGui::Text("Endurance: %d", (CON+SIZ)/2);//耐久力
     ImGui::Text("Magic Points: %d", POW*1);//マジックポイント
     ImGui::Text("Occupational Skill Points: %d", EDU*20);
@@ -331,22 +388,29 @@ void CharcterScene::Render()
             charcter.endurance, charcter.maxEndurance, charcter.con, charcter.siz);
     }
 
-    // Portrait selection (Dev-only convenience): allow entering a path to an image
-    ImGui::Separator();
-    ImGui::Text("Portrait:");
-    char bufPath[512] = {};
-    if (!charcter.portraitPath.empty()) strncpy_s(bufPath, sizeof(bufPath), charcter.portraitPath.c_str(), _TRUNCATE);
-    if (ImGui::InputText("Portrait Path", bufPath, sizeof(bufPath))) {
-        charcter.portraitPath = std::string(bufPath);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Load Portrait")) {
-        // Try to load via TextureManager to warm cache; store path regardless
-        g_SceneManager.SetPlayer(charcter); // ensure SceneManager has latest
-        TextureManager::LoadTexture(charcter.portraitPath);
+    // Portrait selection: only show the path input in Dev mode
+    if (g_SceneManager.IsDevMode()) {
+        ImGui::Separator();
+        ImGui::Text("Portrait:");
+        char bufPath[512] = {};
+        if (!charcter.portraitPath.empty()) strncpy_s(bufPath, sizeof(bufPath), charcter.portraitPath.c_str(), _TRUNCATE);
+        if (ImGui::InputText("Portrait Path", bufPath, sizeof(bufPath))) {
+            charcter.portraitPath = std::string(bufPath);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Load Portrait")) {
+            // Try to load via TextureManager to warm cache; store path regardless
+            g_SceneManager.SetPlayer(charcter); // ensure SceneManager has latest
+            TextureManager::LoadTexture(charcter.portraitPath);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Clear Portrait")) {
+            charcter.portraitPath.clear();
+            g_SceneManager.SetPlayer(charcter);
+        }
     }
 
-    ImGui::EndChild();
+    // NOTE: Derived child was already ended above. Do not call EndChild() here.
     ImGui::Columns(1);
 
     ImGui::Separator();
@@ -394,81 +458,4 @@ void CharcterScene::Render()
     }
 
     ImGui::End();
-    for (int i=0;i<(int)abilities.size();++i) {
-        auto &a = abilities[i];
-        ImGui::PushID(i);
-        ImGui::Text("%s", a.name.c_str()); ImGui::SameLine(120);
-
-        // ロールボタン: 個々の出目を取得して abilityFaces に保存
-        if (ImGui::Button(a.expr.c_str())) {
-            int total = 0;
-            auto faces = RollDiceDetailed(a.expr, total);
-            a.value = total;
-            lastDiceRoll = total;
-            if (i >= 0 && i < (int)abilityFaces.size()) abilityFaces[i] = faces;
-        }
-        ImGui::SameLine();
-
-        if (ImGui::Checkbox("Lock", &a.locked)) { }
-        ImGui::SameLine();
-
-        // ダイス出目画像の表示（アトラス: 3 列 x 2 行 想定）
-        if (i >= 0 && i < (int)abilityFaces.size() && !abilityFaces[i].empty()) {
-            // 出目文字列を作成（例: "1+4+3+6"、加算分があれば末尾に +6 など）
-            int sumFaces = 0;
-            std::string facesStr;
-            {
-                std::ostringstream oss;
-                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
-                    if (fi) oss << "+";
-                    oss << abilityFaces[i][fi];
-                    sumFaces += abilityFaces[i][fi];
-                }
-                int add = a.value - sumFaces;
-                if (add > 0) oss << "+" << add;
-                facesStr = oss.str();
-            }
-
-            ImTextureID sheet = TextureManager::GetImGuiTextureID("texture/dice.jpg"); // ← 正しい相対パスに変更
-            if (!sheet) {
-                OutputDebugStringA("CharacterSelect: TextureManager returned NULL for texture/dice.jpg\n");
-                // フォールバック：数値を並べて表示
-                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
-                    ImGui::Text("%d", abilityFaces[i][fi]);
-                    ImGui::SameLine();
-                }
-                ImGui::NewLine();
-                // facesStr も表示（詳細）
-                ImGui::SameLine();
-                ImGui::Text("%s", facesStr.c_str());
-                ImGui::SameLine(120);
-                ImGui::Text("%d", a.value);
-            }
-            else {
-                const float cols = 3.0f;
-                const float rows = 2.0f;
-                for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
-                    int face = abilityFaces[i][fi];
-                    if (face < 1 || face > 6) continue;
-                    int idx = face - 1;
-                    int col = idx % 3;
-                    int row = idx / 3;
-                    ImVec2 uv0(col / cols, row / rows);
-                    ImVec2 uv1((col + 1) / cols, (row + 1) / rows);
-                    ImGui::Image(sheet, ImVec2(28, 28), uv0, uv1);
-                    ImGui::SameLine();
-                }
-                // 画像の横に出目の文字列と合計を表示
-                ImGui::SameLine();
-                ImGui::Text("%s", facesStr.c_str());
-                ImGui::SameLine(120); // 必要なら調整
-                ImGui::Text("%d", a.value);
-            }
-        } else {
-            // ダイス出目が無い／未ロールのときは数値のみ表示（位置を合わせる）
-            ImGui::SameLine(120);
-            ImGui::Text("%d", a.value);
-        }
-        ImGui::PopID();
-    }
 }

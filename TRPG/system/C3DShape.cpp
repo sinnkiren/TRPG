@@ -1,4 +1,3 @@
-#include <iostream>
 #include "C3DShape.h"
 #include "commontypes.h"
 #include "SphereDrawer.h"

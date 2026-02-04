@@ -3,8 +3,8 @@
 #include "StoryPlayer.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
+#include "Logging.h"
 #include <fstream>
-#include <iostream>
 #include "system/imgui/imgui.h"
 #include "system/json.hpp" 
 #include "FearEffects.h"
@@ -21,10 +21,44 @@ StoryPlayer::~StoryPlayer() {
 #endif
 }
 
+void StoryPlayer::RenderDevPanelContents()
+{
+    ImGui::Text("StoryPlayer Dev Info");
+    ImGui::Separator();
+    ImGui::Text("BG Path: %s", m_bgPath.empty() ? "(empty)" : m_bgPath.c_str());
+    ImGui::Text("Load attempts: %d", m_bgLoadAttempts);
+    ImGui::Text("Loaded attempted: %s", m_bgLoadedAttempted ? "yes" : "no");
+    if (!m_lastLoadError.empty()) ImGui::TextWrapped("Last load error: %s", m_lastLoadError.c_str());
+}
+
+void StoryPlayer::RenderUI()
+{
+    // Dev-only: show background load status window, toggleable
+    if (!g_SceneManager.IsDevMode()) return;
+    if (ImGui::GetCurrentContext() == nullptr) return;
+
+    ImGui::Begin("StoryPlayer Dev", &m_showDevWindow, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text("BG Path: %s", m_bgPath.empty() ? "(empty)" : m_bgPath.c_str());
+    ImGui::Text("Loaded attempted: %s", m_bgLoadedAttempted ? "yes" : "no");
+    ImGui::Text("BG Tex set: %s", m_bgTex ? "yes" : "no");
+    if (!m_lastLoadError.empty()) ImGui::TextWrapped("Last load error: %s", m_lastLoadError.c_str());
+    ImGui::Separator();
+    if (ImGui::Button(m_bgLoadedAttempted ? "Retry Load" : "Load Background")) {
+        // Reset attempts so LoadBackgroundTextureIfNeeded will try immediately
+        m_bgLoadedAttempted = false;
+        m_bgLoadAttempts = 0;
+        m_bgLastAttemptTime = 0.0f;
+        LoadBackgroundTextureIfNeeded();
+    }
+    ImGui::End();
+}
+
 #ifdef IMGUI_IMPL_DIRECTX11
 void StoryPlayer::SetBackgroundSRV(ID3D11ShaderResourceView* srv)
 {
     if (m_bgSrv == srv) return;
+    // AddRef new SRV first to ensure we own a reference, then release previous
+    if (srv) srv->AddRef();
     if (m_bgSrv) { m_bgSrv->Release(); m_bgSrv = nullptr; }
     m_bgSrv = srv;
     m_bgTex = reinterpret_cast<ImTextureID>(srv);
@@ -36,30 +70,50 @@ void StoryPlayer::SetBackgroundSRV(ID3D11ShaderResourceView* srv)
 
 void StoryPlayer::LoadBackgroundTextureIfNeeded()
 {
-    if (m_bgLoadedAttempted) return; // 既に試行済み
     if (m_bgPath.empty()) return;
 
 #ifdef IMGUI_IMPL_DIRECTX11
+    // If we've succeeded or exhausted attempts, don't try further
+    if (m_bgLoadedAttempted) return;
+
     // Device が準備できているかチェック
     if (!Application::GetDevice()) {
-        return; // Device 未初期化 => 後で試す
-    }
-
-    m_bgLoadedAttempted = true; // 一度だけ試す
-
-    // TextureManager に任せてロードする（assetRoot を基準とした相対パス）
-    ID3D11ShaderResourceView* srv = TextureManager::LoadTexture(m_bgPath);
-    if (!srv) {
-        std::string msg = "StoryPlayer: TextureManager failed to load: " + m_bgPath + "\n";
-        OutputDebugStringA(msg.c_str());
+        // Device 未初期化 => 後で試す
         return;
     }
 
-    // StoryPlayer 側でも保持するので参照カウントを増やす（安全のため）
-    srv->AddRef();
-    SetBackgroundSRV(srv); // m_bgSrv にセット（StoryPlayer が解放を行う）
+    // Check if we've already exhausted retries
+    if (m_bgMaxLoadAttempts >= 0 && m_bgLoadAttempts >= m_bgMaxLoadAttempts) {
+        m_bgLoadedAttempted = true; // mark as done
+        m_lastLoadError = "Background load: max attempts reached for: " + m_bgPath;
+        return;
+    }
 
-    OutputDebugStringA(("StoryPlayer: background loaded via TextureManager: " + m_bgPath + "\n").c_str());
+    float now = static_cast<float>(ImGui::GetTime());
+    // If we've attempted recently, wait until retry interval elapsed
+    if (m_bgLoadAttempts > 0) {
+        float since = now - m_bgLastAttemptTime;
+        if (since < m_bgRetryInterval) return; // wait longer
+    }
+
+    // Attempt to load
+    m_bgLoadAttempts++;
+    m_bgLastAttemptTime = now;
+
+    ID3D11ShaderResourceView* srv = TextureManager::LoadTexture(m_bgPath);
+    if (!srv) {
+        m_lastLoadError = "StoryPlayer: TextureManager failed to load: " + m_bgPath;
+        std::string msg = m_lastLoadError + " (attempt " + std::to_string(m_bgLoadAttempts) + ")";
+        ::Log::Log(::Log::Level::Warning, msg);
+        // Do not set m_bgLoadedAttempted so we can retry later until max attempts
+        return;
+    }
+
+    // Success: Set texture (SetBackgroundSRV will AddRef the SRV for ownership)
+    SetBackgroundSRV(srv); // m_bgSrv にセット（StoryPlayer が解放を行う）
+    m_bgLoadedAttempted = true;
+    m_lastLoadError.clear();
+    ::Log::Log(::Log::Level::Info, std::string("StoryPlayer: background loaded via TextureManager: ") + m_bgPath);
 #endif
 }
 
@@ -130,34 +184,111 @@ void StoryPlayer::Initialize() {
 
 void StoryPlayer::Update() {
     // 毎フレーム呼ばれる Update から実際の更新処理を呼ぶ
-    float dt = ImGui::GetIO().DeltaTime;
+    // Use steady clock to decouple from ImGui timing
+    static std::chrono::steady_clock::time_point s_lastTick = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<float> delta = now - s_lastTick;
+    s_lastTick = now;
+    float dt = delta.count();
+    if (dt > 0.5f) dt = 0.5f; // clamp large dt
     UpdateImpl(dt);
 }
 
 bool StoryPlayer::LoadFromFile(const std::string& path) {
-    std::ifstream ifs(path);
-    if (!ifs.is_open()) {
-        std::cerr << "Failed to open story file: " << path << "\n";
+    // Clear previous error
+    m_lastLoadError.clear();
+
+    // Check file existence first
+    namespace fs = std::filesystem;
+    try {
+        if (!fs::exists(path)) {
+            m_lastLoadError = "Story file does not exist: " + path;
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
+    }
+    catch (const std::exception& ex) {
+        m_lastLoadError = std::string("Filesystem check failed: ") + ex.what();
+        ::Log::Log(::Log::Level::Error, m_lastLoadError);
         return false;
     }
-    json j;
-    ifs >> j;
-    m_events.clear();
-    for (auto& it : j) {
-        StoryEvent ev;
-        ev.text = it.value("text", "");
-        ev.speaking = it.value("speaker", "");
-        ev.faceImage = it.value("face", "");
-        ev.effect = it.value("effect", "");
-        ev.duration = it.value("duration", 1.0f);
-        if (it.contains("effectParams")) ev.effectParams = it["effectParams"];
-        else ev.effectParams = nullptr;
-        m_events.push_back(ev);
+
+    std::ifstream ifs(path);
+    if (!ifs.is_open()) {
+        m_lastLoadError = "Failed to open story file: " + path;
+        ::Log::Log(::Log::Level::Error, m_lastLoadError);
+        return false;
     }
+
+    json j;
+    try {
+        ifs >> j;
+    }
+    catch (const std::exception& ex) {
+        m_lastLoadError = std::string("Failed to parse JSON: ") + ex.what();
+        ::Log::Log(::Log::Level::Error, m_lastLoadError);
+        return false;
+    }
+
+    // Validate that the root is an array
+    if (!j.is_array()) {
+        m_lastLoadError = "Story JSON root is not an array: " + path;
+        ::Log::Log(::Log::Level::Error, m_lastLoadError);
+        return false;
+    }
+
+    m_events.clear();
+    try {
+        for (auto& it : j) {
+            StoryEvent ev;
+            if (it.contains("text")) ev.text = it.value("text", "");
+            if (it.contains("speaker")) ev.speaking = it.value("speaker", "");
+            if (it.contains("face")) ev.faceImage = it.value("face", "");
+            if (it.contains("effect")) ev.effect = it.value("effect", "");
+            if (it.contains("duration")) ev.duration = it.value("duration", 1.0f);
+            if (it.contains("effectParams")) ev.effectParams = it["effectParams"];
+            else ev.effectParams = nullptr;
+            m_events.push_back(ev);
+        }
+    }
+    catch (const std::exception& ex) {
+        m_lastLoadError = std::string("Error reading story entries: ") + ex.what();
+        ::Log::Log(::Log::Level::Error, m_lastLoadError);
+        m_events.clear();
+        return false;
+    }
+
     m_index = 0;
     m_timer = 0.0f;
     m_playing = false;
+    // success: clear last error
+    m_lastLoadError.clear();
     return true;
+}
+
+bool StoryPlayer::SaveToFile(const std::string& path) const
+{
+    try {
+        json j = json::array();
+        for (const auto& ev : m_events) {
+            json it;
+            it["text"] = ev.text;
+            it["speaker"] = ev.speaking;
+            it["face"] = ev.faceImage;
+            it["effect"] = ev.effect;
+            it["duration"] = ev.duration;
+            if (!ev.effectParams.is_null()) it["effectParams"] = ev.effectParams;
+            j.push_back(it);
+        }
+
+        std::ofstream ofs(path);
+        if (!ofs.is_open()) return false;
+        ofs << j.dump(2);
+        return true;
+    }
+    catch (...) {
+        return false;
+    }
 }
 
 void StoryPlayer::RegisterEffect(const std::string& name, EffectHandler handler) {
@@ -169,7 +300,7 @@ void StoryPlayer::TriggerEffect(const StoryEvent& ev) {
     if (it != m_effects.end()) {
         it->second(ev);
     } else {
-        std::cout << "[Effect] " << ev.effect << " (no handler)\n";
+        ::Log::Log(::Log::Level::Warning, std::string("[Effect] ") + ev.effect + " (no handler)");
     }
 }
 
@@ -272,8 +403,8 @@ void StoryPlayer::Render() {
 
     const ImGuiViewport* vp = ImGui::GetMainViewport();
 
-    // --- デバッグオーバーレイ: 背景読み込みステータスを画面左上に描画 ---
-    {
+    // --- デバッグオーバーレイ: 背景読み込みステータスを画面左上に描画 (Dev モード限定) ---
+    if (g_SceneManager.IsDevMode()) {
         ImDrawList* fg = ImGui::GetForegroundDrawList();
         if (fg && vp) {
             std::string existsStr = "(n/a)";
@@ -289,6 +420,10 @@ void StoryPlayer::Render() {
             s += "exists: " + existsStr + "\n";
             s += "loadAttempted: " + std::string(m_bgLoadedAttempted ? "yes" : "no") + "\n";
             s += "bgTex set: " + std::string(m_bgTex ? "yes" : "no") + "\n";
+            if (!m_lastLoadError.empty()) {
+                s += "Last load error: ";
+                s += m_lastLoadError + "\n";
+            }
 
             ImU32 col = ImGui::GetColorU32(ImVec4(1.0f, 0.9f, 0.2f, 1.0f));
             ImFont* font = ImGui::GetFont();
@@ -298,15 +433,17 @@ void StoryPlayer::Render() {
     }
 
     // --- 背景描画（あれば） ---
-    if (m_bgTex && vp) {
-        ImDrawList* bg = ImGui::GetBackgroundDrawList();
-        bg->AddImage(m_bgTex, vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y));
-    } else {
-        // デバッグ用: 背景が無い場合は薄いグレーで塗ることで確認可能
+    if (g_SceneManager.IsDevMode() || m_bgTex) {
         if (vp) {
             ImDrawList* bg = ImGui::GetBackgroundDrawList();
-            ImU32 col = ImGui::GetColorU32(ImVec4(0.08f, 0.08f, 0.08f, 1.0f));
-            bg->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
+            if (m_bgTex) {
+                bg->AddImage(m_bgTex, vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y));
+            }
+            else {
+                // Dev モードでは背景が無いことを薄いグレーで示す
+                ImU32 col = ImGui::GetColorU32(ImVec4(0.08f, 0.08f, 0.08f, 1.0f));
+                bg->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
+            }
         }
     }
 

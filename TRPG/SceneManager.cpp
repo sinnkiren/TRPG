@@ -78,10 +78,14 @@ void SceneManager::HandleFileDrop(const std::string& path)
         std::string p = path;
         // Helper using C FILE* to avoid <fstream> issues in some toolchains
         auto file_exists = [](const std::string& fp)->bool {
-            FILE* f = fopen(fp.c_str(), "rb");
-            if (f) { fclose(f); return true; }
+            FILE* f = nullptr;
+            if (fopen_s(&f, fp.c_str(), "rb") == 0 && f) {
+                fclose(f);
+                return true;
+            }
             return false;
-        };
+            };
+
 
         // If not absolute, prefer assetRoot + path; otherwise try the relative path in CWD
         if (!IsAbsolute(p)) {

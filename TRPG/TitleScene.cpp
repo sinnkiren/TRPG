@@ -73,13 +73,13 @@ void TitleScene::Update()
     if (s_fadingIn) {
         s_titleFadeElapsed += dt;
         float r = (s_titleFadeInDuration > 0.0f) ? (s_titleFadeElapsed / s_titleFadeInDuration) : 1.0f;
-        s_titleAlpha = std::clamp(r, 0.0f, 1.0f);
+        s_titleAlpha = clamp_t(r, 0.0f, 1.0f);
         if (r >= 1.0f) s_fadingIn = false;
     }
     else if (s_fadingOut) {
         s_titleFadeElapsed += dt;
         float r = (s_titleFadeOutDuration > 0.0f) ? (s_titleFadeElapsed / s_titleFadeOutDuration) : 1.0f;
-        s_titleAlpha = 1.0f - std::clamp(r, 0.0f, 1.0f);
+        s_titleAlpha = 1.0f - clamp_t(r, 0.0f, 1.0f);
         if (r >= 1.0f) {
             s_fadingOut = false;
             s_titleAlpha = 0.0f;
@@ -105,14 +105,14 @@ void TitleScene::Update()
     if (s_fsFadingIn) {
         s_fsFadeElapsed += dt;
         float r = (s_fsFadeDurationIn > 0.0f) ? (s_fsFadeElapsed / s_fsFadeDurationIn) : 1.0f;
-        s_fsFadeAlpha = 1.0f - std::clamp(r, 0.0f, 1.0f);
+        s_fsFadeAlpha = 1.0f - clamp_t(r, 0.0f, 1.0f);
         if (r >= 1.0f) { s_fsFadingIn = false; s_fsFadeAlpha = 0.0f; }
     }
 
     if (s_fsFadingOut) {
         s_fsFadeElapsed += dt;
         float r = (s_fsFadeDurationOut > 0.0f) ? (s_fsFadeElapsed / s_fsFadeDurationOut) : 1.0f;
-        s_fsFadeAlpha = std::clamp(r, 0.0f, 1.0f);
+        s_fsFadeAlpha = clamp_t(r, 0.0f, 1.0f);
         if (r >= 1.0f) {
             s_fsFadingOut = false;
             s_fsFadeAlpha = 1.0f;
@@ -180,7 +180,11 @@ void TitleScene::Render()
     }
 
     // 入力: 画面どこかをクリックしたらノイズ→フェードのシーケンスを開始
-    if (!s_noiseActive && !s_fsFadingOut && ImGui::IsMouseClicked(0)) {
+    // ただし ImGui がマウスをキャプチャしている場合（Dev UI 操作中など）は反応しない
+    ImGuiIO& io = ImGui::GetIO();
+    // If SceneManager has a pending dev-forced scene change, ignore title clicks to avoid
+    // starting the title's click-to-next behavior which can block the pending change.
+    if (!s_noiseActive && !s_fsFadingOut && !io.WantCaptureMouse && !g_SceneManager.HasPendingChange() && ImGui::IsMouseClicked(0)) {
         s_noiseActive = true;
         s_noiseElapsed = 0.0f;
         // ランダム種を生成（毎回異なるノイズ）

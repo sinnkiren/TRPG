@@ -29,6 +29,29 @@ void StoryPlayer::RenderDevPanelContents()
     ImGui::Text("Load attempts: %d", m_bgLoadAttempts);
     ImGui::Text("Loaded attempted: %s", m_bgLoadedAttempted ? "yes" : "no");
     if (!m_lastLoadError.empty()) ImGui::TextWrapped("Last load error: %s", m_lastLoadError.c_str());
+    ImGui::Separator();
+    // Node info: current index and total
+    ImGui::Text("Current node: %d / %d", m_index, (int)m_events.size());
+
+    // Jump controls
+    ImGui::InputInt("Jump to node", &m_devNodeInput);
+    ImGui::SameLine();
+    if (ImGui::Button("Go")) {
+        if (m_devNodeInput >= 0 && m_devNodeInput < (int)m_events.size()) {
+            m_index = m_devNodeInput;
+            m_timer = 0.0f;
+            ShowCurrentText();
+            ::Log::Log(::Log::Level::Info, std::string("StoryPlayer: jumped to node ") + std::to_string(m_devNodeInput));
+        }
+        else {
+            ::Log::Log(::Log::Level::Warning, std::string("StoryPlayer: invalid node id for jump: ") + std::to_string(m_devNodeInput));
+        }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Next Node")) {
+        Next();
+    }
 }
 
 void StoryPlayer::RenderUI()

@@ -31,8 +31,7 @@ public:
     std::function<void(int)> RequestSceneChange;
 
     CharcterScene::CharcterDate player;
-
-private:
+    // Public Enemy and Phase types so external BattleLogic can operate on them
     struct Enemy {
         std::string name;
         int hp = 10;
@@ -41,10 +40,10 @@ private:
         int fearDamage = 2; // 敵が与える精神的ダメージ量
     };
 
-
-    std::vector<Enemy> enemies;
-
     enum class Phase { PlayerTurn, EnemyTurn, Victory, Defeat } phase = Phase::PlayerTurn;
+
+private:
+    std::vector<Enemy> enemies;
 
     int selectedEnemy = -1;
     int lastRoll = 0;
@@ -82,4 +81,7 @@ private:
 
     // Timekeeping for Update() to avoid ImGui dependency
     std::chrono::steady_clock::time_point m_lastTick = std::chrono::steady_clock::now();
+    // Separated implementations (to allow splitting into multiple translation units)
+    void UpdateImpl();
+    void RenderImpl();
 };

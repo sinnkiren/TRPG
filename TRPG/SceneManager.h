@@ -52,6 +52,9 @@ public:
 #endif
     }
 
+    // Query whether a scene change is pending (useful for scenes to ignore input when a dev-forced change is pending)
+    bool HasPendingChange() const;
+
 private:
     // フレーム処理の補助（SceneManager.cpp で実装）
     void HandleInput();
@@ -79,6 +82,8 @@ private:
     bool m_devMode = false;
     // F12 toggle edge detector
     bool f12PressedLastFrame = false;
+    // Edge detectors for function keys F1..F12 (index by key number), default false
+    bool fKeyPressedLast[13] = {};
 
     // Update window title to reflect current scene and dev/play mode
     void UpdateWindowTitle();

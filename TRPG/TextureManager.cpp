@@ -2,7 +2,8 @@
 #include "TextureManager.h"
 #include "Application.h"
 #include "system/stb_image.h"
-#include <filesystem>
+#include <fstream>
+#include <cctype>
 #include <sstream>
 #include <unordered_map>
 #include "Logging.h"
@@ -35,52 +36,65 @@ namespace TextureManager
 
     // ファイルパス解決
     // Accepts absolute paths as-is. For relative paths, try assetRoot first, then current_path.
-    static std::filesystem::path ResolvePath(const std::string& rel)
+    // Simple path resolver without std::filesystem.
+    // Uses fixed asset root + relative path concatenation as a stable approach for student projects.
+    static std::string ResolvePath(const std::string& rel)
     {
-        std::filesystem::path req(rel);
-        // If caller passed an absolute path, use it directly
-        if (req.is_absolute()) return req;
+        return g_assetRoot + rel;
+    }
 
-        std::filesystem::path p1 = std::filesystem::path(g_assetRoot) / rel;
-        if (std::filesystem::exists(p1)) return p1;
+    // Simple absolute-path detector for Windows/Unix-ish paths.
+    static bool IsAbsolutePath(const std::string& p)
+    {
+        if (p.empty()) return false;
 
-        std::filesystem::path p2 = std::filesystem::current_path() / rel;
-        if (std::filesystem::exists(p2)) return p2;
+        // Windowsドライブ C:\~
+        if (p.size() >= 2 &&
+            std::isalpha(static_cast<unsigned char>(p[0])) &&
+            p[1] == ':')
+            return true;
 
-        // Fallback: return asset-root based path (may not exist)
-        return p1;
+        // ルートパス / または \\ で始まる
+        if (p[0] == '/' || p[0] == '\\')
+            return true;
+
+        return false;
     }
 
     // テクスチャ読み込み
     ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath)
     {
         if (!g_device) return nullptr;
-        // Resolve path (accepts absolute). Use resolved absolute path string as cache key.
-        auto p = ResolvePath(relativePath);
-        std::string key = p.string();
+        // Resolve path. Use resolved path string as cache key.
+        std::string p = ResolvePath(relativePath);
+        // If caller passed an absolute path, use it directly instead of prefixing asset root
+        if (IsAbsolutePath(relativePath)) p = relativePath;
+        std::string key = p;
 
         // Cache check
         auto it = g_cache.find(key);
         if (it != g_cache.end()) return it->second;
 
-        if (!std::filesystem::exists(p)) {
-            std::ostringstream o; o << "TextureManager: file not found: " << p.string();
+        // Check existence using std::ifstream (portable, avoids filesystem dependency)
+        std::ifstream ifs(p, std::ios::binary);
+        if (!ifs) {
+            std::ostringstream o; o << "TextureManager: file not found: " << p;
             Log::Log(Log::Level::Warning, o.str());
             g_cache[key] = nullptr;
             return nullptr;
         }
 
         // Log when an absolute path is used
-        if (std::filesystem::path(relativePath).is_absolute()) {
-            std::ostringstream o; o << "TextureManager: loading absolute path: " << p.string();
+        if (IsAbsolutePath(relativePath)) {
+            std::ostringstream o; o << "TextureManager: loading absolute path: " << p;
             Log::Log(Log::Level::Info, o.str());
         }
 
         // stbi でロード
         int w = 0, h = 0, channels = 0;
-        unsigned char* pixels = stbi_load(p.string().c_str(), &w, &h, &channels, 4);
+        unsigned char* pixels = stbi_load(p.c_str(), &w, &h, &channels, 4);
         if (!pixels || w <= 0 || h <= 0) {
-            std::ostringstream o; o << "TextureManager: stbi_load failed: " << p.string();
+            std::ostringstream o; o << "TextureManager: stbi_load failed: " << p;
             Log::Log(Log::Level::Error, o.str());
             if (pixels) stbi_image_free(pixels);
             g_cache[key] = nullptr;
@@ -107,7 +121,7 @@ namespace TextureManager
         stbi_image_free(pixels);
 
         if (FAILED(hr) || !tex) {
-            std::ostringstream o; o << "TextureManager: CreateTexture2D failed 0x" << std::hex << (unsigned int)hr << " for " << p.string();
+            std::ostringstream o; o << "TextureManager: CreateTexture2D failed 0x" << std::hex << (unsigned int)hr << " for " << p;
             Log::Log(Log::Level::Error, o.str());
             if (tex) tex->Release();
             g_cache[key] = nullptr;
@@ -125,7 +139,7 @@ namespace TextureManager
         tex->Release();
 
         if (FAILED(hr) || !srv) {
-            std::ostringstream o; o << "TextureManager: CreateSRV failed 0x" << std::hex << (unsigned int)hr << " for " << p.string();
+            std::ostringstream o; o << "TextureManager: CreateSRV failed 0x" << std::hex << (unsigned int)hr << " for " << p;
             Log::Log(Log::Level::Error, o.str());
             if (srv) srv->Release();
             g_cache[key] = nullptr;
@@ -134,7 +148,7 @@ namespace TextureManager
 
         g_cache[key] = srv;
 
-        std::ostringstream ok; ok << "TextureManager: loaded " << p.string();
+        std::ostringstream ok; ok << "TextureManager: loaded " << p;
         Log::Log(Log::Level::Info, ok.str());
 
         return srv;
@@ -156,9 +170,10 @@ namespace TextureManager
     void ReleaseTexture(const std::string& relativePath)
     {
         // Resolve and use same keying as LoadTexture
-        auto p = ResolvePath(relativePath);
-        std::string key = p.string();
-        auto it = g_cache.find(key);
+        std::string p = ResolvePath(relativePath);
+        if (IsAbsolutePath(relativePath)) p = relativePath;
+
+        auto it = g_cache.find(p);
         if (it != g_cache.end()) {
             if (it->second) it->second->Release();
             g_cache.erase(it);

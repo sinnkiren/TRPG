@@ -21,7 +21,11 @@
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
     <ClCompile Include="AtlasTools.cpp" />
+    <ClCompile Include="BattleLogic.cpp" />
     <ClCompile Include="BattleScene.cpp" />
+    <ClCompile Include="BattleScene_Dev.cpp" />
+    <ClCompile Include="BattleScene_Render.cpp" />
+    <ClCompile Include="BattleScene_Update.cpp" />
     <ClCompile Include="CharacterSelect.cpp" />
     <ClCompile Include="DirectX.cpp" />
     <ClCompile Include="FearEffects.cpp" />
@@ -81,6 +85,7 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </ClInclude>
     <ClInclude Include="AtlasTools.h" />
+    <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="BattleScene.h" />
     <ClInclude Include="CharacterDateManeger.h" />
     <ClInclude Include="CharacterSelect.h" />
@@ -133,6 +138,7 @@
     <ClInclude Include="system\CylinderDrawer.h" />
     <ClInclude Include="system\DebugUI.h" />
     <ClInclude Include="system\dx11helper.h" />
+    <ClInclude Include="system\filesystem_compat.h" />
     <ClInclude Include="system\imgui\imconfig.h" />
     <ClInclude Include="system\imgui\imgui.h" />
     <ClInclude Include="system\imgui\imgui_impl_dx11.h" />

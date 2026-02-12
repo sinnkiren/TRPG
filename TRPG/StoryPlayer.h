@@ -102,6 +102,8 @@ private:
 
 	// Dev UI: toggle for overlay/debug window
 	bool m_showDevWindow = false;
+    // Dev helper: node jump input
+    int m_devNodeInput = 0;
     // Expose some info to centralized dev panel
 public:
     void RenderDevPanelContents();

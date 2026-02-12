@@ -2,6 +2,9 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #include <assert.h>
 #include <functional>

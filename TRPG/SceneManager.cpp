@@ -8,6 +8,8 @@
 #include "Result.h"
 #include "IScene.h"
 #include "Logging.h"
+// ImGui for input capture checks
+#include "system/imgui/imgui.h"
 
 // Windows ヘッダを先に読み込みます。
 // WIN32_LEAN_AND_MEAN と NOMINMAX を定義して不要な定義・マクロ干渉を避ける。
@@ -26,7 +28,8 @@
 #include <DirectXMath.h>
 #include <string>
 #include <cstdint>
-#include <filesystem>
+#include <fstream>
+#include "system/filesystem_compat.h"
 #include <algorithm>
 #include <set>
 
@@ -62,19 +65,47 @@ void SceneManager::HandleFileDrop(const std::string& path)
 {
     // Decide behavior based on file extension
     try {
-        std::filesystem::path p(path);
-        // Resolve non-absolute paths similar to TextureManager: try assetRoot/current_path
-        if (!p.is_absolute()) {
-            std::filesystem::path alt = std::filesystem::path(std::filesystem::current_path()) / p;
-            if (std::filesystem::exists(alt)) p = alt;
+        // Work with plain strings to avoid relying on std::filesystem (toolchain differences)
+        auto IsAbsolute = [](const std::string& s)->bool {
+            if (s.empty()) return false;
+            if (s.size() >= 2 && std::isalpha(static_cast<unsigned char>(s[0])) && s[1] == ':') return true; // Windows drive
+            if (s[0] == '/' || s[0] == '\\') return true;
+            return false;
+        };
+
+        const std::string assetRoot = "../assets/";
+
+        std::string p = path;
+        // Helper using C FILE* to avoid <fstream> issues in some toolchains
+        auto file_exists = [](const std::string& fp)->bool {
+            FILE* f = fopen(fp.c_str(), "rb");
+            if (f) { fclose(f); return true; }
+            return false;
+        };
+
+        // If not absolute, prefer assetRoot + path; otherwise try the relative path in CWD
+        if (!IsAbsolute(p)) {
+            std::string candidate = assetRoot;
+            if (!candidate.empty() && candidate.back() != '/' && candidate.back() != '\\') candidate += '/';
+            candidate += p;
+            if (file_exists(candidate)) {
+                p = candidate;
+            }
+            else if (!file_exists(p)) {
+                ::Log::Log(::Log::Level::Warning, std::string("SceneManager::HandleFileDrop - dropped file does not exist: ") + path);
+                return;
+            }
+        }
+        else {
+            if (!file_exists(p)) {
+                ::Log::Log(::Log::Level::Warning, std::string("SceneManager::HandleFileDrop - dropped file does not exist: ") + p);
+                return;
+            }
         }
 
-        if (!std::filesystem::exists(p)) {
-            ::Log::Log(::Log::Level::Warning, std::string("SceneManager::HandleFileDrop - dropped file does not exist: ") + p.string());
-            return;
-        }
-
-        std::string ext = p.extension().string();
+        std::string ext;
+        auto pos = p.find_last_of('.');
+        if (pos != std::string::npos) ext = p.substr(pos);
         std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
 
         // JSON files: allowed in Play mode (GAME_PLAY) so story data can be loaded at runtime
@@ -82,9 +113,9 @@ void SceneManager::HandleFileDrop(const std::string& path)
             if (currentType == SceneType::GAME_PLAY) {
                 StoryPlayer* sp = dynamic_cast<StoryPlayer*>(currentScene.get());
                 if (sp) {
-                    bool ok = sp->LoadFromFile(p.string());
-                    if (ok) ::Log::Log(::Log::Level::Info, std::string("SceneManager: story JSON loaded from file drop: ") + p.string());
-                    else ::Log::Log(::Log::Level::Warning, std::string("SceneManager: failed to load story JSON from file drop: ") + p.string());
+                    bool ok = sp->LoadFromFile(p);
+                    if (ok) ::Log::Log(::Log::Level::Info, std::string("SceneManager: story JSON loaded from file drop: ") + p);
+                    else ::Log::Log(::Log::Level::Warning, std::string("SceneManager: failed to load story JSON from file drop: ") + p);
                 }
                 else {
                     ::Log::Log(::Log::Level::Warning, "SceneManager: JSON dropped but current scene is not StoryPlayer");
@@ -107,10 +138,7 @@ void SceneManager::HandleFileDrop(const std::string& path)
             if (currentType == SceneType::CHARACTER_SELECT) {
                 CharcterScene* cs = dynamic_cast<CharcterScene*>(currentScene.get());
                 if (!cs) return;
-                std::string out = std::filesystem::path(p).string();
-                // ↓ 変換
-                std::string outStr(out.begin(), out.end());
-                cs->SetPortraitPath(outStr);
+                cs->SetPortraitPath(p);
                 return;
             }
             else {
@@ -159,11 +187,19 @@ void SceneManager::Update() {
 }
 
 void SceneManager::HandleInput() {
-    bool spacePressedNow = (GetAsyncKeyState(VK_SPACE) & 0x8000) != 0;
-    if (spacePressedNow && !spacePressedLastFrame) {
-        auto it = nextSceneMap.find(currentType);
-        if (it != nextSceneMap.end()) {
-            ChangeScene(it->second);
+    // If ImGui wants to capture keyboard input (e.g. user is interacting with Dev UI),
+    // ignore the space key that would otherwise trigger scene changes.
+    ImGuiIO& io = ImGui::GetIO();
+    bool wantKeyboard = io.WantCaptureKeyboard || io.WantTextInput;
+
+    bool spacePressedNow = false;
+    if (!wantKeyboard) {
+        spacePressedNow = (GetAsyncKeyState(VK_SPACE) & 0x8000) != 0;
+        if (spacePressedNow && !spacePressedLastFrame) {
+            auto it = nextSceneMap.find(currentType);
+            if (it != nextSceneMap.end()) {
+                ChangeScene(it->second);
+            }
         }
     }
     spacePressedLastFrame = spacePressedNow;
@@ -181,6 +217,32 @@ void SceneManager::HandleInput() {
     }
 #endif
     f12PressedLastFrame = f12PressedNow;
+
+    // Handle F1..F11 quick scene jumps (edge detect) - only in debug builds
+#ifndef NDEBUG
+    if (m_devMode) {
+        for (int k = 1; k <= 11; ++k) {
+        int vk = VK_F1 + (k - 1);
+        bool now = (GetAsyncKeyState(vk) & 0x8000) != 0;
+        if (now && !fKeyPressedLast[k]) {
+            // Edge: key just pressed
+            switch (k) {
+            case 1: ChangeScene(SceneType::TITLE); break;            // F1 -> Title
+            case 2: ChangeScene(SceneType::TRPG_SELECT); break;     // F2 -> TRPG Select
+            case 3: ChangeScene(SceneType::SCENARIO_SELECT); break; // F3 -> Scenario Select
+            case 4: ChangeScene(SceneType::CHARACTER_SELECT); break;// F4 -> Character Select
+            case 5: ChangeScene(SceneType::GAME_PLAY); break;       // F5 -> Story Player
+            case 6: ChangeScene(SceneType::BATTLE); break;          // F6 -> Battle
+            case 7: ChangeScene(SceneType::RESULT); break;          // F7 -> Result
+            // F8..F11 currently unassigned
+            default: break;
+            }
+            ::Log::Log(::Log::Level::Info, std::string("SceneManager: Dev -> jump to scene (deferred) via F key: F") + std::to_string(k));
+        }
+            fKeyPressedLast[k] = now;
+        }
+    }
+#endif
 }
 
 void SceneManager::SetPlayer(const CharcterScene::CharcterDate& p)
@@ -188,7 +250,7 @@ void SceneManager::SetPlayer(const CharcterScene::CharcterDate& p)
     // 値コピーして SceneManager が所有する
     playerData = p;
 
-    // デバッグ出力（アドレスは playerData のアドレス）
+    // デバッグ出力（アドレスは playerData のアドレス）　
     if (m_devMode) {
         std::string s = "SceneManager::SetPlayer called. playerData=" + std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(&playerData))) + " name=" + playerData.name + "\n";
         ::Log::Log(::Log::Level::Debug, s);
@@ -209,10 +271,8 @@ void SceneManager::Render() {
 
     // Dev-only: show central log window and Dev Panel (only in debug builds)
 #ifndef NDEBUG
+    static bool s_logOpen = true;
     if (m_devMode) {
-        // Log window (separate, uses Logging::RenderImGui)
-        static bool s_logOpen = true;
-
         // Dev Panel: three conceptual sections: Global / Scene / Log
         ImGui::Begin("Dev Panel", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
@@ -239,7 +299,53 @@ void SceneManager::Render() {
 
         // --- Scene section ---
         if (ImGui::CollapsingHeader("Scene", ImGuiTreeNodeFlags_DefaultOpen)) {
-            // Provide an embedded area for the current scene to show its Dev contents
+            // Controls to jump between scenes (Dev convenience)
+            static const struct { SceneType t; const char* name; } s_scenes[] = {
+                { SceneType::TITLE, "Title" },
+                { SceneType::TRPG_SELECT, "TRPG Select" },
+                { SceneType::SCENARIO_SELECT, "Scenario Select" },
+                { SceneType::CHARACTER_SELECT, "Character Select" },
+                { SceneType::GAME_PLAY, "Story Player" },
+                { SceneType::BATTLE, "Battle" },
+                { SceneType::RESULT, "Result" },
+            };
+            static int s_selectedScene = 0;
+            static SceneType s_lastSyncedScene = SceneType::TITLE;
+            if (s_lastSyncedScene != currentType) {
+                s_lastSyncedScene = currentType;
+                for (int i = 0; i < (int)(sizeof(s_scenes)/sizeof(s_scenes[0])); ++i) if (s_scenes[i].t == currentType) { s_selectedScene = i; break; }
+            }
+
+            ImGui::Text("Current: %s", s_scenes[s_selectedScene].name);
+            ImGui::SameLine();
+            if (ImGui::Button("Next Scene")) {
+                auto it = nextSceneMap.find(currentType);
+                if (it != nextSceneMap.end()) {
+                    ChangeScene(it->second);
+                    ::Log::Log(::Log::Level::Info, std::string("SceneManager: Dev -> jump to next scene (deferred)"));
+                } else {
+                    ::Log::Log(::Log::Level::Warning, std::string("SceneManager: Dev -> no next scene mapping for current scene"));
+                }
+            }
+
+            ImGui::Spacing();
+            if (ImGui::BeginCombo("Go to scene", s_scenes[s_selectedScene].name)) {
+                for (int i = 0; i < (int)(sizeof(s_scenes)/sizeof(s_scenes[0])); ++i) {
+                    bool selected = (s_selectedScene == i);
+                    if (ImGui::Selectable(s_scenes[i].name, selected)) {
+                        s_selectedScene = i;
+                    }
+                    if (selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Go")) {
+                ChangeScene(s_scenes[s_selectedScene].t);
+                ::Log::Log(::Log::Level::Info, std::string("SceneManager: Dev -> jump to scene (deferred): ") + s_scenes[s_selectedScene].name);
+            }
+
+            ImGui::Separator();
             ImGui::BeginChild("SceneDevArea", ImVec2(400, 200), true);
             if (currentScene) currentScene->RenderDevPanelContents();
             ImGui::EndChild();
@@ -254,10 +360,40 @@ void SceneManager::Render() {
 
         ImGui::End();
 
-        // Render central log window (separate window so it can be resized/moved independently)
         if (s_logOpen) Log::RenderImGui("Log", &s_logOpen);
+
+        // Also show a compact hint overlay when Dev Mode is ON (debug builds only)
+        if (ImGui::GetCurrentContext() != nullptr) {
+            ImGui::SetNextWindowPos(ImVec2(12, 12), ImGuiCond_Always);
+            ImGui::SetNextWindowBgAlpha(0.35f);
+            ImGui::Begin("Dev Shortcuts", nullptr,
+                ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings);
+            ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.6f, 1.0f), "Dev shortcuts (debug only)");
+            ImGui::Separator();
+            ImGui::Text("F1: Title");
+            ImGui::Text("F2: TRPG 選択");
+            ImGui::Text("F3: シナリオ選択");
+            ImGui::Text("F4: キャラクター選択");
+            ImGui::Text("F5: 本編");
+            ImGui::Text("F6: バトル");
+            ImGui::Text("F7: リザルト");
+            ImGui::Spacing();
+            ImGui::TextWrapped("※ ショートカットは Dev Mode が ON の時のみ有効です。F12 で切替。Dev Mode を有効にするにはチェックまたは F12 を押してください。");
+            ImGui::End();
+        }
     }
+#else
+    // In release builds there is no Dev UI
+    (void)0;
 #endif
+    // If a dev-triggered scene change was requested during ImGui rendering (e.g. pressing "Go"),
+
+    // If a dev-triggered scene change was requested during ImGui rendering (e.g. pressing "Go"),
+    // apply it immediately after ImGui so the user sees the transition without waiting a full frame.
+    // This is safe because we apply the change after ImGui windows have been rendered.
+    if (pendingChange) {
+        ApplyPendingChange();
+    }
 }
 
 void SceneManager::ChangeScene(SceneType next)
@@ -350,3 +486,6 @@ SceneType SceneManager::GetCurrentScene() const {
 }
 
 void SceneManager::Finalize() {}
+
+// Public accessor implementation placed in cpp to avoid multiple-definition issues
+bool SceneManager::HasPendingChange() const { return pendingChange; }

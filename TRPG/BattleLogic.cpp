@@ -34,7 +34,9 @@ namespace BattleLogic {
         std::vector<BattleScene::Enemy*> alive;
         for (auto& e : enemies) if (e.hp > 0) alive.push_back(&e);
         if (alive.empty()) return;
-        BattleScene::Enemy* attacker = alive[Dice::RollDie((int)alive.size() - 1)];
+        // choose random alive attacker: Dice::RollDie returns 1..sides, convert to 0-based index
+        int idx = Dice::RollDie(static_cast<int>(alive.size())) - 1;
+        BattleScene::Enemy* attacker = alive[idx];
         int hit = Dice::RollDie(20);
         int dmg = (hit >= 6) ? attacker->atk : 1;
         player.ApplyEnduranceLoss(dmg);

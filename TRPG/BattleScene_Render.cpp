@@ -31,6 +31,40 @@ void BattleScene::Render()
     // フルスクリーン風に扱うメインウィンドウ
     const ImGuiIO& io = ImGui::GetIO();
     ImVec2 disp = io.DisplaySize;
+
+    // Dev helper: if developer chose to hide the main Battle UI, skip creating full-screen window
+    if (g_SceneManager.IsDevMode() && m_hideBattleUIInDev) {
+        // Draw a tiny overlay control so developer can unhide the UI
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing;
+        ImGui::SetNextWindowBgAlpha(0.6f);
+        ImGui::SetNextWindowPos(ImVec2(disp.x - 12.0f, 12.0f), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+        if (ImGui::Begin("Battle Dev Overlay", nullptr, flags)) {
+            ImGui::Text("Battle UI hidden (Dev)");
+            if (ImGui::SmallButton("Show Battle UI")) {
+                m_hideBattleUIInDev = false;
+            }
+            ImGui::Separator();
+            if (ImGui::SmallButton("Toggle Battle Log")) {
+#ifndef NDEBUG
+                m_showBattleLog = !m_showBattleLog;
+#endif
+            }
+        }
+        ImGui::End();
+
+        // still draw overlays so game feedback continues while UI hidden
+        float intensity = 1.0f - ((player.maxEndurance > 0) ? float(player.endurance) / float(player.maxEndurance) : 0.0f);
+        if (damageFlashTimer > 0.001f) {
+            float t = damageFlashTimer / damageFlashDuration;
+            float flashAlpha = clamp_local(t, 0.0f, 1.0f);
+            DrawFearOverlay(min_local(1.0f, intensity + 0.6f * flashAlpha), ImGui::GetTime(), 0);
+        }
+        else if (persistentStage > 0 && intensity > 0.001f) {
+            DrawFearOverlay(intensity, ImGui::GetTime(), persistentStage);
+        }
+        FearEffects::RenderOverlay();
+        return;
+    }
     ImGui::SetNextWindowSize(disp, ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     // Make the window background transparent so the full-screen background image is visible
@@ -293,6 +327,10 @@ void BattleScene::Render()
 #ifndef NDEBUG
         if (ImGui::Button("Toggle Battle Log Window")) {
             m_showBattleLog = !m_showBattleLog;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Hide Battle UI")) {
+            m_hideBattleUIInDev = true;
         }
 #endif
     }

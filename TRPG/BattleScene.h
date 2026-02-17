@@ -67,6 +67,8 @@ private:
     AtlasTools::AtlasMap atlasMap;
     // 背景用テクスチャ
     ImTextureID bgTexture = nullptr;
+    // Dev: allow hiding main Battle UI so Dev windows behind can be interacted with
+    bool m_hideBattleUIInDev = false;
 
     // --- ログ表示用 ---
     // msg: text to append. level: 0=Error,1=Info,2=Debug (higher is more verbose)

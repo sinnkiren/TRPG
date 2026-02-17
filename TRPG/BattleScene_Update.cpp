@@ -73,6 +73,18 @@ void BattleScene::Update()
     // ƒvƒŒƒCƒ„[‚Ì”s–k”»’èi‚±‚±‚Å‚Í‘Ï‹v—Í0‚Å”s–kj
     if (player.endurance <= 0) phase = Phase::Defeat;
 
+    // If we've reached an end phase, set result flag and request scene change to Result
+    if (phase == Phase::Victory) {
+        g_SceneManager.SetLastResultVictory(true);
+        g_SceneManager.ChangeScene(SceneType::RESULT);
+        return;
+    }
+    else if (phase == Phase::Defeat) {
+        g_SceneManager.SetLastResultVictory(false);
+        g_SceneManager.ChangeScene(SceneType::RESULT);
+        return;
+    }
+
     // Process enemy turn logic here (Update, not Render). This keeps game state changes frame-rate independent.
     if (phase == Phase::EnemyTurn) {
         BattleLogic::UpdateTurn(enemies, player, phase, [this](const std::string& s, int l){ PushLog(s, l); });

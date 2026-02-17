@@ -52,6 +52,10 @@ public:
 #endif
     }
 
+    // Result outcome setter/getter (used to indicate victory vs defeat when showing Result scene)
+    void SetLastResultVictory(bool v) { m_lastResultVictory = v; }
+    bool WasLastResultVictory() const { return m_lastResultVictory; }
+
     // Query whether a scene change is pending (useful for scenes to ignore input when a dev-forced change is pending)
     bool HasPendingChange() const;
 
@@ -91,6 +95,7 @@ private:
     // ペンディング遷移フラグ
     bool pendingChange = false;
     SceneType pendingSceneType = SceneType::TITLE;
+    bool m_lastResultVictory = false;
 };
 
 extern SceneManager g_SceneManager;

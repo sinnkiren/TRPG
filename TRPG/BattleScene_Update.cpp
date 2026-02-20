@@ -1,6 +1,7 @@
 #include "BattleScene.h"
 #include "SceneManager.h"
 #include "BattleLogic.h"
+#include "DiceVisual.h"
 #include <chrono>
 #include <algorithm>
 #include "Logging.h"
@@ -65,6 +66,9 @@ void BattleScene::Update()
         std::string s = "BattleScene::Update dt=" + std::to_string(dt) + " timeAccum=" + std::to_string(timeAccum) + " player.endurance=" + std::to_string(player.endurance);
         ::Log::Log(::Log::Level::Debug, s);
     }
+
+    // Update dice visual
+    DiceVisual::Instance().Update(dt);
 
     // ‘S‚Ä‚Ì“G‚ª“|‚³‚ê‚½‚©”»’è
     bool anyAlive = false;

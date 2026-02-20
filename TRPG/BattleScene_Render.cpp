@@ -361,4 +361,7 @@ void BattleScene::Render()
     // Story 側や他から開始した FearEffects オーバーレイを描画
     FearEffects::RenderOverlay();
 
+    // Dice visual overlay
+    DiceVisual::Instance().Render();
+
 }

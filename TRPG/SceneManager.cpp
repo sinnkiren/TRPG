@@ -8,6 +8,7 @@
 #include "Result.h"
 #include "IScene.h"
 #include "Logging.h"
+#include "DiceVisual.h"
 // ImGui for input capture checks
 #include "system/imgui/imgui.h"
 
@@ -415,6 +416,8 @@ void SceneManager::ApplyPendingChange() {
         ::Log::Log(::Log::Level::Debug, dbg);
     }
     currentType = pendingSceneType;
+    // Clear any active dice visuals when changing scenes to avoid stray overlays
+    DiceVisual::Instance().Cancel();
     if (currentScene) currentScene.reset();
 
     switch (pendingSceneType) {

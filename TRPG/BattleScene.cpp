@@ -87,6 +87,9 @@ void BattleScene::Initialize()
         if (!uiAtlas) ::Log::Log(::Log::Level::Warning, "BattleScene: warning - uiAtlas not loaded");
         if (!bgTexture) ::Log::Log(::Log::Level::Warning, "BattleScene: warning - bgTexture not loaded");
     }
+
+    // Ensure DiceVisual singleton is reset (no-op if not used elsewhere)
+    DiceVisual::Instance();
 }
 
 void BattleScene::PushLog(const std::string& msg, int level)

@@ -1,5 +1,6 @@
 #include "CharacterSelect.h"
 #include "Dice.h"
+#include "DiceVisual.h"
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
@@ -85,7 +86,8 @@ static int EvalDiceExpr(const std::string& expr)
 }
 
 // 出目の詳細を返すヘルパ: 個々のダイスの出目を配列で返し、合計を outTotal に設定する
-static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal)
+// If outSides != nullptr, it will be set to the parsed sides value.
+static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal, int* outSides = nullptr)
 {
     std::vector<int> faces;
     outTotal = 0;
@@ -97,17 +99,25 @@ static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal)
     int add = 0;
     if (m.size() >= 4 && m[3].matched) add = std::stoi(m[3].str());
     for (int i = 0; i < n; ++i) {
-        int r = Dice::RollDie(sides);
+        int r = Dice::RollDieNoVisual(sides);
         faces.push_back(r);
         outTotal += r;
     }
+    if (outSides) *outSides = sides;
     outTotal += add;
     return faces;
 }
 
 void CharcterScene::Update()
 {
-    // 必要ならここに入力処理や状態更新を記述する
+    // Update Dice visual (use ImGui delta time when available)
+    if (ImGui::GetCurrentContext() != nullptr) {
+        ImGuiIO& io = ImGui::GetIO();
+        float dt = io.DeltaTime;
+        // Fallback small dt if zero
+        if (dt <= 0.0f) dt = 1.0f / 60.0f;
+        DiceVisual::Instance().Update(dt);
+    }
 }
 
 void CharcterScene::SetPortraitPath(const std::string& path)
@@ -230,10 +240,12 @@ void CharcterScene::Render()
         // ダイス式ボタン（固定幅）
         if (ImGui::Button(a.expr.c_str(), ImVec2(64, 0))) {
             int total = 0;
-            auto faces = RollDiceDetailed(a.expr, total);
+            int sides = 6;
+            auto faces = RollDiceDetailed(a.expr, total, &sides);
             a.value = total;
             lastDiceRoll = total;
             if (i >= 0 && i < (int)abilityFaces.size()) abilityFaces[i] = faces;
+            if (!faces.empty()) DiceVisual::Instance().StartRollFaces(sides, faces);
         }
 
         // ロックチェックボックス（位置固定）
@@ -458,4 +470,7 @@ void CharcterScene::Render()
     }
 
     ImGui::End();
+
+    // Render dice visual overlay (foreground)
+    if (ImGui::GetCurrentContext() != nullptr) DiceVisual::Instance().Render();
 }

@@ -27,6 +27,7 @@
     <ClCompile Include="BattleScene_Render.cpp" />
     <ClCompile Include="BattleScene_Update.cpp" />
     <ClCompile Include="CharacterSelect.cpp" />
+    <ClCompile Include="DiceVisual.cpp" />
     <ClCompile Include="DirectX.cpp" />
     <ClCompile Include="FearEffects.cpp" />
     <ClCompile Include="game.cpp" />
@@ -90,6 +91,7 @@
     <ClInclude Include="CharacterDateManeger.h" />
     <ClInclude Include="CharacterSelect.h" />
     <ClInclude Include="Dice.h" />
+    <ClInclude Include="DiceVisual.h" />
     <ClInclude Include="DirectX.h" />
     <ClInclude Include="FearEffects.h" />
     <ClInclude Include="game.h" />

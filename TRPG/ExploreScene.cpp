@@ -8,6 +8,7 @@
 #include "Logging.h"
 #include <fstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <filesystem>
 #include <Windows.h>
 #include "SceneManager.h"
@@ -17,6 +18,64 @@ using json = nlohmann::json;
 static std::unordered_map<int, EventNode> g_nodes;
 static int g_currentNode = -1;
 static std::vector<std::string> g_log;
+// global flags for exploration (string identifiers)
+static std::unordered_set<std::string> g_flags;
+static std::string g_saveError;
+
+static std::string GetExploreSavePath()
+{
+    // Save next to asset root for simplicity
+    std::string root = AssetManager::GetAssetRoot();
+    if (root.empty()) return std::string("explore_save.json");
+    // ensure no trailing slash issues
+    char last = root.back();
+    if (last == '/' || last == '\\') return root + "explore_save.json";
+    return root + "/explore_save.json";
+}
+
+static void SaveExploreState()
+{
+    std::string path = GetExploreSavePath();
+    json j;
+    j["currentNode"] = g_currentNode;
+    j["flags"] = json::array();
+    for (auto &f : g_flags) j["flags"].push_back(f);
+    // inventory future
+    try {
+        std::ofstream ofs(path);
+        if (!ofs.is_open()) { g_saveError = "Failed to open save file for writing: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
+        ofs << j.dump(2);
+        g_saveError.clear();
+        ::Log::Log(::Log::Level::Info, std::string("Explore: saved state to: ") + path);
+    } catch (const std::exception &ex) {
+        g_saveError = std::string("Save failed: ") + ex.what();
+        ::Log::Log(::Log::Level::Error, g_saveError);
+    }
+}
+
+static void LoadExploreState()
+{
+    std::string path = GetExploreSavePath();
+    namespace fs = std::filesystem;
+    if (!fs::exists(path)) { g_saveError = ""; return; }
+    try {
+        std::ifstream ifs(path);
+        if (!ifs.is_open()) { g_saveError = "Failed to open save file: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
+        std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+        if (!json::accept(content)) { g_saveError = "Save file JSON invalid: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
+        json j = json::parse(content);
+        if (j.contains("currentNode")) g_currentNode = j["currentNode"].get<int>();
+        if (j.contains("flags") && j["flags"].is_array()) {
+            g_flags.clear();
+            for (auto &e : j["flags"]) if (e.is_string()) g_flags.insert(e.get<std::string>());
+        }
+        g_saveError.clear();
+        ::Log::Log(::Log::Level::Info, std::string("Explore: loaded save from: ") + path);
+    } catch (const std::exception &ex) {
+        g_saveError = std::string("Load failed: ") + ex.what();
+        ::Log::Log(::Log::Level::Error, g_saveError);
+    }
+}
 // pending transition state so the UI / dice visual have time to play
 static bool g_waitingChoice = false;
 static int g_pendingNode = -1;
@@ -80,6 +139,8 @@ void ExploreScene::Initialize() {
         g_log.push_back(std::string("Explore: loaded nodes: ") + std::to_string((int)g_nodes.size()));
         ::Log::Log(::Log::Level::Info, std::string("ExploreScene: loaded nodes from: ") + path + ", count=" + std::to_string((int)g_nodes.size()));
     }
+    // try to load saved exploration state (if any)
+    LoadExploreState();
 }
 
 void ExploreScene::Update() {
@@ -106,7 +167,18 @@ void ExploreScene::RenderUI() {
     if (ImGui::GetCurrentContext() == nullptr) return;
     ImGui::Begin("Explore (Dev)");
     ImGui::Text("Current node: %d", g_currentNode);
+    // show flags
+    ImGui::Separator();
+    ImGui::Text("Flags:");
+    ImGui::BeginChild("Flags", ImVec2(0,80), true);
+    for (auto &f : g_flags) ImGui::TextWrapped("%s", f.c_str());
+    ImGui::EndChild();
     if (ImGui::Button("Log Clear")) g_log.clear();
+    ImGui::SameLine();
+    if (ImGui::Button("Save State")) { SaveExploreState(); }
+    ImGui::SameLine();
+    if (ImGui::Button("Load State")) { LoadExploreState(); }
+    if (!g_saveError.empty()) ImGui::TextWrapped("Save/Load error: %s", g_saveError.c_str());
     ImGui::Separator();
     ImGui::BeginChild("Log", ImVec2(0,200), true);
     for (auto &s : g_log) ImGui::TextWrapped("%s", s.c_str());
@@ -147,24 +219,49 @@ void ExploreScene::Render() {
 
     // choices
     // show choices vertically and support pending transition so user sees dice visual
+    auto ApplyFlags = [&](const std::vector<std::string> &sets, const std::vector<std::string> &clears) {
+        for (auto &f : sets) g_flags.insert(f);
+        for (auto &f : clears) g_flags.erase(f);
+    };
+
     for (size_t i = 0; i < n.choices.size(); ++i) {
         const Choice &c = n.choices[i];
         ImGui::PushID((int)i);
+
+        // check requirements
+        bool enabled = true;
+        for (auto &rf : c.requireFlags) if (!g_flags.count(rf)) { enabled = false; break; }
+        if (enabled) {
+            for (auto &nf : c.requireNotFlags) if (g_flags.count(nf)) { enabled = false; break; }
+        }
+
         if (!c.rollCond.has_value()) {
-            if (ImGui::Button(c.text.c_str(), ImVec2(-1, 0))) {
-                g_log.push_back(std::string("Choice: ") + c.text);
-                if (c.nextNodeID >= 0 && g_nodes.count(c.nextNodeID)) {
-                    // small delay so player sees UI feedback
-                    g_pendingNode = c.nextNodeID;
-                    g_pendingTimer = 0.18f;
-                    g_waitingChoice = true;
-                } else g_log.push_back("Choice leads nowhere.");
+            if (!enabled) {
+                ImGui::BeginDisabled();
+                ImGui::Button(c.text.c_str(), ImVec2(-1, 0));
+                ImGui::EndDisabled();
+            } else {
+                if (ImGui::Button(c.text.c_str(), ImVec2(-1, 0))) {
+                    g_log.push_back(std::string("Choice: ") + c.text);
+                    // apply flags immediately
+                    ApplyFlags(c.setFlags, c.clearFlags);
+                    if (c.nextNodeID >= 0 && g_nodes.count(c.nextNodeID)) {
+                        // small delay so player sees UI feedback
+                        g_pendingNode = c.nextNodeID;
+                        g_pendingTimer = 0.18f;
+                        g_waitingChoice = true;
+                    } else g_log.push_back("Choice leads nowhere.");
+                }
             }
         } else {
             // roll button shows condition
             char buf[128];
             std::snprintf(buf, sizeof(buf), "%s (Roll %d)", c.text.c_str(), c.rollCond->sides);
-            if (ImGui::Button(buf, ImVec2(-1, 0))) {
+            if (!enabled) {
+                ImGui::BeginDisabled();
+                ImGui::Button(buf, ImVec2(-1, 0));
+                ImGui::EndDisabled();
+            } else if (ImGui::Button(buf, ImVec2(-1, 0))) {
                 // perform roll (no immediate node change)
                 int r = Dice::RollDieNoVisual(c.rollCond->sides);
                 // visual
@@ -174,8 +271,13 @@ void ExploreScene::Render() {
                 std::string msg = std::string("Rolled: ") + std::to_string(r) + (success ? " (SUCCESS)" : " (FAIL)");
                 g_log.push_back(msg);
                 // set pending node depending on result, allow visual to play for 1.0s
-                if (success) g_pendingNode = (c.nextOnSuccess >= 0) ? c.nextOnSuccess : -1;
-                else g_pendingNode = (c.nextOnFail >= 0) ? c.nextOnFail : -1;
+                if (success) {
+                    ApplyFlags(c.setOnSuccess, c.clearOnSuccess);
+                    g_pendingNode = (c.nextOnSuccess >= 0) ? c.nextOnSuccess : -1;
+                } else {
+                    ApplyFlags(c.setOnFail, c.clearOnFail);
+                    g_pendingNode = (c.nextOnFail >= 0) ? c.nextOnFail : -1;
+                }
                 g_pendingTimer = 1.0f; // wait for dice to settle / display
                 g_waitingChoice = true;
             }

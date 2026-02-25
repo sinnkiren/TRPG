@@ -28,7 +28,7 @@
     <Filter Include="ソース ファイル\DIrectX">
       <UniqueIdentifier>{6c1f2b46-7282-420c-a356-b774bed1a613}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ソース ファイル\Scene\b">
+    <Filter Include="ソース ファイル\Scene\battle">
       <UniqueIdentifier>{c119a25f-0f63-488e-8d01-cd046fd4a3e6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -159,9 +159,6 @@
     <ClCompile Include="ImGuiFontLoader.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="BattleScene.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Result.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
@@ -196,16 +193,16 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="BattleScene_Dev.cpp">
-      <Filter>ソース ファイル\Scene\b</Filter>
+      <Filter>ソース ファイル\Scene\battle</Filter>
     </ClCompile>
     <ClCompile Include="BattleLogic.cpp">
-      <Filter>ソース ファイル\Scene\b</Filter>
+      <Filter>ソース ファイル\Scene\battle</Filter>
     </ClCompile>
     <ClCompile Include="BattleScene_Render.cpp">
-      <Filter>ソース ファイル\Scene\b</Filter>
+      <Filter>ソース ファイル\Scene\battle</Filter>
     </ClCompile>
     <ClCompile Include="BattleScene_Update.cpp">
-      <Filter>ソース ファイル\Scene\b</Filter>
+      <Filter>ソース ファイル\Scene\battle</Filter>
     </ClCompile>
     <ClCompile Include="DiceVisual.cpp">
       <Filter>ソース ファイル</Filter>
@@ -215,6 +212,9 @@
     </ClCompile>
     <ClCompile Include="AssetManager.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="BattleScene.cpp">
+      <Filter>ソース ファイル\Scene\battle</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

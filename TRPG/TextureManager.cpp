@@ -7,6 +7,7 @@
 #include <sstream>
 #include <unordered_map>
 #include "Logging.h"
+#include "AssetManager.h"
 
 namespace TextureManager
 {
@@ -38,9 +39,15 @@ namespace TextureManager
     // Accepts absolute paths as-is. For relative paths, try assetRoot first, then current_path.
     // Simple path resolver without std::filesystem.
     // Uses fixed asset root + relative path concatenation as a stable approach for student projects.
+    // Resolve a relative texture path to an absolute/best-effort path using AssetManager.
+    // Accepts names like "dark-tunnel2.jpg" or optionally prefixed with "texture/".
     static std::string ResolvePath(const std::string& rel)
     {
-        return g_assetRoot + rel;
+        // If caller passed a path already under "texture/", strip that prefix so AssetManager doesn't duplicate it.
+        std::string r = rel;
+        if (r.rfind("texture/", 0) == 0) r = r.substr(8);
+        if (r.rfind("texture\\", 0) == 0) r = r.substr(8);
+        return AssetManager::GetTexturePath(r);
     }
 
     // Simple absolute-path detector for Windows/Unix-ish paths.
@@ -66,9 +73,9 @@ namespace TextureManager
     {
         if (!g_device) return nullptr;
         // Resolve path. Use resolved path string as cache key.
-        std::string p = ResolvePath(relativePath);
-        // If caller passed an absolute path, use it directly instead of prefixing asset root
+        std::string p;
         if (IsAbsolutePath(relativePath)) p = relativePath;
+        else p = ResolvePath(relativePath);
         std::string key = p;
 
         // Cache check

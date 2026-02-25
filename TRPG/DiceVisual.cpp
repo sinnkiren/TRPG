@@ -135,9 +135,30 @@ void DiceVisual::Update(float dt) {
             // if all settled -> finalize
             bool all = true; for (auto &d : m_dice) if (!d.settled) { all = false; break; }
             if (all) {
+                // snap settled dice to an evenly spaced line on the tray for a tidy final layout
+                size_t totalCount = m_dice.size();
+                float cx = 0.0f;
+                for (auto &d : m_dice) cx += d.posX;
+                cx /= (float)totalCount;
+                // recompute spacing same as StartRollFaces logic
+                float baseSpacing = 80.0f;
+                float spacing = baseSpacing + std::min(10.0f, static_cast<float>(totalCount) * 6.0f);
+                // compute half size per die and target Y on ground
+                float targetY = groundY - halfSizeBase;
+                for (size_t i = 0; i < m_dice.size(); ++i) {
+                    auto &d = m_dice[i];
+                    float spread = ((float)i - (float)totalCount * 0.5f) * spacing;
+                    d.posX = cx + spread;
+                    d.posY = targetY;
+                    d.velX = d.velY = 0.0f;
+                    d.angVel = 0.0f;
+                    // small canonical angle so pips align nicely
+                    d.angle = 0.0f;
+                    d.settled = true;
+                }
+                // end physics and show results for timer
                 m_physical = false;
                 m_active = false;
-                // show results for timer
                 m_resultDisplayTimer = m_resultDisplayDuration;
                 // set current face to last die so old single-die code still shows something
                 m_currentFace = m_dice.back().face;
@@ -226,6 +247,7 @@ void DiceVisual::Render() {
     ImGuiIO& io = ImGui::GetIO();
     ImVec2 center(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.35f);
     float size = 96.0f * m_scale;
+    float half = size * 0.5f;
 
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     if (!dl) return;
@@ -236,8 +258,42 @@ void DiceVisual::Render() {
 
     // if multiple dice, draw each die separately
     if (!m_dice.empty()) {
+        // draw a simple dice tray under the dice (rounded rect)
+        // compute bounding width from dice count and spacing similar to StartRollFaces
+        size_t totalCount = m_dice.size();
+        float baseSpacing = 80.0f;
+        float spacing = baseSpacing + std::min(10.0f, (float)totalCount * 6.0f);
+        float trayWidth = std::max(160.0f, spacing * (float)totalCount + 40.0f);
+        // center at screen center X or average of dice
+        float cx = 0.0f;
+        for (auto &d : m_dice) cx += d.posX;
+        cx /= (float)totalCount;
         ImGuiIO& io = ImGui::GetIO();
-        float half = size * 0.5f;
+        float vpY = io.DisplaySize.y * 0.6f;
+        float trayHeight = 110.0f * m_scale;
+        ImVec2 tA(cx - trayWidth * 0.5f, vpY - trayHeight * 0.5f + 8.0f);
+        ImVec2 tB(cx + trayWidth * 0.5f, vpY + trayHeight * 0.5f + 8.0f);
+        // background shadow
+        dl->AddRectFilled(tA, tB, IM_COL32(20,20,20,120), 12.0f);
+        // inner tray (lighter)
+        dl->AddRectFilled(ImVec2(tA.x+4.0f, tA.y+4.0f), ImVec2(tB.x-4.0f, tB.y-4.0f), IM_COL32(240,240,235,230), 10.0f);
+        // outline
+        dl->AddRect(ImVec2(tA.x+4.0f, tA.y+4.0f), ImVec2(tB.x-4.0f, tB.y-4.0f), IM_COL32(40,40,40,160), 10.0f, 0, 2.0f);
+        // draw soft shadows for each die (under the tray, before drawing dice)
+        float groundY = io.DisplaySize.y * 0.6f;
+        for (auto &d : m_dice) {
+            // shadow position is aligned to tray ground
+            float shadowY = groundY - half * 0.15f;
+            ImVec2 sc(d.posX, shadowY);
+            float sr = half * d.scale * 0.9f; // base radius
+            // draw outer soft ring
+            dl->AddCircleFilled(sc, sr * 1.6f, IM_COL32(0,0,0,35), 20);
+            // mid
+            dl->AddCircleFilled(sc, sr * 1.2f, IM_COL32(0,0,0,55), 20);
+            // inner dark
+            dl->AddCircleFilled(sc, sr * 0.85f, IM_COL32(0,0,0,95), 20);
+        }
+
         for (auto &d : m_dice) {
             if (d.settled == false || m_resultDisplayTimer > 0.0f || m_active) {
                 ImVec2 c(d.posX, d.posY);

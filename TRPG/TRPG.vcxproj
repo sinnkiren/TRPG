@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="AssetManager.cpp" />
     <ClCompile Include="AtlasTools.cpp" />
     <ClCompile Include="BattleLogic.cpp" />
     <ClCompile Include="BattleScene.cpp" />
@@ -29,6 +30,7 @@
     <ClCompile Include="CharacterSelect.cpp" />
     <ClCompile Include="DiceVisual.cpp" />
     <ClCompile Include="DirectX.cpp" />
+    <ClCompile Include="ExploreScene.cpp" />
     <ClCompile Include="FearEffects.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="ImGuiFontLoader.cpp">
@@ -85,6 +87,7 @@
     <ClInclude Include="Application.h">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
     </ClInclude>
+    <ClInclude Include="AssetManager.h" />
     <ClInclude Include="AtlasTools.h" />
     <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="BattleScene.h" />
@@ -93,6 +96,8 @@
     <ClInclude Include="Dice.h" />
     <ClInclude Include="DiceVisual.h" />
     <ClInclude Include="DirectX.h" />
+    <ClInclude Include="EventNode.h" />
+    <ClInclude Include="ExploreScene.h" />
     <ClInclude Include="FearEffects.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="ImGuiFontLoader.h">
@@ -164,6 +169,7 @@
     <ClInclude Include="TRPGSelectScene.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\story\explore.json" />
     <None Include="assets\story\story.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

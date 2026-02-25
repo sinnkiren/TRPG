@@ -8,6 +8,7 @@
 #include "system/imgui/imgui.h"
 #include "system/json.hpp" 
 #include "FearEffects.h"
+#include "AssetManager.h"
 #include <filesystem>
 #include <d3d11.h>
 #include <direct.h> // _getcwd
@@ -141,7 +142,7 @@ void StoryPlayer::LoadBackgroundTextureIfNeeded()
 }
 
 void StoryPlayer::Initialize() {
-    LoadFromFile("assets/story/story.json");
+    LoadFromFile(AssetManager::GetStoryPath("story.json"));
 
     // イベント完了時コールバック（シーン切り替え等）
     // battle_start はフェード開始に置き換え
@@ -198,8 +199,8 @@ void StoryPlayer::Initialize() {
         FearEffects::StartShake(shakeIntensity, ev.duration * 0.6f);
     });
 
-    // 背景パスを登録（遅延ロード） - TextureManager の assetRoot を "assets/texture/" にしているため相対パスで指定
-    m_bgPath = "texture/dark-tunnel2.jpg";
+    // 背景パスを登録（遅延ロード） - AssetManager を使って安定したパスを取得
+    m_bgPath = AssetManager::GetTexturePath("dark-tunnel2.jpg");
     m_bgLoadedAttempted = false;
 
     Play();
@@ -243,9 +244,16 @@ bool StoryPlayer::LoadFromFile(const std::string& path) {
         return false;
     }
 
+    // Read file into string so we can validate before parsing (avoids first-chance exceptions in debugger)
+    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
     json j;
     try {
-        ifs >> j;
+        if (!json::accept(content)) {
+            m_lastLoadError = "Failed to parse JSON: invalid JSON (accept failed)";
+            ::Log::Log(::Log::Level::Error, m_lastLoadError + std::string(" : ") + path);
+            return false;
+        }
+        j = json::parse(content);
     }
     catch (const std::exception& ex) {
         m_lastLoadError = std::string("Failed to parse JSON: ") + ex.what();

@@ -1,0 +1,44 @@
+[
+  {
+    "id": 0,
+    "text": "洞窟の入り口だ。道は二手に分かれている。",
+    "choices": [
+      { "text": "左の暗い通路へ進む", "next": 1 },
+      { "text": "右の明かりのある道へ進む", "next": 2 }
+    ]
+  },
+  {
+    "id": 1,
+    "text": "暗い通路で足元が怪しい。何か音がする。",
+    "choices": [
+      {
+        "text": "慎重に進む（成功で進行、失敗で戦闘）",
+        "roll": { "sides": 6, "threshold": 4, "greaterOrEqual": true },
+        "next_success": 3,
+        "next_fail": 4
+      },
+      { "text": "引き返す", "next": 0 }
+    ]
+  },
+  {
+    "id": 2,
+    "text": "明かりのある道で小さな集落跡を見つけた。",
+    "choices": [
+      { "text": "探索する", "next": 5 },
+      { "text": "先に進む", "next": 6 }
+    ]
+  },
+  {
+    "id": 3,
+    "text": "成功して無事に進めた。宝箱を見つけた。",
+    "choices": [ { "text": "開ける", "next": 7 }, { "text": "無視する", "next": 6 } ]
+  },
+  {
+    "id": 4,
+    "text": "失敗してモンスターと遭遇。戦闘だ！",
+    "choices": [ { "text": "戦う", "next": 100 } ]
+  },
+  { "id": 5, "text": "集落跡で古い日記を見つけた。", "choices": [ { "text": "読む", "next": 6 } ] },
+  { "id": 6, "text": "道が続く…。", "choices": [ { "text": "進む", "next": 0 } ] },
+  { "id": 7, "text": "宝箱の中には黄金が！大収穫だ。", "choices": [ { "text": "戻る", "next": 0 } ] }
+]

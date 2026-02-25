@@ -6,6 +6,7 @@
 #include "StoryPlayer.h"
 #include "BattleScene.h"
 #include "Result.h"
+#include "ExploreScene.h"
 #include "IScene.h"
 #include "Logging.h"
 #include "DiceVisual.h"
@@ -310,6 +311,7 @@ void SceneManager::Render() {
                 { SceneType::TRPG_SELECT, "TRPG Select" },
                 { SceneType::SCENARIO_SELECT, "Scenario Select" },
                 { SceneType::CHARACTER_SELECT, "Character Select" },
+                { SceneType::EXPLORE, "Explore" },
                 { SceneType::GAME_PLAY, "Story Player" },
                 { SceneType::BATTLE, "Battle" },
                 { SceneType::RESULT, "Result" },
@@ -440,6 +442,10 @@ void SceneManager::ApplyPendingChange() {
     case SceneType::GAME_PLAY:
         currentScene = std::make_unique<StoryPlayer>();
         if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - 本編");
+        break;
+    case SceneType::EXPLORE:
+        currentScene = std::make_unique<ExploreScene>();
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - 探索");
         break;
             // --- ApplyPendingChange() 内、BATTLE ケース直前にデバッグログを追加 ---
     case SceneType::BATTLE: {

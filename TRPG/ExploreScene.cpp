@@ -16,10 +16,15 @@
 using json = nlohmann::json;
 
 static std::unordered_map<int, EventNode> g_nodes;
-static int g_currentNode = -1;
 static std::vector<std::string> g_log;
-// global flags for exploration (string identifiers)
-static std::unordered_set<std::string> g_flags;
+// Centralized game state for exploration and future sharing across scenes
+struct GameState {
+    int currentNode = -1;
+    std::unordered_set<std::string> flags;
+    std::unordered_set<std::string> inventory; // use set for O(1) lookup and uniqueness
+    std::unordered_map<std::string,int> vars; // numeric variables (HP, SAN, counters...)
+};
+static GameState g_state;
 static std::string g_saveError;
 
 static std::string GetExploreSavePath()
@@ -37,9 +42,13 @@ static void SaveExploreState()
 {
     std::string path = GetExploreSavePath();
     json j;
-    j["currentNode"] = g_currentNode;
+    j["currentNode"] = g_state.currentNode;
     j["flags"] = json::array();
-    for (auto &f : g_flags) j["flags"].push_back(f);
+    for (auto &f : g_state.flags) j["flags"].push_back(f);
+    j["inventory"] = json::array();
+    for (auto &it : g_state.inventory) j["inventory"].push_back(it);
+    j["vars"] = json::object();
+    for (auto &kv : g_state.vars) j["vars"][kv.first] = kv.second;
     // inventory future
     try {
         std::ofstream ofs(path);
@@ -64,10 +73,29 @@ static void LoadExploreState()
         std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
         if (!json::accept(content)) { g_saveError = "Save file JSON invalid: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
         json j = json::parse(content);
-        if (j.contains("currentNode")) g_currentNode = j["currentNode"].get<int>();
+        if (j.contains("currentNode")) {
+            int loaded = j["currentNode"].get<int>();
+            // validate against loaded nodes; if invalid, keep current default
+            if (g_nodes.count(loaded)) g_state.currentNode = loaded;
+            else {
+                // fallback to node 0 if exists, otherwise first node
+                if (g_nodes.count(0)) g_state.currentNode = 0;
+                else if (!g_nodes.empty()) g_state.currentNode = g_nodes.begin()->first;
+            }
+        }
         if (j.contains("flags") && j["flags"].is_array()) {
-            g_flags.clear();
-            for (auto &e : j["flags"]) if (e.is_string()) g_flags.insert(e.get<std::string>());
+            g_state.flags.clear();
+            for (auto &e : j["flags"]) if (e.is_string()) g_state.flags.insert(e.get<std::string>());
+        }
+        if (j.contains("inventory") && j["inventory"].is_array()) {
+            g_state.inventory.clear();
+            for (auto &e : j["inventory"]) if (e.is_string()) g_state.inventory.insert(e.get<std::string>());
+        }
+        if (j.contains("vars") && j["vars"].is_object()) {
+            g_state.vars.clear();
+            for (auto it = j["vars"].begin(); it != j["vars"].end(); ++it) {
+                if (it.value().is_number_integer()) g_state.vars[it.key()] = it.value().get<int>();
+            }
         }
         g_saveError.clear();
         ::Log::Log(::Log::Level::Info, std::string("Explore: loaded save from: ") + path);
@@ -88,7 +116,10 @@ void ExploreScene::Initialize() {
     std::string path = AssetManager::GetStoryPath("explore.json");
     g_nodes.clear();
     g_log.clear();
-    g_currentNode = -1;
+    g_state.currentNode = -1;
+    g_state.flags.clear();
+    g_state.inventory.clear();
+    g_state.vars.clear();
     g_waitingChoice = false;
 
     if (!fs::exists(path)) {
@@ -128,13 +159,13 @@ void ExploreScene::Initialize() {
     if (g_nodes.empty()) {
         g_log.push_back("Explore: no nodes loaded from JSON.");
         ::Log::Log(::Log::Level::Warning, "ExploreScene: no nodes loaded from explore.json");
-        g_currentNode = -1;
+        g_state.currentNode = -1;
     } else {
-        if (g_nodes.count(0)) g_currentNode = 0;
+        if (g_nodes.count(0)) g_state.currentNode = 0;
         else {
             // pick first available node id
-            g_currentNode = g_nodes.begin()->first;
-            g_log.push_back(std::string("Explore: start node 0 not found, using node ") + std::to_string(g_currentNode));
+            g_state.currentNode = g_nodes.begin()->first;
+            g_log.push_back(std::string("Explore: start node 0 not found, using node ") + std::to_string(g_state.currentNode));
         }
         g_log.push_back(std::string("Explore: loaded nodes: ") + std::to_string((int)g_nodes.size()));
         ::Log::Log(::Log::Level::Info, std::string("ExploreScene: loaded nodes from: ") + path + ", count=" + std::to_string((int)g_nodes.size()));
@@ -154,7 +185,11 @@ void ExploreScene::Update() {
         if (g_waitingChoice) {
             g_pendingTimer -= dt;
             if (g_pendingTimer <= 0.0f) {
-                if (g_pendingNode >= 0 && g_nodes.count(g_pendingNode)) g_currentNode = g_pendingNode;
+                if (g_pendingNode >= 0 && g_nodes.count(g_pendingNode)) {
+                    g_state.currentNode = g_pendingNode;
+                    // save state after transition
+                    SaveExploreState();
+                }
                 g_waitingChoice = false;
                 g_pendingNode = -1;
                 g_pendingTimer = 0.0f;
@@ -166,13 +201,33 @@ void ExploreScene::Update() {
 void ExploreScene::RenderUI() {
     if (ImGui::GetCurrentContext() == nullptr) return;
     ImGui::Begin("Explore (Dev)");
-    ImGui::Text("Current node: %d", g_currentNode);
+    ImGui::Text("Current node: %d", g_state.currentNode);
     // show flags
     ImGui::Separator();
     ImGui::Text("Flags:");
     ImGui::BeginChild("Flags", ImVec2(0,80), true);
-    for (auto &f : g_flags) ImGui::TextWrapped("%s", f.c_str());
+    for (auto &f : g_state.flags) ImGui::TextWrapped("%s", f.c_str());
     ImGui::EndChild();
+    ImGui::Separator();
+    ImGui::Text("Inventory:");
+    ImGui::BeginChild("Inventory", ImVec2(0,80), true);
+    int idx = 0;
+    for (auto it = g_state.inventory.begin(); it != g_state.inventory.end();) {
+        ImGui::PushID(idx);
+        ImGui::TextWrapped("%s", it->c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Remove")) {
+            it = g_state.inventory.erase(it);
+            ImGui::PopID();
+            continue;
+        } else ++it;
+        ImGui::PopID();
+        ++idx;
+    }
+    ImGui::EndChild();
+    static char newItemBuf[128] = "";
+    ImGui::InputText("New Item", newItemBuf, sizeof(newItemBuf));
+    ImGui::SameLine(); if (ImGui::Button("Add Item") && newItemBuf[0] != '\0') { g_state.inventory.insert(std::string(newItemBuf)); newItemBuf[0] = '\0'; }
     if (ImGui::Button("Log Clear")) g_log.clear();
     ImGui::SameLine();
     if (ImGui::Button("Save State")) { SaveExploreState(); }
@@ -187,7 +242,7 @@ void ExploreScene::RenderUI() {
 }
 
 void ExploreScene::Render() {
-    if (g_currentNode < 0 || g_nodes.find(g_currentNode) == g_nodes.end()) {
+    if (g_state.currentNode < 0 || g_nodes.find(g_state.currentNode) == g_nodes.end()) {
         // show a helpful message so user knows why nothing is displayed
         if (ImGui::GetCurrentContext() == nullptr) return;
         ImGuiIO &io = ImGui::GetIO();
@@ -204,7 +259,7 @@ void ExploreScene::Render() {
         ImGui::End();
         return;
     }
-    const EventNode &n = g_nodes[g_currentNode];
+    const EventNode &n = g_nodes[g_state.currentNode];
 
     // center dialog near bottom by default but ensure visible on most resolutions
     ImGuiIO &io = ImGui::GetIO();
@@ -220,8 +275,8 @@ void ExploreScene::Render() {
     // choices
     // show choices vertically and support pending transition so user sees dice visual
     auto ApplyFlags = [&](const std::vector<std::string> &sets, const std::vector<std::string> &clears) {
-        for (auto &f : sets) g_flags.insert(f);
-        for (auto &f : clears) g_flags.erase(f);
+        for (auto &f : sets) g_state.flags.insert(f);
+        for (auto &f : clears) g_state.flags.erase(f);
     };
 
     for (size_t i = 0; i < n.choices.size(); ++i) {
@@ -230,9 +285,9 @@ void ExploreScene::Render() {
 
         // check requirements
         bool enabled = true;
-        for (auto &rf : c.requireFlags) if (!g_flags.count(rf)) { enabled = false; break; }
+        for (auto &rf : c.requireFlags) if (!g_state.flags.count(rf)) { enabled = false; break; }
         if (enabled) {
-            for (auto &nf : c.requireNotFlags) if (g_flags.count(nf)) { enabled = false; break; }
+            for (auto &nf : c.requireNotFlags) if (g_state.flags.count(nf)) { enabled = false; break; }
         }
 
         if (!c.rollCond.has_value()) {
@@ -250,6 +305,8 @@ void ExploreScene::Render() {
                         g_pendingNode = c.nextNodeID;
                         g_pendingTimer = 0.18f;
                         g_waitingChoice = true;
+                        // autosave after taking a choice
+                        SaveExploreState();
                     } else g_log.push_back("Choice leads nowhere.");
                 }
             }
@@ -280,6 +337,8 @@ void ExploreScene::Render() {
                 }
                 g_pendingTimer = 1.0f; // wait for dice to settle / display
                 g_waitingChoice = true;
+                // autosave after roll decision
+                SaveExploreState();
             }
         }
         ImGui::PopID();

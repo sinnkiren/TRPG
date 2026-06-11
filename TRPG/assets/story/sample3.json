@@ -1,0 +1,4 @@
+[
+  { "id": 1, "text": "Sample Scenario 3: Tiny demo.", "choices": [ { "text": "Next", "next": 2 } ] },
+  { "id": 2, "text": "Sample 3: Done.", "choices": [] }
+]

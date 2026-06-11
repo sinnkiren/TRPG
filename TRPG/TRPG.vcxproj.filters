@@ -31,6 +31,9 @@
     <Filter Include="ソース ファイル\Scene\battle">
       <UniqueIdentifier>{c119a25f-0f63-488e-8d01-cd046fd4a3e6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Scene\StoryPlayer">
+      <UniqueIdentifier>{ef1b3631-8d12-4d1b-8ceb-6fc41ffae6a2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp">
@@ -162,9 +165,6 @@
     <ClCompile Include="Result.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="StoryPlayer.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="FearEffects.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -215,6 +215,27 @@
     </ClCompile>
     <ClCompile Include="BattleScene.cpp">
       <Filter>ソース ファイル\Scene\battle</Filter>
+    </ClCompile>
+    <ClCompile Include="ImGuiHelpers.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="StoryEditorScene.cpp">
+      <Filter>ソース ファイル\Scene\StoryPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="StoryPlayer_Editor.cpp">
+      <Filter>ソース ファイル\Scene\StoryPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="StoryPlayer_Editor_Utils.cpp">
+      <Filter>ソース ファイル\Scene\StoryPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="StoryPlayer_NodeGraph.cpp">
+      <Filter>ソース ファイル\Scene\StoryPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="StoryPlayer_Runtime.cpp">
+      <Filter>ソース ファイル\Scene\StoryPlayer</Filter>
+    </ClCompile>
+    <ClCompile Include="StoryPlayer.cpp">
+      <Filter>ソース ファイル\Scene\StoryPlayer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -455,9 +476,18 @@
     <ClInclude Include="AssetManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="StoryEditorScene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiHelpers.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\story\story.json" />
     <None Include="assets\story\explore.json" />
+    <None Include="assets\story\sample1.json" />
+    <None Include="assets\story\sample2.json" />
+    <None Include="assets\story\sample3.json" />
   </ItemGroup>
 </Project>

@@ -80,4 +80,7 @@ private:
     };
 
     std::vector<AbilityRow> abilities;
+    // Helpers to sync abilities <-> character fields
+    void RefreshAbilitiesFromCharacter();
+    void ApplyAbilitiesToCharacter();
 };

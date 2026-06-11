@@ -1,5 +1,6 @@
 #include "ExploreScene.h"
 #include "EventNode.h"
+#include "CharacterSelect.h"
 #include "system/json.hpp"
 #include "AssetManager.h"
 #include "system/imgui/imgui.h"
@@ -15,18 +16,30 @@
 
 using json = nlohmann::json;
 
+// ExploreScene: 探索用のノード読み込み、選択肢表示、状態管理（flags/inventory/vars）の実装ファイル
+// このファイルは JSON ファイルから EventNode を読み込み、選択肢をレンダリングして
+// ユーザ操作により GameState を更新・保存します。
+
 static std::unordered_map<int, EventNode> g_nodes;
 static std::vector<std::string> g_log;
-// Centralized game state for exploration and future sharing across scenes
+// 中央のゲーム状態（探索シーンと共有される状態）
 struct GameState {
-    int currentNode = -1;
-    std::unordered_set<std::string> flags;
-    std::unordered_set<std::string> inventory; // use set for O(1) lookup and uniqueness
-    std::unordered_map<std::string,int> vars; // numeric variables (HP, SAN, counters...)
+    int currentNode = -1; // 現在のノードID
+    std::unordered_set<std::string> flags; // 論理的なフラグ集合
+    std::unordered_set<std::string> inventory; // 所持品（重複不可）
+    std::unordered_map<std::string,int> vars; // 数値変数（例: san, gold 等）
 };
 static GameState g_state;
-static std::string g_saveError;
+static std::string g_saveError; // セーブ/ロードエラーの説明
 
+// セーブファイルのパスを決定して返す
+/*
+ * GetExploreSavePath
+ * ------------------
+ * セーブファイルのフルパスを返します。
+ * - AssetManager を基準に保存先を決定します。
+ * - テストや開発時は実行フォルダに "explore_save.json" を作成します。
+ */
 static std::string GetExploreSavePath()
 {
     // Save next to asset root for simplicity
@@ -37,11 +50,28 @@ static std::string GetExploreSavePath()
     if (last == '/' || last == '\\') return root + "explore_save.json";
     return root + "/explore_save.json";
 }
+// forward declarations of static helpers (defined later)
+static void SaveExploreState();
+static void LoadExploreState();
 
+// Save format version. Increment when changing saved JSON layout.
+static constexpr int kExploreSaveVersion = 1;
+
+// 現在の g_state を JSON としてディスクに書き出す
+// players は SceneManager のロスターから取得して保存する
+/*
+ * SaveExploreState
+ * ----------------
+ * 現在の探索状態（g_state）と SceneManager に登録されたプレイヤーロスターを
+ * JSON にシリアライズしてディスクに保存します。
+ * - ここで保存される内容: saveVersion, currentNode, flags, inventory, vars, players, activePlayerIndex
+ * - 失敗時は g_saveError にメッセージを格納しログ出力します。
+ */
 static void SaveExploreState()
 {
     std::string path = GetExploreSavePath();
     json j;
+    j["saveVersion"] = kExploreSaveVersion;
     j["currentNode"] = g_state.currentNode;
     j["flags"] = json::array();
     for (auto &f : g_state.flags) j["flags"].push_back(f);
@@ -49,7 +79,26 @@ static void SaveExploreState()
     for (auto &it : g_state.inventory) j["inventory"].push_back(it);
     j["vars"] = json::object();
     for (auto &kv : g_state.vars) j["vars"][kv.first] = kv.second;
-    // inventory future
+    // players: serialize SceneManager roster
+    j["players"] = json::array();
+    {
+        const auto &players = g_SceneManager.GetPlayers();
+        for (const auto &p : players) {
+            json pj;
+            pj["name"] = p.name;
+            pj["job"] = p.job;
+            pj["str"] = p.str; pj["con"] = p.con; pj["dex"] = p.dex; pj["int"] = p.int_;
+            pj["pow"] = p.pow; pj["cha"] = p.cha; pj["app"] = p.app; pj["siz"] = p.siz; pj["edu"] = p.edu;
+            pj["sanity"] = p.sanity; pj["maxSanity"] = p.maxSanity;
+            pj["endurance"] = p.endurance; pj["maxEndurance"] = p.maxEndurance;
+            pj["portraitPath"] = p.portraitPath;
+            pj["skills"] = json::array();
+            for (auto &s : p.skills) pj["skills"].push_back(s);
+            j["players"].push_back(pj);
+        }
+        j["activePlayerIndex"] = g_SceneManager.GetActivePlayerIndex();
+    }
+    // inventory 保存処理
     try {
         std::ofstream ofs(path);
         if (!ofs.is_open()) { g_saveError = "Failed to open save file for writing: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
@@ -62,6 +111,14 @@ static void SaveExploreState()
     }
 }
 
+// ディスクから JSON を読み込み g_state と SceneManager のプレイヤーロスターを復元する
+/*
+ * LoadExploreState
+ * ----------------
+ * セーブファイルを読み込み、g_state と SceneManager のプレイヤーロスターを復元します。
+ * - 互換性のため saveVersion を確認し、既知フィールドのみ復元します。
+ * - 不正な JSON やファイルが無い場合は g_saveError を更新します。
+ */
 static void LoadExploreState()
 {
     std::string path = GetExploreSavePath();
@@ -73,6 +130,13 @@ static void LoadExploreState()
         std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
         if (!json::accept(content)) { g_saveError = "Save file JSON invalid: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
         json j = json::parse(content);
+        int ver = j.value("saveVersion", 0);
+        if (ver == 0) {
+            ::Log::Log(::Log::Level::Info, std::string("Explore: loading legacy save (no version) from: ") + path);
+        } else if (ver != kExploreSaveVersion) {
+            if (ver > kExploreSaveVersion) ::Log::Log(::Log::Level::Warning, std::string("Explore: save file version is newer (file=") + std::to_string(ver) + ", supported=" + std::to_string(kExploreSaveVersion) + ")");
+            else ::Log::Log(::Log::Level::Info, std::string("Explore: save file version different (file=") + std::to_string(ver) + ", supported=" + std::to_string(kExploreSaveVersion) + ")");
+        }
         if (j.contains("currentNode")) {
             int loaded = j["currentNode"].get<int>();
             // validate against loaded nodes; if invalid, keep current default
@@ -97,6 +161,39 @@ static void LoadExploreState()
                 if (it.value().is_number_integer()) g_state.vars[it.key()] = it.value().get<int>();
             }
         }
+        // load players if present
+        if (j.contains("players") && j["players"].is_array()) {
+            auto &plist = g_SceneManager.GetPlayers();
+            plist.clear();
+            for (auto &pj : j["players"]) {
+                CharcterScene::CharcterDate p;
+                if (pj.contains("name")) p.name = pj["name"].get<std::string>();
+                if (pj.contains("job")) p.job = pj["job"].get<std::string>();
+                if (pj.contains("str")) p.str = pj["str"].get<int>();
+                if (pj.contains("con")) p.con = pj["con"].get<int>();
+                if (pj.contains("dex")) p.dex = pj["dex"].get<int>();
+                if (pj.contains("int")) p.int_ = pj["int"].get<int>();
+                if (pj.contains("pow")) p.pow = pj["pow"].get<int>();
+                if (pj.contains("cha")) p.cha = pj["cha"].get<int>();
+                if (pj.contains("app")) p.app = pj["app"].get<int>();
+                if (pj.contains("siz")) p.siz = pj["siz"].get<int>();
+                if (pj.contains("edu")) p.edu = pj["edu"].get<int>();
+                if (pj.contains("sanity")) p.sanity = pj["sanity"].get<int>();
+                if (pj.contains("maxSanity")) p.maxSanity = pj["maxSanity"].get<int>();
+                if (pj.contains("endurance")) p.endurance = pj["endurance"].get<int>();
+                if (pj.contains("maxEndurance")) p.maxEndurance = pj["maxEndurance"].get<int>();
+                if (pj.contains("portraitPath")) p.portraitPath = pj["portraitPath"].get<std::string>();
+                if (pj.contains("skills") && pj["skills"].is_array()) {
+                    p.skills.clear();
+                    for (auto &s : pj["skills"]) if (s.is_string()) p.skills.push_back(s.get<std::string>());
+                }
+                plist.push_back(p);
+            }
+            if (j.contains("activePlayerIndex") && j["activePlayerIndex"].is_number_integer()) {
+                int idx = j["activePlayerIndex"].get<int>();
+                g_SceneManager.SetActivePlayerIndex(idx);
+            }
+        }
         g_saveError.clear();
         ::Log::Log(::Log::Level::Info, std::string("Explore: loaded save from: ") + path);
     } catch (const std::exception &ex) {
@@ -104,11 +201,18 @@ static void LoadExploreState()
         ::Log::Log(::Log::Level::Error, g_saveError);
     }
 }
-// pending transition state so the UI / dice visual have time to play
+// UI 表示のためにノード遷移を少し遅らせるための状態
 static bool g_waitingChoice = false;
 static int g_pendingNode = -1;
 static float g_pendingTimer = 0.0f;
 
+/*
+ * ExploreScene::Initialize
+ * -------------------------
+ * - アセットから explore.json を読み込んで EventNode を構築します。
+ * - g_nodes にノードを格納し、開始ノードを決定します。
+ * - セーブファイルがあれば LoadExploreState() を呼んで状態を復元します。
+ */
 void ExploreScene::Initialize() {
     // load nodes from assets/story/explore.json if present
     namespace fs = std::filesystem;
@@ -174,6 +278,13 @@ void ExploreScene::Initialize() {
     LoadExploreState();
 }
 
+/*
+ * ExploreScene::Update
+ * ---------------------
+ * 毎フレームの更新処理。
+ * - DiceVisual を更新してダイス演出を進めます。
+ * - 選択肢の後処理として遷移を遅延させるための pending タイマーを扱います。
+ */
 void ExploreScene::Update() {
     // advance dice visual
     if (ImGui::GetCurrentContext()) {
@@ -198,6 +309,13 @@ void ExploreScene::Update() {
     }
 }
 
+/*
+ * ExploreScene::RenderUI
+ * -----------------------
+ * 開発用のデバッグ UI を描画します。
+ * - flags / inventory / vars の中身を表示・編集できます。
+ * - Save / Load ボタンで手動保存や復元が可能です。
+ */
 void ExploreScene::RenderUI() {
     if (ImGui::GetCurrentContext() == nullptr) return;
     ImGui::Begin("Explore (Dev)");
@@ -241,6 +359,14 @@ void ExploreScene::RenderUI() {
     ImGui::End();
 }
 
+/*
+ * ExploreScene::Render
+ * ---------------------
+ * 探索ダイアログ（ノードテキストと選択肢）を描画します。
+ * - 各選択肢の要件チェックを行い、ボタン押下で効果を適用します。
+ * - ロール判定がある選択肢はダイスを振り、成功/失敗で分岐させます。
+ * - 効果の適用は ApplyChoiceEffects に委譲し、状態更新後に自動セーブします。
+ */
 void ExploreScene::Render() {
     if (g_state.currentNode < 0 || g_nodes.find(g_state.currentNode) == g_nodes.end()) {
         // show a helpful message so user knows why nothing is displayed
@@ -273,10 +399,120 @@ void ExploreScene::Render() {
     ImGui::Separator();
 
     // choices
-    // show choices vertically and support pending transition so user sees dice visual
+    // 選択肢の実行に関わるヘルパ
+    // ApplyFlags: フラグの追加/削除をまとめて行う
     auto ApplyFlags = [&](const std::vector<std::string> &sets, const std::vector<std::string> &clears) {
         for (auto &f : sets) g_state.flags.insert(f);
         for (auto &f : clears) g_state.flags.erase(f);
+    };
+
+    // apply commandized effects for a given choice
+    // Choice::effects のコマンドを評価・実行するコア処理。
+    // success 引数はロール判定の結果（成功:true/失敗:false）を示す。
+    auto ApplyChoiceEffects = [&](const Choice &c, bool success) {
+        // 条件評価: Condition を見て現在の g_state が条件を満たすか判定する
+        auto CheckCond = [&](const Choice::Effect::Condition &cond)->bool {
+            // If no requirements specified, condition passes
+            bool hasAnyReq = !cond.requireFlags.empty() || !cond.requireNotFlags.empty() || !cond.requireInventory.empty()
+                || !cond.requireVarMin.empty() || !cond.requireVarMax.empty();
+            if (!hasAnyReq) return true;
+
+            if (cond.mode == Choice::Effect::Condition::Mode::ALL) {
+                // flags
+                for (auto &rf : cond.requireFlags) if (!g_state.flags.count(rf)) return false;
+                for (auto &nf : cond.requireNotFlags) if (g_state.flags.count(nf)) return false;
+                // inventory
+                for (auto &it : cond.requireInventory) if (!g_state.inventory.count(it)) return false;
+                // vars min/max
+                for (auto &kv : cond.requireVarMin) {
+                    int val = 0;
+                    auto itv = g_state.vars.find(kv.first);
+                    if (itv != g_state.vars.end()) val = itv->second;
+                    if (val < kv.second) return false;
+                }
+                for (auto &kv : cond.requireVarMax) {
+                    int val = 0;
+                    auto itv = g_state.vars.find(kv.first);
+                    if (itv != g_state.vars.end()) val = itv->second;
+                    if (val > kv.second) return false;
+                }
+                return true;
+            }
+            else {
+                // Mode::ANY - satisfy if any single requirement is met
+                // flags: any listed flag present
+                for (auto &rf : cond.requireFlags) if (g_state.flags.count(rf)) return true;
+                // requireNotFlags: if none of the listed flags present, that's a satisfied condition
+                if (!cond.requireNotFlags.empty()) {
+                    bool anyPresent = false;
+                    for (auto &nf : cond.requireNotFlags) if (g_state.flags.count(nf)) { anyPresent = true; break; }
+                    if (!anyPresent) return true;
+                }
+                // inventory: any listed item present
+                for (auto &it : cond.requireInventory) if (g_state.inventory.count(it)) return true;
+                // vars min: any variable meets its min
+                for (auto &kv : cond.requireVarMin) {
+                    int val = 0;
+                    auto itv = g_state.vars.find(kv.first);
+                    if (itv != g_state.vars.end()) val = itv->second;
+                    if (val >= kv.second) return true;
+                }
+                // vars max: any variable meets its max constraint
+                for (auto &kv : cond.requireVarMax) {
+                    int val = 0;
+                    auto itv = g_state.vars.find(kv.first);
+                    if (itv != g_state.vars.end()) val = itv->second;
+                    if (val <= kv.second) return true;
+                }
+                return false;
+            }
+        };
+        // 実行対象の効果リストを作成（基本効果 + success/fail 用効果）
+        std::vector<Choice::Effect> exec = c.effects;
+        if (success) {
+            exec.insert(exec.end(), c.effectsOnSuccess.begin(), c.effectsOnSuccess.end());
+        } else {
+            exec.insert(exec.end(), c.effectsOnFail.begin(), c.effectsOnFail.end());
+        }
+        // 再帰実行子: if/then/else をサポートしつつ各 effect を評価・適用する
+        std::function<void(const std::vector<Choice::Effect>&, bool)> ExecEffects;
+        ExecEffects = [&](const std::vector<Choice::Effect> &effectsList, bool parentSuccess) {
+            for (auto &e : effectsList) {
+                if (e.op == "if") {
+                    // if エントリ: 条件を評価して then/else を再帰実行
+                    bool condOk = CheckCond(e.condition);
+                    g_log.push_back(std::string("IfEffect: ") + (condOk ? "(cond OK)" : "(cond FAIL)"));
+                    if (condOk) ExecEffects(e.thenEffects, parentSuccess);
+                    else ExecEffects(e.elseEffects, parentSuccess);
+                    continue;
+                }
+                // 通常の effect: 条件を評価して適用
+                bool condOk = CheckCond(e.condition);
+                std::string dbg = std::string("Effect: ") + e.op + (condOk ? " (cond OK)" : " (cond FAIL)");
+                g_log.push_back(dbg);
+                if (!condOk) continue;
+                if (e.op == "add_inventory") {
+                    for (auto &it : e.items) { g_state.inventory.insert(it); g_log.push_back(std::string("Added item: ") + it); }
+                } else if (e.op == "remove_inventory") {
+                    for (auto &it : e.items) { g_state.inventory.erase(it); g_log.push_back(std::string("Removed item: ") + it); }
+                } else if (e.op == "add_var") {
+                    g_state.vars[e.key] += e.intValue;
+                    g_log.push_back(std::string("Var add: ") + e.key + "=" + std::to_string(e.intValue));
+                } else if (e.op == "set_var") {
+                    g_state.vars[e.key] = e.intValue;
+                    g_log.push_back(std::string("Var set: ") + e.key + "=" + std::to_string(e.intValue));
+                } else if (e.op == "set_flag") {
+                    for (auto &f : e.items) g_state.flags.insert(f);
+                } else if (e.op == "clear_flag") {
+                    for (auto &f : e.items) g_state.flags.erase(f);
+                } else {
+                    // 未知の op はログに残して無視
+                    g_log.push_back(std::string("Unknown effect op: ") + e.op);
+                }
+            }
+        };
+
+        ExecEffects(exec, success);
     };
 
     for (size_t i = 0; i < n.choices.size(); ++i) {
@@ -289,6 +525,29 @@ void ExploreScene::Render() {
         if (enabled) {
             for (auto &nf : c.requireNotFlags) if (g_state.flags.count(nf)) { enabled = false; break; }
         }
+        // inventory requirements
+        if (enabled && !c.requireInventory.empty()) {
+            for (auto &it : c.requireInventory) {
+                if (!g_state.inventory.count(it)) { enabled = false; break; }
+            }
+        }
+        // numeric var requirements (min/max)
+        if (enabled && !c.requireVarMin.empty()) {
+            for (auto &kv : c.requireVarMin) {
+                int val = 0;
+                auto itv = g_state.vars.find(kv.first);
+                if (itv != g_state.vars.end()) val = itv->second;
+                if (val < kv.second) { enabled = false; break; }
+            }
+        }
+        if (enabled && !c.requireVarMax.empty()) {
+            for (auto &kv : c.requireVarMax) {
+                int val = 0;
+                auto itv = g_state.vars.find(kv.first);
+                if (itv != g_state.vars.end()) val = itv->second;
+                if (val > kv.second) { enabled = false; break; }
+            }
+        }
 
         if (!c.rollCond.has_value()) {
             if (!enabled) {
@@ -300,6 +559,8 @@ void ExploreScene::Render() {
                     g_log.push_back(std::string("Choice: ") + c.text);
                     // apply flags immediately
                     ApplyFlags(c.setFlags, c.clearFlags);
+                            // apply inventory/var effects
+                            ApplyChoiceEffects(c, false);
                     if (c.nextNodeID >= 0 && g_nodes.count(c.nextNodeID)) {
                         // small delay so player sees UI feedback
                         g_pendingNode = c.nextNodeID;
@@ -330,9 +591,13 @@ void ExploreScene::Render() {
                 // set pending node depending on result, allow visual to play for 1.0s
                 if (success) {
                     ApplyFlags(c.setOnSuccess, c.clearOnSuccess);
+                    // apply inventory/var effects (success)
+                    ApplyChoiceEffects(c, true);
                     g_pendingNode = (c.nextOnSuccess >= 0) ? c.nextOnSuccess : -1;
                 } else {
                     ApplyFlags(c.setOnFail, c.clearOnFail);
+                    // apply inventory/var effects (fail)
+                    ApplyChoiceEffects(c, false);
                     g_pendingNode = (c.nextOnFail >= 0) ? c.nextOnFail : -1;
                 }
                 g_pendingTimer = 1.0f; // wait for dice to settle / display
@@ -355,4 +620,16 @@ void ExploreScene::Render() {
     DiceVisual::Instance().Render();
 }
 
+
+
+// Public wrappers
+void ExploreScene::SaveStateNow()
+{
+    SaveExploreState();
+}
+
+void ExploreScene::LoadStateNow()
+{
+    LoadExploreState();
+}
 

@@ -2,6 +2,7 @@
 #include "system/imgui/imgui.h"
 #include <cmath>
 #include <algorithm>
+#include <random>
 
 // Local clamp to avoid depending on std::clamp (toolchain differences / NOMINMAX macro issues)
 template<typename T>
@@ -12,6 +13,8 @@ static inline T clamp_val(T v, T lo, T hi) {
 // FearEffects ŠO•” API
 namespace FearEffects
 {
+    // expose RNG access for deterministic testing
+    std::mt19937& GetRng();
     void StartShake(float intensity, float duration);
     void StartOverlay(float intensity, float duration, int stage = 0);
     void Update(float dt);

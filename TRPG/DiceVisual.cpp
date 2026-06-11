@@ -1,6 +1,7 @@
 #include "DiceVisual.h"
 #include "system/imgui/imgui.h"
 #include "TextureManager.h"
+#include "ImGuiHelpers.h"
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
@@ -30,7 +31,11 @@ void DiceVisual::StartRollFaces(int sides, const std::vector<int>& faces) {
     float spacing = baseSpacing + std::min(10.0f, (float)totalCount * 6.0f);
     for (size_t i = 0; i < faces.size(); ++i) {
         ActiveDie d;
-        d.face = faces[i];
+        d.targetFace = faces[i];
+        // start with a random interim face for visual variety
+        std::uniform_int_distribution<int> faceDist(1, std::max(1, sides));
+        d.face = faceDist(m_rng);
+        d.faceFlipTimer = 0.05f + 0.18f * (1.0f - std::min(1.0f, m_timer / m_duration));
         // spread horizontally across this roll with adjustable spacing
         float spread = ((float)i - (float)totalCount * 0.5f) * spacing;
         d.posX = cx + spread;
@@ -43,13 +48,15 @@ void DiceVisual::StartRollFaces(int sides, const std::vector<int>& faces) {
         d.scale = std::max(0.6f, 1.0f - (float)totalCount * 0.035f);
         d.angle = 0.0f;
         d.angVel = ang(m_rng);
-        d.scale = 1.0f;
+        // keep computed scale (do not overwrite)
         d.stopTimer = 0.0f;
         d.settled = false;
         m_dice.push_back(d);
     }
     m_active = true;
     m_physical = true;
+    // mark grouped visual active (prevent unrelated single rolls from appending)
+    m_groupedVisual = true;
     m_timer = 0.0f;
 }
 
@@ -80,6 +87,37 @@ void DiceVisual::StartRoll(int sides, int face) {
     // give an initial random horizontal velocity and downward impulse
     std::uniform_real_distribution<float> vx(-220.0f, 220.0f);
     std::uniform_real_distribution<float> ang(-18.0f, 18.0f);
+    // If multi-dice visuals are active, append this single roll as another active die
+    if (!m_dice.empty()) {
+        // if grouped visual active, cap appended dice to avoid accidental growth
+        if (m_groupedVisual && (int)m_dice.size() >= m_groupMaxDice) return;
+        ActiveDie d;
+        d.targetFace = face;
+        std::uniform_int_distribution<int> faceDist(1, std::max(1, sides));
+        d.face = faceDist(m_rng);
+        d.faceFlipTimer = 0.05f + 0.18f * (1.0f - std::min(1.0f, m_timer / m_duration));
+        // position this new die to the right of existing set
+        float avgX = 0.0f; for (auto &ad : m_dice) avgX += ad.posX; avgX /= (float)m_dice.size();
+        float offset =  (float)m_dice.size() * 70.0f + 40.0f;
+        d.posX = avgX + offset;
+        d.posY = -120.0f;
+        d.velX = vx(m_rng) * 0.6f;
+        d.velY = 240.0f + std::abs(vx(m_rng)) * 0.4f;
+        d.scale = std::max(0.6f, 1.0f - (float)m_dice.size() * 0.035f);
+        d.angle = 0.0f;
+        d.angVel = ang(m_rng);
+        d.stopTimer = 0.0f;
+        d.settled = false;
+        m_dice.push_back(d);
+        // ensure physical simulation is active
+        m_active = true;
+        m_physical = true;
+        return;
+    }
+
+    // No multi-dice active: perform single-die start (legacy behavior)
+    m_dice.clear();
+    m_stopParticles.clear();
     m_velX = vx(m_rng);
     m_velY = 0.0f;
     m_angle = 0.0f;
@@ -99,6 +137,20 @@ void DiceVisual::Update(float dt) {
     if (!m_active) return;
     m_timer += dt;
 
+    // update stop particles
+    for (auto it = m_stopParticles.begin(); it != m_stopParticles.end(); ) {
+        it->life += dt;
+        if (it->life >= it->ttl) { it = m_stopParticles.erase(it); continue; }
+        // integrate particle
+        it->vy += m_gravity * 0.5f * dt; // lighter gravity for particles
+        it->x += it->vx * dt;
+        it->y += it->vy * dt;
+        // simple damping
+        it->vx *= 0.96f;
+        it->vy *= 0.96f;
+        ++it;
+    }
+
     if (m_physical) {
         // If multiple dice active, simulate each independently
         if (!m_dice.empty()) {
@@ -111,6 +163,14 @@ void DiceVisual::Update(float dt) {
                 d.posX += d.velX * dt;
                 d.posY += d.velY * dt;
                 d.angle += d.angVel * dt;
+
+                // interim face flipping for multi-dice visuals
+                d.faceFlipTimer -= dt;
+                if (d.faceFlipTimer <= 0.0f) {
+                    std::uniform_int_distribution<int> distFace(1, std::max(1, m_sides));
+                    d.face = distFace(m_rng);
+                    d.faceFlipTimer = 0.05f + 0.18f * (1.0f - std::min(1.0f, m_timer / m_duration));
+                }
 
                 float halfSize = halfSizeBase * d.scale;
                 if (d.posY + halfSize >= groundY) {
@@ -129,8 +189,84 @@ void DiceVisual::Update(float dt) {
                     d.stopTimer += dt;
                     if (d.stopTimer > 0.28f) {
                         d.settled = true;
+                        // snap displayed face to target
+                        if (d.targetFace > 0) d.face = d.targetFace;
+                        // spawn stop particles for visual flair
+                        int spawn = std::min(m_maxStopParticles, 6 + (int)(std::abs(d.angVel) * 2.0f));
+                        for (int pi = 0; pi < spawn; ++pi) {
+                            StopParticle p;
+                            p.x = d.posX + ((float)pi - spawn*0.5f) * 2.4f;
+                            p.y = d.posY - halfSize * 0.2f;
+                            std::uniform_real_distribution<float> ang(-3.14f, 3.14f);
+                            float a = ang(m_rng);
+                            p.vx = std::cos(a) * (m_particleSpawnSpeed * (0.4f + 0.6f * ((float)pi / spawn)));
+                            p.vy = -std::abs(std::sin(a)) * (m_particleSpawnSpeed * 0.4f);
+                            p.life = 0.0f;
+                            p.ttl = m_particleTTL * (0.8f + 0.6f * ((float)pi / spawn));
+                            p.size = 6.0f * d.scale * (0.6f + 0.8f * ((float)pi / spawn));
+                            m_stopParticles.push_back(p);
+                        }
                     }
                 } else d.stopTimer = 0.0f;
+            }
+            // simple pairwise collisions (circle approximation)
+            for (size_t i = 0; i < m_dice.size(); ++i) {
+                for (size_t j = i + 1; j < m_dice.size(); ++j) {
+                    auto &a = m_dice[i];
+                    auto &b = m_dice[j];
+                    if (a.settled && b.settled) continue; // no need to collide fully settled dice
+                    float halfA = halfSizeBase * a.scale;
+                    float halfB = halfSizeBase * b.scale;
+                    float rx = b.posX - a.posX;
+                    float ry = b.posY - a.posY;
+                    float dist2 = rx*rx + ry*ry;
+                    float minDist = halfA + halfB;
+                    if (dist2 <= 1e-6f) {
+                        // jitter to avoid exact overlap
+                        std::uniform_real_distribution<float> jitter(-0.5f, 0.5f);
+                        float jx = jitter(m_rng), jy = jitter(m_rng);
+                        a.posX -= jx; a.posY -= jy;
+                        b.posX += jx; b.posY += jy;
+                        continue;
+                    }
+                    if (dist2 < minDist*minDist) {
+                        float dist = std::sqrt(dist2);
+                        float overlap = minDist - dist;
+                        float nx = rx / dist;
+                        float ny = ry / dist;
+                        // positional correction (split)
+                        float corr = 0.5f * overlap;
+                        a.posX -= nx * corr;
+                        a.posY -= ny * corr;
+                        b.posX += nx * corr;
+                        b.posY += ny * corr;
+                        // relative velocity along normal
+                        float rvx = b.velX - a.velX;
+                        float rvy = b.velY - a.velY;
+                        float reln = rvx * nx + rvy * ny;
+                        if (reln < 0.0f) {
+                            float e = m_collisionRestitution;
+                            float j = -(1.0f + e) * reln * 0.5f; // equal mass
+                            float ix = j * nx;
+                            float iy = j * ny;
+                            a.velX -= ix;
+                            a.velY -= iy;
+                            b.velX += ix;
+                            b.velY += iy;
+                            // simple tangential friction: reduce tangential relative velocity
+                            float tx = -ny; float ty = nx;
+                            float rvt = rvx * tx + rvy * ty;
+                            float ft = rvt * (1.0f - m_collisionFriction);
+                            a.velX += tx * ft * 0.5f;
+                            a.velY += ty * ft * 0.5f;
+                            b.velX -= tx * ft * 0.5f;
+                            b.velY -= ty * ft * 0.5f;
+                            // small angular change based on impulse
+                            a.angVel -= (ix * 0.02f);
+                            b.angVel += (ix * 0.02f);
+                        }
+                    }
+                }
             }
             // if all settled -> finalize
             bool all = true; for (auto &d : m_dice) if (!d.settled) { all = false; break; }
@@ -162,6 +298,8 @@ void DiceVisual::Update(float dt) {
                 m_resultDisplayTimer = m_resultDisplayDuration;
                 // set current face to last die so old single-die code still shows something
                 m_currentFace = m_dice.back().face;
+                // clear grouped visual flag
+                m_groupedVisual = false;
             }
             return;
         }
@@ -284,14 +422,14 @@ void DiceVisual::Render() {
         for (auto &d : m_dice) {
             // shadow position is aligned to tray ground
             float shadowY = groundY - half * 0.15f;
-            ImVec2 sc(d.posX, shadowY);
-            float sr = half * d.scale * 0.9f; // base radius
-            // draw outer soft ring
-            dl->AddCircleFilled(sc, sr * 1.6f, IM_COL32(0,0,0,35), 20);
-            // mid
-            dl->AddCircleFilled(sc, sr * 1.2f, IM_COL32(0,0,0,55), 20);
-            // inner dark
-            dl->AddCircleFilled(sc, sr * 0.85f, IM_COL32(0,0,0,95), 20);
+            // directional offset based on rolling angle to add depth
+            float dirOff = std::sin(d.angle) * half * 0.08f;
+            ImVec2 sc(d.posX + dirOff, shadowY + std::abs(dirOff) * 0.12f);
+            float sr = half * d.scale * 0.95f; // base radius
+            // layered soft shadow (improved)
+            dl->AddCircleFilled(sc, sr * 1.9f, IM_COL32(0,0,0,28), 24);
+            dl->AddCircleFilled(sc, sr * 1.35f, IM_COL32(0,0,0,60), 22);
+            dl->AddCircleFilled(sc, sr * 0.95f, IM_COL32(0,0,0,110), 20);
         }
 
         for (auto &d : m_dice) {
@@ -312,15 +450,20 @@ void DiceVisual::Render() {
                     int face = d.face;
                     if (face < 1) face = 1; if (face > m_sides) face = m_sides;
                     int idx = face - 1; int col = idx % 3; int row = idx / 3;
-                    ImVec2 uv0(col / cols, row / rows);
-                    ImVec2 uv1((col+1)/cols, (row+1)/rows);
-                    ImVec2 a(c.x - half, c.y - half), b(c.x + half, c.y + half);
-                    dl->AddImage(sheet, a, b, uv0, uv1, IM_COL32(255,255,255,255));
+                    ImVec2 uv_tl(col / cols, row / rows);
+                    ImVec2 uv_tr((col+1)/cols, row / rows);
+                    ImVec2 uv_br((col+1)/cols, (row+1)/rows);
+                    ImVec2 uv_bl(col / cols, (row+1)/rows);
+                    // draw rotated image aligned with die angle
+                    ImGui_AddImageQuadRotated(dl, sheet, ImVec2(c.x, c.y), size * d.scale, d.angle, uv_tl, uv_tr, uv_br, uv_bl, IM_COL32(255,255,255,255));
                 }
-                // draw numeric fallback/overlay so each die's value is always visible
-                if (d.face > 0) {
+                // draw numeric fallback/overlay only when die is settled or result display active
+                if (d.face > 0 && (d.settled || m_resultDisplayTimer > 0.0f)) {
+                    int displayVal = d.face;
+                    // for d10 tens/ones usage we encode 10 as 0; map accordingly for display
+                    if (m_sides == 10 && displayVal == 10) displayVal = 0;
                     char buf[8];
-                    std::snprintf(buf, sizeof(buf), "%d", d.face);
+                    std::snprintf(buf, sizeof(buf), "%d", displayVal);
                     ImVec2 ts = ImGui::CalcTextSize(buf);
                     dl->AddText(ImVec2(c.x - ts.x*0.5f, c.y - half - ts.y - 2.0f), IM_COL32(20,20,20,255), buf);
                 }
@@ -342,17 +485,30 @@ void DiceVisual::Render() {
         int row = idx / 3;
         ImVec2 uv0(col / cols, row / rows);
         ImVec2 uv1((col + 1) / cols, (row + 1) / rows);
-        // draw texture centered at drawCenter with size 'size'
-        ImVec2 a(drawCenter.x - size*0.5f, drawCenter.y - size*0.5f);
-        ImVec2 b(drawCenter.x + size*0.5f, drawCenter.y + size*0.5f);
-        dl->AddImage(sheet, a, b, uv0, uv1, IM_COL32(255,255,255,255));
+        // draw texture centered at drawCenter with size 'size', rotated by m_angle
+        ImGui_AddImageQuadRotated(dl, sheet, drawCenter, size, m_angle, uv0, ImVec2(uv1.x, uv0.y), uv1, ImVec2(uv0.x, uv1.y), IM_COL32(255,255,255,255));
     }
     else if (m_currentFace > 0) {
         // draw face number centered (fallback)
         char buf[16];
         int n = std::snprintf(buf, sizeof(buf), "%d", m_currentFace);
         if (n < 0) buf[0] = '\0';
-        ImVec2 txtSize = ImGui::CalcTextSize(buf);
-        dl->AddText(ImVec2(drawCenter.x - txtSize.x*0.5f, drawCenter.y - txtSize.y*0.5f), IM_COL32(24,24,24,255), buf);
+        // hide number while single die is physically rolling to avoid mismatch
+        if (!(m_physical && m_active)) {
+            int displayVal = m_currentFace;
+            if (m_sides == 10 && displayVal == 10) displayVal = 0;
+            char dbuf[16]; std::snprintf(dbuf, sizeof(dbuf), "%d", displayVal);
+            ImVec2 txtSize = ImGui::CalcTextSize(dbuf);
+            dl->AddText(ImVec2(drawCenter.x - txtSize.x*0.5f, drawCenter.y - txtSize.y*0.5f), IM_COL32(24,24,24,255), dbuf);
+        }
+    }
+
+    // render stop particles
+    for (auto &p : m_stopParticles) {
+        float t = p.life / p.ttl;
+        float alpha = (1.0f - t) * 0.85f;
+        ImU32 col = IM_COL32(220, 200, 140, (int)(alpha * 255));
+        // draw faded circle
+        dl->AddCircleFilled(ImVec2(p.x, p.y), p.size * (1.0f - 0.5f * t), col, 8);
     }
 }

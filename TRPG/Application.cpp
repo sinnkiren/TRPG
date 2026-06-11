@@ -8,6 +8,10 @@
 #include "TextureManager.h"
 #include "ImGuiFontLoader.h" // 追加
 #include "Logging.h"
+#include "AssetManager.h"
+#include <sstream>
+#include <system_error>
+#include <typeinfo>
 
 // 静的メンバ変数の定義
 HINSTANCE  Application::m_hInst = nullptr;
@@ -38,6 +42,9 @@ IDXGISwapChain* Application::m_SwapChain = nullptr;
 ID3D11RenderTargetView* Application::m_RenderTargetView = nullptr;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Forward declaration so LogAndBreakException can be used in functions above its definition
+static void LogAndBreakException(const std::exception& ex, const char* where);
 
 
 /**
@@ -170,12 +177,19 @@ bool Application::InitApp()
             // OutputDebugStringW expects a null-terminated string
             OutputDebugStringW(msg.c_str());
         }
-        // Trigger a debug break so developer can inspect call stack
-        __debugbreak();
+        // Trigger a debug break so developer can inspect call stack when a debugger is attached
+        if (IsDebuggerPresent()) {
+            __debugbreak();
+        }
     });
 
-    // TextureManager 初期化（assetRoot はプロジェクト内の実際のフォルダに合わせる）
-    TextureManager::Initialize(m_Device, "assets/");
+    // TextureManager 初期化（AssetManager::GetAssetRoot を使って実行ファイル周りの assets を解決）
+    std::string assetRoot = AssetManager::GetAssetRoot();
+    {
+        std::ostringstream ss; ss << "Application: asset root = " << assetRoot;
+        Log::Log(Log::Level::Info, ss.str());
+    }
+    TextureManager::Initialize(m_Device, assetRoot);
 
     // フォントロード...
     bool fontOk = ImGuiFontLoader::InitializeImGuiFonts("resources/fonts/NotoSansJP-Regular.ttf");
@@ -301,24 +315,25 @@ void Application::MainLoop()
                 g_SceneManager.Update();
             }
             catch (const std::exception& ex) {
-                Log::Log(Log::Level::Error, std::string("Application: exception during SceneManager::Update: ") + ex.what());
-                __debugbreak();
+                LogAndBreakException(ex, "Application: exception during SceneManager::Update");
             }
             catch (...) {
                 Log::Log(Log::Level::Error, "Application: unknown exception during SceneManager::Update");
-                __debugbreak();
+    // Break into debugger only if one is attached. Otherwise just return so program can continue
+    if (IsDebuggerPresent()) {
+        __debugbreak();
+    }
             }
 
             try {
                 g_SceneManager.Render();
             }
             catch (const std::exception& ex) {
-                Log::Log(Log::Level::Error, std::string("Application: exception during SceneManager::Render: ") + ex.what());
-                __debugbreak();
+                LogAndBreakException(ex, "Application: exception during SceneManager::Render");
             }
             catch (...) {
                 Log::Log(Log::Level::Error, "Application: unknown exception during SceneManager::Render");
-                __debugbreak();
+                if (IsDebuggerPresent()) __debugbreak();
             }
             // Update and Render are called once above inside try/catch blocks.
             // Do not call them again to avoid operating on destroyed scenes.
@@ -366,19 +381,33 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         if (fileCount > 0) {
             wchar_t wfilename[MAX_PATH];
             if (DragQueryFileW(hDrop, 0, wfilename, MAX_PATH)) {
-                // Convert wide path (UTF-16) to UTF-8 std::string
-                int required = ::WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, nullptr, 0, nullptr, nullptr);
-                if (required > 0) {
-                    // required includes space for terminating null. Reserve that many, then strip the null.
-                    std::string utf8;
-                    utf8.resize(required);
-                    int wrote = ::WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, utf8.data(), required, nullptr, nullptr);
-                    if (wrote > 0) {
-                        // Remove terminating null from std::string so it contains the path only
-                        if (!utf8.empty() && utf8.back() == '\0') utf8.pop_back();
-                        // Forward to SceneManager
-                        g_SceneManager.HandleFileDrop(utf8);
-                    }
+                // Convert wide path (UTF-16) to both UTF-8 for logging/UI and ANSI (system code page) for file APIs.
+                // UTF-8 (for ImGui / internal logs)
+                int reqUtf8 = ::WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, nullptr, 0, nullptr, nullptr);
+                std::string utf8;
+                if (reqUtf8 > 0) {
+                    utf8.resize(reqUtf8);
+                    int wroteUtf8 = ::WideCharToMultiByte(CP_UTF8, 0, wfilename, -1, utf8.data(), reqUtf8, nullptr, nullptr);
+                    if (wroteUtf8 > 0 && !utf8.empty() && utf8.back() == '\0') utf8.pop_back();
+                }
+                // ANSI (system code page) for file system APIs / fopen/ifstream
+                int reqAnsi = ::WideCharToMultiByte(CP_ACP, 0, wfilename, -1, nullptr, 0, nullptr, nullptr);
+                std::string ansi;
+                if (reqAnsi > 0) {
+                    ansi.resize(reqAnsi);
+                    int wroteAnsi = ::WideCharToMultiByte(CP_ACP, 0, wfilename, -1, ansi.data(), reqAnsi, nullptr, nullptr);
+                    if (wroteAnsi > 0 && !ansi.empty() && ansi.back() == '\0') ansi.pop_back();
+                }
+                // Prefer forwarding ANSI path to SceneManager since subsequent file checks use narrow APIs.
+                if (!ansi.empty()) {
+                    g_SceneManager.HandleFileDrop(ansi);
+                } else if (!utf8.empty()) {
+                    // fallback
+                    g_SceneManager.HandleFileDrop(utf8);
+                }
+                // Also emit a UTF-8 log so the ImGui log shows a readable path
+                if (!utf8.empty()) {
+                    ::Log::Log(::Log::Level::Info, std::string("Dropped file: ") + utf8);
                 }
             }
         }
@@ -409,4 +438,33 @@ ID3D11Device* Application::GetDevice()
 ID3D11DeviceContext* Application::GetDeviceContext()
 {
     return m_DeviceContext;
+}
+
+// 既存の includes の直後あたりに追加
+static void LogAndBreakException(const std::exception& ex, const char* where)
+{
+    try {
+        std::ostringstream ss;
+        ss << where << ": exception what=\"" << ex.what() << "\"";
+        if (auto se = dynamic_cast<const std::system_error*>(&ex)) {
+            ss << " | system_error.code=" << se->code().value()
+               << " message=\"" << se->code().message() << "\"";
+        }
+        ss << " | type=" << typeid(ex).name();
+        Log::Log(Log::Level::Error, ss.str());
+    }
+    catch (...) {
+        Log::Log(Log::Level::Error, std::string(where) + ": failed to format exception details");
+    }
+    if (IsDebuggerPresent()) __debugbreak();
+}
+
+static std::string WideToUtf8(const std::wstring& ws)
+{
+    if (ws.empty()) return std::string();
+    int size = WideCharToMultiByte(CP_UTF8, 0, ws.data(), (int)ws.size(), nullptr, 0, nullptr, nullptr);
+    if (size == 0) throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "WideCharToMultiByte");
+    std::string s(size, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, ws.data(), (int)ws.size(), s.data(), size, nullptr, nullptr);
+    return s;
 }

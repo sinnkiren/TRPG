@@ -6,20 +6,309 @@
 #include "Logging.h"
 #include <fstream>
 #include "system/imgui/imgui.h"
+#include <random>
 #include "system/json.hpp" 
 #include "FearEffects.h"
 #include "AssetManager.h"
 #include <filesystem>
 #include <d3d11.h>
 #include <direct.h> // _getcwd
+#include "EventNode.h"
 
 using json = nlohmann::json;
+
+// Implementations moved to StoryPlayer_Editor.cpp
+
+// (Moved runtime node UI and character drawing helpers to StoryPlayer_Runtime.cpp)
+
+
+
+void StoryPlayer::AddOrUpdateCharacter(const CharacterState& s)
+{
+    for (auto &c : m_characters) {
+        if (c.id == s.id) { c = s; return; }
+    }
+    m_characters.push_back(s);
+}
+
+void StoryPlayer::LoadCharacterTexturesIfNeeded()
+{
+    for (auto &c : m_characters) {
+        if (c.tex) continue;
+        if (c.imagePath.empty()) continue;
+#ifdef IMGUI_IMPL_DIRECTX11
+        ImTextureID tid = TextureManager::GetImGuiTextureID(c.imagePath);
+        if (tid) c.tex = tid;
+#else
+        ImTextureID tid = TextureManager::GetImGuiTexture(c.imagePath);
+        if (tid) c.tex = tid;
+#endif
+    }
+}
+
+bool StoryPlayer::RemoveCharacterById(const std::string& id)
+{
+    for (size_t i=0;i<m_characters.size();++i) {
+        if (m_characters[i].id == id) { m_characters.erase(m_characters.begin()+i); return true; }
+    }
+    return false;
+}
+
+CharacterState* StoryPlayer::FindCharacter(const std::string& id)
+{
+    for (auto &c : m_characters) if (c.id == id) return &c;
+    return nullptr;
+}
+
+void StoryPlayer::SetCharacterVisible(const std::string& id, bool visible)
+{
+    CharacterState* c = FindCharacter(id);
+    if (c) c->visible = visible;
+}
+
 
 StoryPlayer::StoryPlayer() {}
 StoryPlayer::~StoryPlayer() {
 #ifdef IMGUI_IMPL_DIRECTX11
     if (m_bgSrv) { m_bgSrv->Release(); m_bgSrv = nullptr; }
 #endif
+}
+
+bool StoryPlayer::LoadGraphFromFile(const std::string& path)
+{
+    m_lastLoadError.clear();
+    namespace fs = std::filesystem;
+    try {
+        // Construct a filesystem path from UTF-8 input to avoid ANSI code-page conversions on Windows.
+        // Avoid deprecated std::filesystem::u8path overloads in C++20 by constructing a path from a
+        // std::u8string first.
+        std::u8string u8s;
+        u8s.reserve(path.size());
+        for (char c : path) u8s.push_back(static_cast<char8_t>(c));
+        fs::path ppath(u8s);
+        if (!fs::exists(ppath)) {
+            m_lastLoadError = "Graph file does not exist: " + path;
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
+
+        // Open using fs::path so the implementation can use wide APIs on Windows
+        std::ifstream ifs(ppath, std::ios::binary);
+        if (!ifs.is_open()) {
+            m_lastLoadError = "Failed to open graph file: " + path;
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
+
+        json j;
+        try {
+            ifs >> j;
+        } catch (const std::exception& ex) {
+            m_lastLoadError = std::string("Failed to parse graph JSON: ") + ex.what();
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
+
+        // Continue using 'j' below (move on to parsing nodes)
+
+        // Support two formats:
+        // 1) legacy: root is an array of nodes
+        // 2) object: { "nodes": [...], "characters": [...] }
+        json nodesArray;
+        if (j.is_array()) {
+            nodesArray = j;
+        } else if (j.is_object() && j.contains("nodes") && j["nodes"].is_array()) {
+            nodesArray = j["nodes"];
+            if (j.contains("characters")) {
+                try {
+                    ParseCharactersJson(j["characters"], m_characters);
+                } catch (...) {
+                    ::Log::Log(::Log::Level::Warning, "StoryPlayer: failed to parse characters array in graph JSON");
+                }
+            }
+        } else {
+            m_lastLoadError = "Graph JSON root is not an array or object with 'nodes': " + path;
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
+
+        m_nodeMap.clear();
+        try {
+            for (auto &nj : nodesArray) {
+                EventNode n = EventNode::FromJson(nj);
+                if (n.id < 0) continue;
+                m_nodeMap[n.id] = std::move(n);
+            }
+        } catch (const std::exception& ex) {
+            m_lastLoadError = std::string("Error reading graph entries: ") + ex.what();
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            m_nodeMap.clear();
+            return false;
+        }
+
+        // set start node to smallest id
+        if (!m_nodeMap.empty()) {
+            int start = m_nodeMap.begin()->first;
+            for (auto &p : m_nodeMap) start = std::min(start, p.first);
+            m_currentNodeId = start;
+            m_usingNodeGraph = true;
+            m_timer = 0.0f;
+            m_playing = false;
+        }
+
+        m_lastLoadError.clear();
+        return true;
+
+    } catch (const std::exception& ex) {
+        m_lastLoadError = std::string("Filesystem check failed: ") + ex.what();
+        ::Log::Log(::Log::Level::Error, m_lastLoadError);
+        return false;
+    }
+
+
+}
+
+void StoryPlayer::SelectChoice(int choiceIndex)
+{
+    if (!m_usingNodeGraph) return;
+    auto it = m_nodeMap.find(m_currentNodeId);
+    if (it == m_nodeMap.end()) return;
+    EventNode &node = it->second;
+    if (choiceIndex < 0 || choiceIndex >= (int)node.choices.size()) return;
+    const Choice &c = node.choices[choiceIndex];
+    // Check requirements first (flags, inventory, vars)
+    auto CheckRequirements = [&](const Choice &ch)->bool {
+        for (auto &f : ch.requireFlags) if (m_flags.find(f) == m_flags.end()) return false;
+        for (auto &f : ch.requireNotFlags) if (m_flags.find(f) != m_flags.end()) return false;
+        for (auto &it : ch.requireInventory) {
+            bool found = false;
+            for (auto &inv : m_inventory) if (inv == it) { found = true; break; }
+            if (!found) return false;
+        }
+        for (auto &kv : ch.requireVarMin) {
+            int v = 0; auto itv = m_vars.find(kv.first); if (itv != m_vars.end()) v = itv->second;
+            if (v < kv.second) return false;
+        }
+        for (auto &kv : ch.requireVarMax) {
+            int v = 0; auto itv = m_vars.find(kv.first); if (itv != m_vars.end()) v = itv->second;
+            if (v > kv.second) return false;
+        }
+        return true;
+    };
+
+    if (!CheckRequirements(c)) {
+        ::Log::Log(::Log::Level::Warning, "StoryPlayer::SelectChoice - choice requirements not met");
+        return;
+    }
+
+    // Helper to apply a list of effects
+    std::function<void(const std::vector<Choice::Effect>&)> ApplyEffects;
+    // condition evaluator
+    auto EvalCondition = [&](const Choice::Effect::Condition &cond)->bool {
+        int passCount = 0, total = 0;
+        auto checkFlag = [&](const std::string &f)->bool { return m_flags.find(f) != m_flags.end(); };
+        for (auto &f : cond.requireFlags) { total++; if (checkFlag(f)) passCount++; }
+        for (auto &f : cond.requireNotFlags) { total++; if (!checkFlag(f)) passCount++; }
+        for (auto &it : cond.requireInventory) { total++; bool found=false; for (auto &inv : m_inventory) if (inv==it) { found=true; break; } if (found) passCount++; }
+        for (auto &kv : cond.requireVarMin) { total++; int v=0; auto itv=m_vars.find(kv.first); if (itv!=m_vars.end()) v=itv->second; if (v>=kv.second) passCount++; }
+        for (auto &kv : cond.requireVarMax) { total++; int v=0; auto itv=m_vars.find(kv.first); if (itv!=m_vars.end()) v=itv->second; if (v<=kv.second) passCount++; }
+        if (total == 0) return true;
+        if (cond.mode == Choice::Effect::Condition::Mode::ALL) return passCount == total;
+        return passCount > 0;
+    };
+
+    ApplyEffects = [&](const std::vector<Choice::Effect> &effs) {
+        for (const auto &ef : effs) {
+            if (ef.op == "set_flag") {
+                for (auto &it : ef.items) m_flags.insert(it);
+            } else if (ef.op == "clear_flag") {
+                for (auto &it : ef.items) m_flags.erase(it);
+            } else if (ef.op == "add_inventory") {
+                for (auto &it : ef.items) m_inventory.push_back(it);
+            } else if (ef.op == "remove_inventory") {
+                for (auto &it : ef.items) {
+                    for (auto invIt = m_inventory.begin(); invIt != m_inventory.end(); ) {
+                        if (*invIt == it) { invIt = m_inventory.erase(invIt); break; }
+                        else ++invIt;
+                    }
+                }
+            } else if (ef.op == "add_var") {
+                if (!ef.key.empty()) m_vars[ef.key] += ef.intValue;
+            } else if (ef.op == "set_var") {
+                if (!ef.key.empty()) m_vars[ef.key] = ef.intValue;
+            } else if (ef.op == "if") {
+                bool c = EvalCondition(ef.condition);
+                if (c) ApplyEffects(ef.thenEffects); else ApplyEffects(ef.elseEffects);
+            } else {
+                // unknown op: try legacy single-item ops
+                if (ef.op == "set_flags") { for (auto &it: ef.items) m_flags.insert(it); }
+            }
+        }
+    };
+
+    // Apply base effects first
+    ApplyEffects(c.effects);
+
+    // Determine next node and apply roll branching if present
+    int nextId = c.nextNodeID;
+    if (c.rollCond.has_value()) {
+        // Use deterministic RNG during preview
+        std::mt19937 localRng = m_previewActive ? std::mt19937(123456) : FearEffects::GetRng();
+        int sides = std::max(1, c.rollCond->sides);
+        std::uniform_int_distribution<int> dist(1, sides);
+        int r = dist(localRng);
+        bool success = c.rollCond->greaterOrEqual ? (r >= c.rollCond->threshold) : (r <= c.rollCond->threshold);
+        ::Log::Log(::Log::Level::Info, std::string("StoryPlayer: roll result = ") + std::to_string(r) + (success?" (success)":" (fail)"));
+        if (success) {
+            ApplyEffects(c.effectsOnSuccess);
+            if (c.nextOnSuccess >= 0) nextId = c.nextOnSuccess;
+        } else {
+            ApplyEffects(c.effectsOnFail);
+            if (c.nextOnFail >= 0) nextId = c.nextOnFail;
+        }
+    }
+
+    if (nextId >= 0 && m_nodeMap.find(nextId) != m_nodeMap.end()) {
+        m_currentNodeId = nextId;
+        m_timer = 0.0f;
+        ShowCurrentText();
+    } else {
+        // no next: end graph
+        m_usingNodeGraph = false;
+    }
+}
+
+void StoryPlayer::PreviewEvent(int index)
+{
+    if (index < 0 || index >= (int)m_events.size()) return;
+    // If already previewing, stop previous
+    if (m_previewActive) StopPreview();
+    // save state
+    m_previewPrevIndex = m_index;
+    m_previewPrevPlaying = m_playing;
+    m_previewPrevTimer = m_timer;
+    // set preview state
+    m_index = index;
+    m_timer = 0.0f;
+    m_playing = false; // don't affect main playback
+    m_previewElapsed = 0.0f;
+    m_previewDuration = m_events[index].duration;
+    m_previewActive = true;
+    // Trigger effect for preview
+    TriggerEffect(m_events[index]);
+    ShowCurrentText();
+}
+
+void StoryPlayer::StopPreview()
+{
+    if (!m_previewActive) return;
+    // restore previous state
+    m_index = m_previewPrevIndex;
+    m_playing = m_previewPrevPlaying;
+    m_timer = m_previewPrevTimer;
+    m_previewActive = false;
+    m_previewElapsed = 0.0f;
+    m_previewDuration = 0.0f;
 }
 
 void StoryPlayer::RenderDevPanelContents()
@@ -60,7 +349,6 @@ void StoryPlayer::RenderUI()
     // Dev-only: show background load status window, toggleable
     if (!g_SceneManager.IsDevMode()) return;
     if (ImGui::GetCurrentContext() == nullptr) return;
-
     ImGui::Begin("StoryPlayer Dev", &m_showDevWindow, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("BG Path: %s", m_bgPath.empty() ? "(empty)" : m_bgPath.c_str());
     ImGui::Text("Loaded attempted: %s", m_bgLoadedAttempted ? "yes" : "no");
@@ -75,7 +363,28 @@ void StoryPlayer::RenderUI()
         LoadBackgroundTextureIfNeeded();
     }
     ImGui::End();
+
+    // Quick controls for node-graph mode
+    if (m_usingNodeGraph) {
+        ImGui::Begin("Node Graph Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::Text("Current Node: %d", m_currentNodeId);
+        if (ImGui::Button("Restart Graph")) {
+            if (!m_nodeMap.empty()) {
+                // pick smallest id as start
+                int start = m_nodeMap.begin()->first;
+                for (auto &p : m_nodeMap) start = std::min(start, p.first);
+                m_currentNodeId = start;
+                m_timer = 0.0f;
+                ShowCurrentText();
+            }
+        }
+        ImGui::End();
+    }
+
+    // Note: Story Editor UI moved to StoryPlayer::RenderEditorUI and should be hosted by a dedicated scene (StoryEditorScene)
 }
+
+// RenderEditorUI implemented in StoryPlayer_Editor.cpp
 
 #ifdef IMGUI_IMPL_DIRECTX11
 void StoryPlayer::SetBackgroundSRV(ID3D11ShaderResourceView* srv)
@@ -261,16 +570,31 @@ bool StoryPlayer::LoadFromFile(const std::string& path) {
         return false;
     }
 
-    // Validate that the root is an array
-    if (!j.is_array()) {
-        m_lastLoadError = "Story JSON root is not an array: " + path;
+    // Support two formats:
+    // 1) legacy: root is an array of events
+    // 2) object: { "events": [...], "characters": [...] }
+    json eventsArray;
+    m_characters.clear();
+    if (j.is_array()) {
+        eventsArray = j;
+    } else if (j.is_object() && j.contains("events") && j["events"].is_array()) {
+        eventsArray = j["events"];
+        if (j.contains("characters")) {
+            try {
+                ParseCharactersJson(j["characters"], m_characters);
+            } catch (...) {
+                ::Log::Log(::Log::Level::Warning, "StoryPlayer: failed to parse characters array in story JSON");
+            }
+        }
+    } else {
+        m_lastLoadError = "Story JSON root is not an array or object with 'events': " + path;
         ::Log::Log(::Log::Level::Error, m_lastLoadError);
         return false;
     }
 
     m_events.clear();
     try {
-        for (auto& it : j) {
+        for (auto& it : eventsArray) {
             StoryEvent ev;
             if (it.contains("text")) ev.text = it.value("text", "");
             if (it.contains("speaker")) ev.speaking = it.value("speaker", "");
@@ -376,6 +700,25 @@ void StoryPlayer::UpdateImpl(float dt) {
     // --- 遅延ロードをここで試す ---
     LoadBackgroundTextureIfNeeded();
 
+    // Editor preview handling: advance preview timer and restore state when done
+    if (m_previewActive) {
+        // Make sure effects advance during preview
+        FearEffects::Update(dt);
+        m_previewElapsed += dt;
+        if (m_previewElapsed >= m_previewDuration) {
+            // end preview and restore state
+            StopPreview();
+        }
+        return; // while previewing, skip normal progression
+    }
+
+    // If using node graph, we don't use the linear m_events progression here.
+    if (m_usingNodeGraph) {
+        // Ensure effects advance
+        FearEffects::Update(dt);
+        return;
+    }
+
     if (!m_playing || m_events.empty() || m_index >= (int)m_events.size()) {
         if (m_fsFadingOut) {
             m_fsFadeElapsed += dt;
@@ -429,10 +772,17 @@ void StoryPlayer::UpdateImpl(float dt) {
 }
 
 void StoryPlayer::Render() {
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+
+    // If using node graph mode, render node UI instead of linear events
+    if (m_usingNodeGraph) {
+        UpdateNode();
+        return;
+    }
+
     if (m_index >= (int)m_events.size()) return;
     const StoryEvent& ev = m_events[m_index];
 
-    const ImGuiViewport* vp = ImGui::GetMainViewport();
 
     // --- デバッグオーバーレイ: 背景読み込みステータスを画面左上に描画 (Dev モード限定) ---
     if (g_SceneManager.IsDevMode()) {
@@ -475,6 +825,8 @@ void StoryPlayer::Render() {
                 ImU32 col = ImGui::GetColorU32(ImVec4(0.08f, 0.08f, 0.08f, 1.0f));
                 bg->AddRectFilled(vp->Pos, ImVec2(vp->Pos.x + vp->Size.x, vp->Pos.y + vp->Size.y), col);
             }
+            // draw characters for linear mode as well
+            DrawCharacters(m_characters, bg, vp);
         }
     }
 
@@ -523,5 +875,40 @@ void StoryPlayer::Render() {
 }
 
 void StoryPlayer::ShowCurrentText() {
-    // 例: LoadFaceTexture(m_events[m_index].faceImage);
+    // Update character visibility/expression based on current node or event
+    if (m_usingNodeGraph) {
+        auto it = m_nodeMap.find(m_currentNodeId);
+        if (it == m_nodeMap.end()) return;
+        EventNode &node = it->second;
+        std::string sp = node.speaker;
+        std::string expr = node.speakerExpression;
+        if (!sp.empty()) {
+            for (auto &c : m_characters) {
+                if (c.id == sp) {
+                    c.visible = true;
+                    if (!expr.empty()) c.expression = expr;
+                } else {
+                    c.visible = false;
+                }
+            }
+            this->LoadCharacterTexturesIfNeeded();
+        }
+    } else {
+        if (m_index < (int)m_events.size()) {
+            const StoryEvent &ev = m_events[m_index];
+            std::string sp = ev.speaking;
+            std::string face = ev.faceImage;
+            if (!sp.empty()) {
+                for (auto &c : m_characters) {
+                    if (c.id == sp) {
+                        c.visible = true;
+                        if (!face.empty()) c.expression = face;
+                    } else {
+                        c.visible = false;
+                    }
+                }
+                this->LoadCharacterTexturesIfNeeded();
+            }
+        }
+    }
 }

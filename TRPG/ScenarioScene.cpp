@@ -4,6 +4,8 @@
 #include "TextureManager.h"
 #include "Logging.h"
 // DirectX関連の描画を記述
+#include <filesystem>
+#include <cctype>
 //シナリオの選択（今考えているのは毒入りスープ）進行状況の記録の確認
 
 
@@ -52,6 +54,42 @@ void ScenarioScene::Update() {
 
     ImGui::Spacing();
 
+    ImGui::Separator();
+    ImGui::Text("Available Scenarios (from ../assets/story):");
+    // enumerate JSON files in assets/story
+    namespace fs = std::filesystem;
+    std::string assetDir = std::string("../assets/story");
+    try {
+        if (fs::exists(assetDir) && fs::is_directory(assetDir)) {
+            for (auto &entry : fs::directory_iterator(assetDir)) {
+                if (!entry.is_regular_file()) continue;
+                auto p = entry.path();
+                auto ext = p.extension().string();
+                for (auto &c : ext) c = (char)std::tolower((unsigned char)c);
+                if (ext != ".json") continue;
+                std::string name = p.filename().string();
+                ImGui::Text("%s", name.c_str());
+                ImGui::SameLine();
+                if (ImGui::Button((std::string("Load & Play##") + name).c_str())) {
+                    // request SceneManager to load this JSON when switching to StoryPlayer
+                    std::string full = p.string();
+                    g_SceneManager.SetPendingStoryPath(full);
+                    g_SceneManager.ChangeScene(SceneType::GAME_PLAY);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button((std::string("Show Path##") + name).c_str())) {
+                    ::Log::Log(::Log::Level::Info, std::string("Scenario path: ") + p.string());
+                }
+            }
+        }
+        else {
+            ImGui::Text("No scenario directory found: %s", assetDir.c_str());
+        }
+    } catch (const std::exception& ex) {
+        ::Log::Log(::Log::Level::Warning, std::string("ScenarioScene: failed to enumerate scenarios: ") + ex.what());
+    }
+
+    ImGui::Spacing();
     if (ImGui::Button("Go to Character Select")) {
         ::Log::Log(::Log::Level::Info, "ScenarioScene: Go button pressed -> ChangeScene(CHARACTER_SELECT)");
         g_SceneManager.ChangeScene(SceneType::CHARACTER_SELECT);

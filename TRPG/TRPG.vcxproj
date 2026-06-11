@@ -36,6 +36,7 @@
     <ClCompile Include="ImGuiFontLoader.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="ImGuiHelpers.cpp" />
     <ClCompile Include="Logging.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshBuffer.cpp" />
@@ -44,7 +45,12 @@
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="SomeInitFile.cpp" />
+    <ClCompile Include="StoryEditorScene.cpp" />
     <ClCompile Include="StoryPlayer.cpp" />
+    <ClCompile Include="StoryPlayer_Editor.cpp" />
+    <ClCompile Include="StoryPlayer_Editor_Utils.cpp" />
+    <ClCompile Include="StoryPlayer_NodeGraph.cpp" />
+    <ClCompile Include="StoryPlayer_Runtime.cpp" />
     <ClCompile Include="system\AssimpPerse.cpp" />
     <ClCompile Include="system\BoxDrawer.cpp" />
     <ClCompile Include="system\C3DShape.cpp" />
@@ -103,6 +109,7 @@
     <ClInclude Include="ImGuiFontLoader.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="ImGuiHelpers.h" />
     <ClInclude Include="ImGuiScope.h" />
     <ClInclude Include="IScene.h" />
     <ClInclude Include="Logging.h" />
@@ -113,6 +120,7 @@
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="SceneType.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="StoryEditorScene.h" />
     <ClInclude Include="StoryPlayer.h" />
     <ClInclude Include="system\AssimpPerse.h" />
     <ClInclude Include="system\BoxDrawer.h" />
@@ -170,6 +178,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\story\explore.json" />
+    <None Include="assets\story\sample1.json" />
+    <None Include="assets\story\sample2.json" />
+    <None Include="assets\story\sample3.json" />
     <None Include="assets\story\story.json" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

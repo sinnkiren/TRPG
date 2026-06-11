@@ -11,10 +11,12 @@ namespace BattleLogic {
                       BattleScene::Phase& phase,
                       PushLog pushLog)
     {
-        lastRoll = Dice::RollDie(100);
+        // roll percentile using two d10 visuals (tens and ones)
+        lastRoll = Dice::RollPercentile();
         bool success = (lastRoll <= player.pow * 5);
         if (success) {
-            int dmg = 4 + Dice::RollDie(3); // 4 + d3
+            // roll damage without triggering an extra single-die visual (keep percentile visual visible)
+            int dmg = 4 + Dice::RollDieNoVisual(3); // 4 + d3
             target.hp = std::max(0, target.hp - dmg);
             if (pushLog) pushLog(player.name + " は " + target.name + " に " + std::to_string(dmg) + " のダメージを与えた。", 1);
             if (target.hp == 0 && pushLog) pushLog(target.name + " を倒した！", 1);

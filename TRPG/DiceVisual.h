@@ -66,6 +66,8 @@ private:
     // multiple-dice visual state
     struct ActiveDie {
         int face = 0;
+        int targetFace = 0; // final face to show when settled
+        float faceFlipTimer = 0.0f; // timer for interim face flips
         float posX = 0.0f, posY = 0.0f;
         float velX = 0.0f, velY = 0.0f;
         float angle = 0.0f, angVel = 0.0f;
@@ -74,4 +76,23 @@ private:
         bool settled = false;
     };
     std::vector<ActiveDie> m_dice;
+    // stop-time particle effects
+    struct StopParticle {
+        float x, y;
+        float vx, vy;
+        float life;
+        float ttl;
+        float size;
+    };
+    std::vector<StopParticle> m_stopParticles;
+    // particle params
+    int m_maxStopParticles = 24;
+    float m_particleSpawnSpeed = 240.0f;
+    float m_particleTTL = 0.9f;
+    // collision params
+    float m_collisionRestitution = 0.6f; // restitution for die-die collisions
+    float m_collisionFriction = 0.88f;
+    // grouped multi-dice mode (e.g. percentile roll)
+    bool m_groupedVisual = false;
+    int m_groupMaxDice = 2; // cap when grouped to avoid accidental growth
 };

@@ -31,6 +31,25 @@ namespace Dice
         return r;
     }
 
+    // Roll percentile (00-99 -> 1..100): returns 1..100 where 00 maps to 100.
+    // Triggers a two-d10 visual: first die is tens digit, second is ones digit.
+    inline int RollPercentile()
+    {
+        // roll two d10 without visuals
+        int r1 = RollDieNoVisual(10); // 1..10 (10 represents 0)
+        int r2 = RollDieNoVisual(10);
+        int tens = r1 % 10; // maps 10->0
+        int ones = r2 % 10;
+        int val = tens * 10 + ones; // 0..99
+        if (val == 0) val = 100;
+        // trigger visual for both dice (faces use 1..10 encoding, with 10 representing 0)
+        std::vector<int> faces;
+        faces.push_back(r1);
+        faces.push_back(r2);
+        DiceVisual::Instance().StartRollFaces(10, faces);
+        return val;
+    }
+
     // count 個の sides 面ダイスをロールして合計を返す
     inline int RollDice(int count, int sides)
     {

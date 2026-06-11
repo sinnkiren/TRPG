@@ -41,4 +41,19 @@
   { "id": 5, "text": "集落跡で古い日記を見つけた。", "choices": [ { "text": "読む", "next": 6 } ] },
   { "id": 6, "text": "道が続く…。", "choices": [ { "text": "進む", "next": 0 } ] },
   { "id": 7, "text": "宝箱の中には黄金が！大収穫だ。", "choices": [ { "text": "戻る", "next": 0 } ] }
+  },
+  {
+    "id": 50,
+    "text": "古い扉の前に鍵が2つある。片方は銀色、片方は銅色。どちらか持っていれば扉を開けられる。",
+    "choices": [
+      {
+        "text": "扉を開ける",
+        "effects": [
+          { "add_inventory": ["opened_door"], "require": { "require_inventory": ["silver_key", "copper_key"], "mode": "any" } }
+        ],
+        "next": 0
+      },
+      { "text": "戻る", "next": 0 }
+    ]
+  }
 ]

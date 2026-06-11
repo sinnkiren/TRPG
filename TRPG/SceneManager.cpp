@@ -4,6 +4,7 @@
 #include "ScenarioScene.h"
 #include "CharacterSelect.h"
 #include "StoryPlayer.h"
+#include "StoryEditorScene.h"
 #include "BattleScene.h"
 #include "Result.h"
 #include "ExploreScene.h"
@@ -177,6 +178,7 @@ void SceneManager::UpdateWindowTitle()
     case SceneType::SCENARIO_SELECT: base = L"TRPG - シナリオ選択"; break;
     case SceneType::CHARACTER_SELECT: base = L"TRPG - キャラクター選択"; break;
     case SceneType::GAME_PLAY: base = L"TRPG - 本編"; break;
+    case SceneType::STORY_EDITOR: base = L"TRPG - Story Editor"; break;
     case SceneType::BATTLE: base = L"TRPG - バトル"; break;
     case SceneType::RESULT: base = L"TRPG - リザルト"; break;
     }
@@ -251,20 +253,33 @@ void SceneManager::HandleInput() {
 #endif
 }
 
-void SceneManager::SetPlayer(const CharcterScene::CharcterDate& p)
-{
-    // 値コピーして SceneManager が所有する
-    playerData = p;
+// Backwards-compatible single-player setters/getters operate on the active player.
+CharcterScene::CharcterDate& SceneManager::GetPlayer() { 
+    if (activePlayerIndex < 0 || activePlayerIndex >= (int)players.size()) {
+        players.emplace_back();
+        activePlayerIndex = (int)players.size() - 1;
+    }
+    return players[activePlayerIndex];
+}
 
-    // デバッグ出力（アドレスは playerData のアドレス）　
+const CharcterScene::CharcterDate& SceneManager::GetPlayer() const { 
+    static CharcterScene::CharcterDate dummy;
+    if (activePlayerIndex < 0 || activePlayerIndex >= (int)players.size()) return dummy;
+    return players[activePlayerIndex];
+}
+
+void SceneManager::SetPlayer(const CharcterScene::CharcterDate& p) {
+    if (activePlayerIndex < 0 || activePlayerIndex >= (int)players.size()) {
+        players.push_back(p);
+        activePlayerIndex = (int)players.size() - 1;
+    } else {
+        players[activePlayerIndex] = p;
+    }
     if (m_devMode) {
-        std::string s = "SceneManager::SetPlayer called. playerData=" + std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(&playerData))) + " name=" + playerData.name + "\n";
+        std::string s = std::string("SceneManager::SetPlayer called. activeIndex=") + std::to_string(activePlayerIndex) + " name=" + players[activePlayerIndex].name;
         ::Log::Log(::Log::Level::Debug, s);
     }
 }
-
-CharcterScene::CharcterDate& SceneManager::GetPlayer() { return playerData; }
-const CharcterScene::CharcterDate& SceneManager::GetPlayer() const { return playerData; }
 
 void SceneManager::Render() {
     if (currentScene) {
@@ -312,6 +327,7 @@ void SceneManager::Render() {
                 { SceneType::SCENARIO_SELECT, "Scenario Select" },
                 { SceneType::CHARACTER_SELECT, "Character Select" },
                 { SceneType::EXPLORE, "Explore" },
+                { SceneType::STORY_EDITOR, "Story Editor" },
                 { SceneType::GAME_PLAY, "Story Player" },
                 { SceneType::BATTLE, "Battle" },
                 { SceneType::RESULT, "Result" },
@@ -417,6 +433,11 @@ void SceneManager::ApplyPendingChange() {
         std::string dbg = std::string("SceneManager: ApplyPendingChange -> pendingSceneType=") + std::to_string((int)pendingSceneType);
         ::Log::Log(::Log::Level::Debug, dbg);
     }
+    // Only allow switching to the Story Editor in Dev mode
+    if (pendingSceneType == SceneType::STORY_EDITOR && !m_devMode) {
+        ::Log::Log(::Log::Level::Warning, "SceneManager: attempted to switch to Story Editor while Dev Mode is OFF");
+        return;
+    }
     currentType = pendingSceneType;
     // Clear any active dice visuals when changing scenes to avoid stray overlays
     DiceVisual::Instance().Cancel();
@@ -443,6 +464,10 @@ void SceneManager::ApplyPendingChange() {
         currentScene = std::make_unique<StoryPlayer>();
         if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - 本編");
         break;
+    case SceneType::STORY_EDITOR:
+        currentScene = std::make_unique<StoryEditorScene>();
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - Story Editor");
+        break;
     case SceneType::EXPLORE:
         currentScene = std::make_unique<ExploreScene>();
         if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - 探索");
@@ -452,14 +477,15 @@ void SceneManager::ApplyPendingChange() {
             auto battle = std::make_unique<BattleScene>();
 
             // デバッグ: プレイヤーデータのアドレスと主要フィールドをログ出力
+            CharcterScene::CharcterDate &pd = GetPlayer();
             if (m_devMode) {
-                std::string s = std::string("SceneManager: copying playerData -> BattleScene (addr=") + std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(&playerData)))
-                    + " name=" + playerData.name + " endurance=" + std::to_string(playerData.endurance) + "/" + std::to_string(playerData.maxEndurance);
+                std::string s = std::string("SceneManager: copying active player -> BattleScene (addr=") + std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(&pd)))
+                    + " name=" + pd.name + " endurance=" + std::to_string(pd.endurance) + "/" + std::to_string(pd.maxEndurance);
                 ::Log::Log(::Log::Level::Debug, s);
             }
 
             // 値コピーで渡す
-            battle->player = playerData;
+            battle->player = pd;
 
             // デバッグ: コピー先のアドレス / 値を確認
             if (m_devMode) {
@@ -490,6 +516,18 @@ void SceneManager::ApplyPendingChange() {
         catch (...) {
             ::Log::Log(::Log::Level::Error, "SceneManager: unknown exception during scene Initialize");
         }
+        // If a story path was requested to be loaded when entering GAME_PLAY, do it now.
+        if (!pendingStoryPath.empty()) {
+            if (currentType == SceneType::GAME_PLAY) {
+                StoryPlayer* sp = dynamic_cast<StoryPlayer*>(currentScene.get());
+                if (sp) {
+                    bool ok = sp->LoadFromFile(pendingStoryPath);
+                    if (!ok) ::Log::Log(::Log::Level::Warning, std::string("SceneManager: failed to load story JSON: ") + pendingStoryPath);
+                    else ::Log::Log(::Log::Level::Info, std::string("SceneManager: loaded story JSON: ") + pendingStoryPath);
+                }
+            }
+            pendingStoryPath.clear();
+        }
     }
     else ::Log::Log(::Log::Level::Warning, "SceneManager::ChangeScene resulted in currentScene == nullptr");
 }
@@ -502,3 +540,30 @@ void SceneManager::Finalize() {}
 
 // Public accessor implementation placed in cpp to avoid multiple-definition issues
 bool SceneManager::HasPendingChange() const { return pendingChange; }
+
+int SceneManager::AddPlayer(const CharcterScene::CharcterDate& p)
+{
+    players.push_back(p);
+    if (activePlayerIndex == -1) activePlayerIndex = (int)players.size() - 1;
+    return (int)players.size() - 1;
+}
+
+bool SceneManager::RemovePlayer(int index)
+{
+    if (index < 0 || index >= (int)players.size()) return false;
+    players.erase(players.begin() + index);
+    if (players.empty()) activePlayerIndex = -1;
+    else if (activePlayerIndex >= (int)players.size()) activePlayerIndex = (int)players.size() - 1;
+    return true;
+}
+
+const std::vector<CharcterScene::CharcterDate>& SceneManager::GetPlayers() const { return players; }
+std::vector<CharcterScene::CharcterDate>& SceneManager::GetPlayers() { return players; }
+
+void SceneManager::SetActivePlayerIndex(int idx)
+{
+    if (idx < 0 || idx >= (int)players.size()) return;
+    activePlayerIndex = idx;
+}
+
+int SceneManager::GetActivePlayerIndex() const { return activePlayerIndex; }

@@ -19,6 +19,8 @@ public:
     void Update();
     void Render();
     void Finalize();
+    // Request that the next StoryPlayer created (on scene change to GAME_PLAY) loads this JSON path.
+    void SetPendingStoryPath(const std::string& path) { pendingStoryPath = path; }
 
     // シーン遷移管理
     void ChangeScene(SceneType Next);
@@ -32,6 +34,17 @@ public:
     void SetPlayer(const CharcterScene::CharcterDate& p);
     CharcterScene::CharcterDate& GetPlayer();
     const CharcterScene::CharcterDate& GetPlayer() const;
+    // Multi-player roster management
+    // Adds a player to the roster and returns its index
+    int AddPlayer(const CharcterScene::CharcterDate& p);
+    // Removes player at index, returns true on success
+    bool RemovePlayer(int index);
+    // Access to full roster
+    const std::vector<CharcterScene::CharcterDate>& GetPlayers() const;
+    std::vector<CharcterScene::CharcterDate>& GetPlayers();
+    // Active player index control
+    void SetActivePlayerIndex(int idx);
+    int GetActivePlayerIndex() const;
 
     // Handle file dropped from OS (Dev mode only)
     void HandleFileDrop(const std::string& path);
@@ -81,7 +94,12 @@ private:
     };
 
     // SceneManager が所有するプレイヤーデータ（値で保持）
-    CharcterScene::CharcterDate playerData;
+    // Player data: support multiple characters (party)
+    std::vector<CharcterScene::CharcterDate> players;
+    int activePlayerIndex = -1; // index into players, -1 if none
+
+    // Backwards-compatible single-player setters/getters operate on the active player.
+    // Implementations are provided in SceneManager.cpp
 
     // Dev mode flag (actual default set at runtime in Initialize)
     bool m_devMode = false;
@@ -96,6 +114,9 @@ private:
     // ペンディング遷移フラグ
     bool pendingChange = false;
     SceneType pendingSceneType = SceneType::TITLE;
+    // Path to a story JSON to load when switching to StoryPlayer (GAME_PLAY).
+    // Set by ScenarioScene to request the story be loaded immediately after scene creation.
+    std::string pendingStoryPath;
     bool m_lastResultVictory = false;
 };
 

@@ -1,6 +1,52 @@
 {
-  "currentNode": 4,
+  "activePlayerIndex": 0,
+  "currentNode": -1,
   "flags": [],
   "inventory": [],
+  "players": [
+    {
+      "app": 13,
+      "cha": 9,
+      "con": 9,
+      "dex": 12,
+      "edu": 15,
+      "endurance": 11,
+      "int": 17,
+      "job": "Investigator",
+      "maxEndurance": 11,
+      "maxSanity": 100,
+      "name": "Researcher Sample",
+      "portraitPath": "",
+      "pow": 13,
+      "sanity": 65,
+      "siz": 14,
+      "skills": [
+        "Library Use",
+        "Psychology",
+        "Dodge"
+      ],
+      "str": 7
+    },
+    {
+      "app": 8,
+      "cha": 0,
+      "con": 10,
+      "dex": 9,
+      "edu": 13,
+      "endurance": 11,
+      "int": 12,
+      "job": "",
+      "maxEndurance": 11,
+      "maxSanity": 100,
+      "name": "New Character",
+      "portraitPath": "",
+      "pow": 16,
+      "sanity": 80,
+      "siz": 13,
+      "skills": [],
+      "str": 13
+    }
+  ],
+  "saveVersion": 1,
   "vars": {}
 }

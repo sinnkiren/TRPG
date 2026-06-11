@@ -4,6 +4,7 @@
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
+#include "ExploreScene.h"
 #include <regex>
 #include <cstring> // strncpy 用
 #include <vector>
@@ -12,7 +13,14 @@
 // 各能力ごとの直近ロール（個々のダイスの出目）を保持する（ファイルスコープ）
 static std::vector<std::vector<int>> abilityFaces;
 
-// 簡易初期化：サンプルキャラクターを用意する
+/*
+ * CharcterScene::Initialize
+ * -------------------------
+ * キャラクター選択シーンの初期化処理。
+ * - サンプルキャラクターを用意します。
+ * - SceneManager に既にロスターがあればそれを編集対象にし、なければサンプルを1体追加します。
+ * - 能力行 (abilities) と出目キャッシュ (abilityFaces) の初期化を行います。
+ */
 void CharcterScene::Initialize()
 {
     sampleCharacters.clear();
@@ -43,8 +51,22 @@ void CharcterScene::Initialize()
 
     // 初期選択を設定
     selectedSampleIndex =0;
-    charcter = sampleCharacters[0];
-    lastDiceRoll =0;
+    // If SceneManager already has players, use active player; otherwise create one from sample
+    auto &roster = g_SceneManager.GetPlayers();
+    if (!roster.empty()) {
+        int idx = g_SceneManager.GetActivePlayerIndex();
+        if (idx < 0 || idx >= (int)roster.size()) idx = 0;
+        charcter = roster[idx];
+        // ensure SceneManager's active index is synced
+        g_SceneManager.SetActivePlayerIndex(idx);
+    } else {
+        charcter = sampleCharacters[0];
+        // add initial sample to roster
+        int newIdx = g_SceneManager.AddPlayer(charcter);
+        g_SceneManager.SetActivePlayerIndex(newIdx);
+    }
+
+    lastDiceRoll = 0;
 
     // 能力値行の初期化
     abilities.clear();
@@ -69,6 +91,42 @@ void CharcterScene::Initialize()
     abilityFaces.resize(abilities.size());
 }
 
+// abilities <-> character の同期ヘルパ（UI から呼ばれる）
+void CharcterScene::RefreshAbilitiesFromCharacter()
+{
+    for (auto &a : abilities) {
+        if (a.name == "STR") a.value = charcter.str;
+        else if (a.name == "CON") a.value = charcter.con;
+        else if (a.name == "POW") a.value = charcter.pow;
+        else if (a.name == "DEX") a.value = charcter.dex;
+        else if (a.name == "APP") a.value = charcter.app;
+        else if (a.name == "SIZ") a.value = charcter.siz;
+        else if (a.name == "INT") a.value = charcter.int_;
+        else if (a.name == "EDU") a.value = charcter.edu;
+    }
+}
+
+// UI から確定操作を行う際に abilities の値を character に適用する
+void CharcterScene::ApplyAbilitiesToCharacter()
+{
+    for (auto &a : abilities) {
+        if (a.name == "STR") charcter.str = a.value;
+        else if (a.name == "CON") charcter.con = a.value;
+        else if (a.name == "POW") charcter.pow = a.value;
+        else if (a.name == "DEX") charcter.dex = a.value;
+        else if (a.name == "APP") charcter.app = a.value;
+        else if (a.name == "SIZ") charcter.siz = a.value;
+        else if (a.name == "INT") charcter.int_ = a.value;
+        else if (a.name == "EDU") charcter.edu = a.value;
+    }
+}
+
+/*
+ * EvalDiceExpr
+ * -------------
+ * 簡易的なダイス式パーサ: "nDm" または "nDm+k" の形式を受け取り合計値を返します。
+ * - ログ出力や個別の出目詳細は RollDiceDetailed を使用してください。
+ */
 static int EvalDiceExpr(const std::string& expr)
 {
     // 簡易的なパーサ: nDm [+ add]
@@ -87,6 +145,14 @@ static int EvalDiceExpr(const std::string& expr)
 
 // 出目の詳細を返すヘルパ: 個々のダイスの出目を配列で返し、合計を outTotal に設定する
 // If outSides != nullptr, it will be set to the parsed sides value.
+/*
+ * RollDiceDetailed
+ * -----------------
+ * ダイス式を解析して個々のダイス出目を生成し、出目配列を返します。
+ * - outTotal に合計値を設定します。
+ * - outSides が nullptr でなければサイコロの面数を格納します。
+ * - ビジュアル用の DiceVisual と組み合わせて使います。
+ */
 static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal, int* outSides = nullptr)
 {
     std::vector<int> faces;
@@ -108,6 +174,12 @@ static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal,
     return faces;
 }
 
+/*
+ * CharcterScene::Update
+ * ----------------------
+ * 毎フレーム更新処理。
+ * - DiceVisual の更新など軽微な状態更新を行います。
+ */
 void CharcterScene::Update()
 {
     // Update Dice visual (use ImGui delta time when available)
@@ -120,6 +192,12 @@ void CharcterScene::Update()
     }
 }
 
+/*
+ * CharcterScene::SetPortraitPath
+ * -------------------------------
+ * 開発モード時のみ呼び出し可能。指定されたパスを当該キャラクターの portraitPath に設定し、
+ * テクスチャを予めロードしてキャッシュをウォームアップします。
+ */
 void CharcterScene::SetPortraitPath(const std::string& path)
 {
     // Only allow in dev mode
@@ -129,9 +207,18 @@ void CharcterScene::SetPortraitPath(const std::string& path)
     // Warm the texture cache
     TextureManager::LoadTexture(charcter.portraitPath);
     // Also update SceneManager's copy
-    g_SceneManager.SetPlayer(charcter);
+        g_SceneManager.SetPlayer(charcter);
+        // persist player roster/state immediately
+        ExploreScene::SaveStateNow();
 }
 
+/*
+ * CharcterScene::Render
+ * ----------------------
+ * キャラクター作成/編集 UI を描画します。
+ * - パーティロスター、能力ロール、派生値、Apply ボタン等を表示します。
+ * - Apply 操作で SceneManager にキャラ情報を反映し、Explore の Save を呼び出して永続化します。
+ */
 void CharcterScene::Render()
 {
     // 安全: ImGui が初期化されていなければ何もしない
@@ -140,6 +227,73 @@ void CharcterScene::Render()
         return;
     }
     ImGui::Begin("Character Sheet");
+    // Refresh ability UI only when the selected character changes to avoid
+    // overwriting recent rolls/edits every frame.
+    static int s_lastRefreshedIndex = -999;
+    if (selectedSampleIndex != s_lastRefreshedIndex) {
+        RefreshAbilitiesFromCharacter();
+        s_lastRefreshedIndex = selectedSampleIndex;
+    }
+    // Roster panel: list existing characters, allow new/remove/select
+    // Roster displayed horizontally with scrollbar
+    ImGui::BeginChild("Roster", ImVec2(0, 80), true, ImGuiWindowFlags_HorizontalScrollbar);
+    ImGui::Text("Party Roster");
+    ImGui::Separator();
+    auto &roster = g_SceneManager.GetPlayers();
+    int active = g_SceneManager.GetActivePlayerIndex();
+    // render each character as an inline button with a small Act button next to it
+    for (int i = 0; i < (int)roster.size(); ++i) {
+        bool isActive = (i == active);
+        ImGui::PushID(i);
+        // make selected (editing) characters visually distinct by button color
+        ImVec4 btnCol = selectedSampleIndex == i ? ImVec4(0.26f, 0.59f, 0.98f, 1.0f) : ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button, btnCol);
+        if (ImGui::Button(roster[i].name.c_str())) {
+            selectedSampleIndex = i;
+            charcter = roster[i];
+            g_SceneManager.SetActivePlayerIndex(i);
+            RefreshAbilitiesFromCharacter();
+        }
+        ImGui::PopStyleColor();
+        ImGui::SameLine();
+        if (isActive) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.6f, 1.0f, 1.0f));
+        if (ImGui::SmallButton("Act")) {
+            g_SceneManager.SetActivePlayerIndex(i);
+        }
+        if (isActive) ImGui::PopStyleColor();
+        ImGui::SameLine();
+        ImGui::PopID();
+    }
+    ImGui::NewLine();
+    // controls for roster management
+    if (ImGui::Button("New Empty")) {
+        CharcterDate nd;
+        nd.name = "New Character";
+        int idx = g_SceneManager.AddPlayer(nd);
+        g_SceneManager.SetActivePlayerIndex(idx);
+        selectedSampleIndex = idx;
+        charcter = nd;
+        RefreshAbilitiesFromCharacter();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Delete") && selectedSampleIndex >= 0 && selectedSampleIndex < (int)roster.size()) {
+        int delIdx = selectedSampleIndex;
+        g_SceneManager.RemovePlayer(delIdx);
+        // adjust selection
+        if (!roster.empty()) {
+            int newIdx = std::min(delIdx, (int)roster.size() - 1);
+            selectedSampleIndex = newIdx;
+            charcter = roster[newIdx];
+            g_SceneManager.SetActivePlayerIndex(newIdx);
+            RefreshAbilitiesFromCharacter();
+        } else {
+            selectedSampleIndex = -1;
+            charcter = sampleCharacters.empty() ? CharcterDate() : sampleCharacters[0];
+            RefreshAbilitiesFromCharacter();
+        }
+    }
+    ImGui::EndChild();
+
 
     // Accept drag and drop files onto the main window (Dev mode only)
     if (g_SceneManager.IsDevMode()) {
@@ -161,6 +315,8 @@ void CharcterScene::Render()
             }
         }
     }
+
+    // Helper functions are implemented as member methods
 
     ImGui::Separator();
 
@@ -343,16 +499,7 @@ void CharcterScene::Render()
 
     // Apply derived values to the character and notify SceneManager
     if (ImGui::Button("Apply to Character")) {
-        for (auto &a : abilities) {
-            if (a.name == "STR") charcter.str = a.value;
-            else if (a.name == "CON") charcter.con = a.value;
-            else if (a.name == "POW") charcter.pow = a.value;
-            else if (a.name == "DEX") charcter.dex = a.value;
-            else if (a.name == "APP") charcter.app = a.value;
-            else if (a.name == "SIZ") charcter.siz = a.value;
-            else if (a.name == "INT") charcter.int_ = a.value;
-            else if (a.name == "EDU") charcter.edu = a.value;
-        }
+        ApplyAbilitiesToCharacter();
 
         // simple derived updates
         charcter.sanity = static_cast<int>(trpg::clamp(charcter.pow * 5, 0, 9999));
@@ -376,30 +523,6 @@ void CharcterScene::Render()
     ImGui::Text("Hobby Skill Points: %d", INT*10);
     ImGui::Text("Damage Bonus: %d", STR + SIZ);
 
-    ImGui::Separator();
-    if (ImGui::Button("Apply to Character")) {
-        //反映ボタン: abilities の値を charcter にコピー
-        for (auto &a : abilities) {
-            if (a.name == "STR") charcter.str = a.value;
-            else if (a.name == "CON") charcter.con = a.value;
-            else if (a.name == "POW") charcter.pow = a.value;
-            else if (a.name == "DEX") charcter.dex = a.value;
-            else if (a.name == "APP") charcter.app = a.value;
-            else if (a.name == "SIZ") charcter.siz = a.value;
-            else if (a.name == "INT") charcter.int_ = a.value;
-            else if (a.name == "EDU") charcter.edu = a.value;
-        }
-        // 計算した耐久力を設定（例: (CON + SIZ) /2 を最大耐久力とする）
-        charcter.maxEndurance = (charcter.con + charcter.siz) /2;
-        charcter.endurance = charcter.maxEndurance;
-
-        g_SceneManager.SetPlayer(charcter);
-
-        // ★ここにデバッグ表示を追加
-        printf("[DEBUG] HP applied: %d / %d (CON=%d, SIZ=%d)\n",
-            charcter.endurance, charcter.maxEndurance, charcter.con, charcter.siz);
-    }
-
     // Portrait selection: only show the path input in Dev mode
     if (g_SceneManager.IsDevMode()) {
         ImGui::Separator();
@@ -413,17 +536,18 @@ void CharcterScene::Render()
         if (ImGui::Button("Load Portrait")) {
             // Try to load via TextureManager to warm cache; store path regardless
             g_SceneManager.SetPlayer(charcter); // ensure SceneManager has latest
+            ExploreScene::SaveStateNow();
             TextureManager::LoadTexture(charcter.portraitPath);
         }
         ImGui::SameLine();
         if (ImGui::Button("Clear Portrait")) {
             charcter.portraitPath.clear();
             g_SceneManager.SetPlayer(charcter);
+            ExploreScene::SaveStateNow();
         }
     }
 
-    // NOTE: Derived child was already ended above. Do not call EndChild() here.
-    ImGui::Columns(1);
+    // end of derived column area
 
     ImGui::Separator();
 

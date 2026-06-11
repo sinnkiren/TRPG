@@ -1,46 +1,47 @@
-﻿[
+[
   {
-    "text": "……暗い部屋だ。目を覚ますと、そこは洞窟だった。",
-    "speaker": "",
-    "face": "",
-    "effect": "fadein",
-    "duration": 2.0
-  },
-  {
-    "text": "次の瞬間洞窟が揺れた。",
-    "speaker": "",
-    "face": "",
+    "duration": 1.5,
     "effect": "shake",
-    "duration": 1.5
+    "face": "",
+    "speaker": "",
+    "text": "次の瞬間洞窟が揺れた。"
   },
   {
-    "text": "……怖い！",
-    "speaker": "NPC",
+    "duration": 1.2000000476837158,
+    "effect": "shake",
+    "effectParams": {
+      "intensity": 20.0
+    },
     "face": "npc_angry.png",
-    "effect": "shake",
-    "duration": 1.2,
-    "effectParams": { "intensity": 20.0 }
+    "speaker": "NPC",
+    "text": "……怖い！"
   },
   {
-    "text": "「……お前は、誰だ？」",
-    "speaker": "???",
-    "face": "face_angry.png",
+    "duration": 2.0,
+    "effect": "fadein",
+    "face": "",
+    "speaker": "",
+    "text": "……暗い部屋だ。目を覚ますと、そこは洞窟だった。"
+  },
+  {
+    "duration": 1.5,
     "effect": "noise",
-    "duration": 1.5
+    "face": "face_angry.png",
+    "speaker": "???",
+    "text": "「……お前は、誰だ？」"
   },
   {
-    "text": "暗闇から影が浮かび上がる。",
-    "speaker": "",
-    "face": "",
+    "duration": 1.0,
     "effect": "blood",
-    "duration": 1.0
+    "face": "",
+    "speaker": "",
+    "text": "暗闇から影が浮かび上がる。"
   },
   {
-    "text": "戦闘開始！",
-    "speaker": "",
-    "face": "",
+    "duration": 0.5,
     "effect": "battle_start",
-    "duration": 0.5
+    "face": "",
+    "speaker": "",
+    "text": "戦闘開始！"
   }
 ]
-

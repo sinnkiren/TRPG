@@ -27,6 +27,18 @@ void ScenarioScene::Update() {
     ImGui::Text("Now:Scenario Scene");
     ImGui::Text("Proceed when ready");
 
+    // If SceneManager recorded a story load error, show it here so user understands what went wrong.
+    const std::string &loadErr = g_SceneManager.GetLastStoryLoadError();
+    if (!loadErr.empty()) {
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1.0f,0.4f,0.4f,1.0f), "Scenario load error:");
+        ImGui::TextWrapped("%s", loadErr.c_str());
+        if (ImGui::Button("Dismiss")) {
+            g_SceneManager.ClearLastStoryLoadError();
+        }
+        ImGui::Separator();
+    }
+
     // Attempt texture load once (TextureManager must have been initialized by Application)
     if (!s_scenarioTex && !s_scenarioTexAttempted) {
         s_scenarioTexAttempted = true;

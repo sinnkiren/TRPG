@@ -117,6 +117,12 @@ private:
     // Path to a story JSON to load when switching to StoryPlayer (GAME_PLAY).
     // Set by ScenarioScene to request the story be loaded immediately after scene creation.
     std::string pendingStoryPath;
+    // If loading a story failed, store a short error message here for UI display.
+    std::string m_lastStoryLoadError;
+public:
+    // Access last story load error (empty if none). Caller may display and/or clear it.
+    const std::string& GetLastStoryLoadError() const { return m_lastStoryLoadError; }
+    void ClearLastStoryLoadError() { m_lastStoryLoadError.clear(); }
     bool m_lastResultVictory = false;
 };
 

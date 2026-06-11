@@ -517,13 +517,37 @@ void SceneManager::ApplyPendingChange() {
             ::Log::Log(::Log::Level::Error, "SceneManager: unknown exception during scene Initialize");
         }
         // If a story path was requested to be loaded when entering GAME_PLAY, do it now.
-        if (!pendingStoryPath.empty()) {
-            if (currentType == SceneType::GAME_PLAY) {
+        if (currentType == SceneType::GAME_PLAY) {
+            // If no pending path was provided, treat as error and return to ScenarioSelect so user can pick.
+            if (pendingStoryPath.empty()) {
+                m_lastStoryLoadError = "No scenario selected. Please choose a scenario to play.";
+                ::Log::Log(::Log::Level::Warning, std::string("SceneManager: no pending story path when entering GAME_PLAY"));
+                // Switch back to ScenarioSelect immediately
+                currentType = SceneType::SCENARIO_SELECT;
+                currentScene.reset();
+                currentScene = std::make_unique<ScenarioScene>();
+                if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - シナリオ選択");
+                try { currentScene->Initialize(); } catch(...) {}
+            }
+            else {
                 StoryPlayer* sp = dynamic_cast<StoryPlayer*>(currentScene.get());
                 if (sp) {
                     bool ok = sp->LoadFromFile(pendingStoryPath);
-                    if (!ok) ::Log::Log(::Log::Level::Warning, std::string("SceneManager: failed to load story JSON: ") + pendingStoryPath);
-                    else ::Log::Log(::Log::Level::Info, std::string("SceneManager: loaded story JSON: ") + pendingStoryPath);
+                    if (!ok) {
+                        m_lastStoryLoadError = std::string("Failed to load scenario: ") + pendingStoryPath + "\n" + sp->GetLastLoadError();
+                        ::Log::Log(::Log::Level::Warning, std::string("SceneManager: failed to load story JSON: ") + pendingStoryPath);
+                        // Return to ScenarioSelect so user can pick another scenario and show error
+                        currentType = SceneType::SCENARIO_SELECT;
+                        currentScene.reset();
+                        currentScene = std::make_unique<ScenarioScene>();
+                        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - シナリオ選択");
+                        try { currentScene->Initialize(); } catch(...) {}
+                    }
+                    else {
+                        ::Log::Log(::Log::Level::Info, std::string("SceneManager: loaded story JSON: ") + pendingStoryPath);
+                        // If loaded successfully, start playback
+                        sp->Play();
+                    }
                 }
             }
             pendingStoryPath.clear();

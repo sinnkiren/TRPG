@@ -524,6 +524,8 @@ void SceneManager::ApplyPendingChange() {
                     bool ok = sp->LoadFromFile(pendingStoryPath);
                     if (!ok) ::Log::Log(::Log::Level::Warning, std::string("SceneManager: failed to load story JSON: ") + pendingStoryPath);
                     else ::Log::Log(::Log::Level::Info, std::string("SceneManager: loaded story JSON: ") + pendingStoryPath);
+                    // If loaded successfully, start playback
+                    if (ok) sp->Play();
                 }
             }
             pendingStoryPath.clear();

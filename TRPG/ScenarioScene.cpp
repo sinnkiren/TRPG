@@ -72,7 +72,8 @@ void ScenarioScene::Update() {
                 ImGui::SameLine();
                 if (ImGui::Button((std::string("Load & Play##") + name).c_str())) {
                     // request SceneManager to load this JSON when switching to StoryPlayer
-                    std::string full = p.string();
+                // Use u8string to preserve UTF-8 paths when passing to loader
+                std::string full = p.u8string();
                     g_SceneManager.SetPendingStoryPath(full);
                     g_SceneManager.ChangeScene(SceneType::GAME_PLAY);
                 }

@@ -49,8 +49,6 @@ public:
 	void UpdateImpl(float dt); // float dt ‚ğó‚¯æ‚éXV
 
 	bool LoadFromFile(const std::string& path);
-    // Returns a human-readable error message from the last LoadFromFile/LoadGraphFromFile attempt.
-	const std::string& GetLastLoadError() const { return m_lastLoadError; }
 	bool SaveToFile(const std::string& path) const;
 	void Play();//Ä¶
 	void Pause();//ˆê’â~

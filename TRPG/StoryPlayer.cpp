@@ -451,7 +451,10 @@ void StoryPlayer::LoadBackgroundTextureIfNeeded()
 }
 
 void StoryPlayer::Initialize() {
-    LoadFromFile(AssetManager::GetStoryPath("story.json"));
+    // Do not auto-load a fixed story JSON here.
+    // Story selection/loading is handled by ScenarioScene -> SceneManager
+    // which sets SceneManager::pendingStoryPath and ApplyPendingChange will
+    // call LoadFromFile on the newly created StoryPlayer instance.
 
     // イベント完了時コールバック（シーン切り替え等）
     // battle_start はフェード開始に置き換え
@@ -512,7 +515,8 @@ void StoryPlayer::Initialize() {
     m_bgPath = AssetManager::GetTexturePath("dark-tunnel2.jpg");
     m_bgLoadedAttempted = false;
 
-    Play();
+    // Do not auto-start playback until a story is loaded by SceneManager.
+    // If a story was preloaded by external code, caller may invoke Play().
 }
 
 void StoryPlayer::Update() {
@@ -531,30 +535,28 @@ bool StoryPlayer::LoadFromFile(const std::string& path) {
     // Clear previous error
     m_lastLoadError.clear();
 
-    // Check file existence first
+    // Check file existence and open using filesystem path constructed from UTF-8 input
     namespace fs = std::filesystem;
     try {
-        if (!fs::exists(path)) {
+        std::u8string u8s;
+        u8s.reserve(path.size());
+        for (char c : path) u8s.push_back(static_cast<char8_t>(c));
+        fs::path ppath(u8s);
+        if (!fs::exists(ppath)) {
             m_lastLoadError = "Story file does not exist: " + path;
             ::Log::Log(::Log::Level::Error, m_lastLoadError);
             return false;
         }
-    }
-    catch (const std::exception& ex) {
-        m_lastLoadError = std::string("Filesystem check failed: ") + ex.what();
-        ::Log::Log(::Log::Level::Error, m_lastLoadError);
-        return false;
-    }
 
-    std::ifstream ifs(path);
-    if (!ifs.is_open()) {
-        m_lastLoadError = "Failed to open story file: " + path;
-        ::Log::Log(::Log::Level::Error, m_lastLoadError);
-        return false;
-    }
+        std::ifstream ifs(ppath, std::ios::binary);
+        if (!ifs.is_open()) {
+            m_lastLoadError = "Failed to open story file: " + path;
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
 
-    // Read file into string so we can validate before parsing (avoids first-chance exceptions in debugger)
-    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+        // Read file into string so we can validate before parsing (avoids first-chance exceptions in debugger)
+        std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
     json j;
     try {
         if (!json::accept(content)) {

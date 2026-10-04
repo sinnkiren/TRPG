@@ -1,10 +1,10 @@
-#pragma once
+ï»¿#pragma once
 #include <random>
 #include <vector>
 #include <algorithm>
 #include "DiceVisual.h"
 
-// ’Pƒ‚Èƒ_ƒCƒXƒ[ƒ‹ƒ†[ƒeƒBƒŠƒeƒB
+// å˜ç´”ãªãƒ€ã‚¤ã‚¹ãƒ­ãƒ¼ãƒ«ãƒ¦ãƒ¼ãƒ†ã‚£ãƒªãƒ†ã‚£
 namespace Dice
 {
     inline std::mt19937& GetEngine()
@@ -22,7 +22,7 @@ namespace Dice
         return dist(GetEngine());
     }
 
-    // 1..sides ‚Ì’Pˆêƒ_ƒCƒX
+    // 1..sides ã®å˜ä¸€ãƒ€ã‚¤ã‚¹
     inline int RollDie(int sides)
     {
         int r = RollDieNoVisual(sides);
@@ -50,7 +50,7 @@ namespace Dice
         return val;
     }
 
-    // count ŒÂ‚Ì sides –Êƒ_ƒCƒX‚ğƒ[ƒ‹‚µ‚Ä‡Œv‚ğ•Ô‚·
+    // count å€‹ã® sides é¢ãƒ€ã‚¤ã‚¹ã‚’ãƒ­ãƒ¼ãƒ«ã—ã¦åˆè¨ˆã‚’è¿”ã™
     inline int RollDice(int count, int sides)
     {
         int sum = 0;

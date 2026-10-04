@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <string>
 
@@ -9,6 +9,6 @@ extern bool ImGui_ImplDX11_CreateDeviceObjects();
 
 namespace ImGuiFontLoader
 {
-    // éŒ¾‚Ì‚İBÀ‘•‚Í ImGuiFontLoader.cpp ‚É’u‚­‚±‚ÆB
+    // å®£è¨€ã®ã¿ã€‚å®Ÿè£…ã¯ ImGuiFontLoader.cpp ã«ç½®ãã“ã¨ã€‚
     bool InitializeImGuiFonts(const std::string& preferredFontPath);
 }

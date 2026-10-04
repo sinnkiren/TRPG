@@ -1,4 +1,4 @@
-#include "StoryPlayer.h"
+ï»¿#include "StoryPlayer.h"
 #include "system/imgui/imgui.h"
 #include "ImGuiHelpers.h"
 #include "system/json.hpp"
@@ -152,7 +152,7 @@ bool StoryPlayer::SaveGraphToFile(const std::string& path) const
                     nj["choices"].push_back(cj);
                 }
             }
-            // ƒm[ƒhˆÊ’u‚ª•Û‘¶‚³‚ê‚Ä‚¢‚ê‚Î pos ƒIƒuƒWƒFƒNƒg‚Æ‚µ‚Äo—Í‚·‚é
+            // ãƒŽãƒ¼ãƒ‰ä½ç½®ãŒä¿å­˜ã•ã‚Œã¦ã„ã‚Œã° pos ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã¨ã—ã¦å‡ºåŠ›ã™ã‚‹
             auto itpos = m_nodePositions.find(n.id);
             if (itpos != m_nodePositions.end()) {
                 nj["pos"] = { {"x", itpos->second.x}, {"y", itpos->second.y} };

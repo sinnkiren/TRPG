@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "system/imgui/imgui.h"
 #include <cmath>
 #include <algorithm>
@@ -10,7 +10,7 @@ static inline T clamp_val(T v, T lo, T hi) {
     return (v < lo) ? lo : (v > hi ? hi : v);
 }
 
-// FearEffects ŠO•” API
+// FearEffects å¤–éƒ¨ API
 namespace FearEffects
 {
     // expose RNG access for deterministic testing
@@ -21,7 +21,7 @@ namespace FearEffects
     ImVec2 GetShakeOffset();
     void RenderOverlay();
 
-    // --- ƒmƒCƒYŒ©‚½–Ú‚Ìƒ‰ƒ“ƒ^ƒCƒ€’²® API ---
+    // --- ãƒã‚¤ã‚ºè¦‹ãŸç›®ã®ãƒ©ãƒ³ã‚¿ã‚¤ãƒ èª¿æ•´ API ---
     void SetOverlayNoiseScale(float scale);
     void SetOverlayNoiseBaseCount(int count);
     void SetOverlayNoiseAlphaScale(float alphaScale);
@@ -30,8 +30,8 @@ namespace FearEffects
     void SetOverlayNoiseContrastBase(float contrast);
 }
 
-// ‘S‰æ–Ê‚Ì‹°•|ƒI[ƒo[ƒŒƒC•`‰æi•â•ŠÖ”j
-// BattleScene “™AŠO•”‚©‚ç’¼ÚŒÄ‚Ôƒ†[ƒeƒBƒŠƒeƒBBƒCƒ“ƒ‰ƒCƒ“‚Åƒwƒbƒ_‚É’u‚­B
+// å…¨ç”»é¢ã®ææ€–ã‚ªãƒ¼ãƒãƒ¼ãƒ¬ã‚¤æç”»ï¼ˆè£œåŠ©é–¢æ•°ï¼‰
+// BattleScene ç­‰ã€å¤–éƒ¨ã‹ã‚‰ç›´æ¥å‘¼ã¶ãƒ¦ãƒ¼ãƒ†ã‚£ãƒªãƒ†ã‚£ã€‚ã‚¤ãƒ³ãƒ©ã‚¤ãƒ³ã§ãƒ˜ãƒƒãƒ€ã«ç½®ãã€‚
 inline void DrawFearOverlay(float intensity, float timeSeconds, int stage = 0)
 {
     if (intensity <= 0.001f) return;
@@ -39,19 +39,19 @@ inline void DrawFearOverlay(float intensity, float timeSeconds, int stage = 0)
     ImDrawList* dl = ImGui::GetForegroundDrawList();
     ImVec2 disp = ImGui::GetIO().DisplaySize;
 
-    // stage ‚É‚æ‚é‚í‚¸‚©‚È‘‹­i0..4j
+    // stage ã«ã‚ˆã‚‹ã‚ãšã‹ãªå¢—å¼·ï¼ˆ0..4ï¼‰
     float stageBoost = 0.5f + 0.3f * static_cast<float>(clamp_val(stage, 0, 4));
-    float redTint = 0.2f + 0.2f * static_cast<float>(clamp_val(stage, 0, 4)); // g‚í‚È‚¢ê‡‚Í–³‹‰Â
+    float redTint = 0.2f + 0.2f * static_cast<float>(clamp_val(stage, 0, 4)); // ä½¿ã‚ãªã„å ´åˆã¯ç„¡è¦–å¯
 
-    // ‚Ü‚¸‚¤‚Á‚·‚çˆÃ‚ß‚Ì•¢‚¢i‰æ–Ê‘S‘Ìj
+    // ã¾ãšã†ã£ã™ã‚‰æš—ã‚ã®è¦†ã„ï¼ˆç”»é¢å…¨ä½“ï¼‰
     ImU32 dark = ImColor(0.0f, 0.0f, 0.0f, 0.08f * intensity * stageBoost);
     dl->AddRectFilled(ImVec2(0, 0), disp, dark);
 
-    // •¡”‚Ì”–‚¢‹éŒ`‚Å’iŠK“I‚ÈF–¡‚ÌƒŒƒCƒ„[‚ğ’Ç‰Áiå‚É•µˆÍ‹Cì‚èj
+    // è¤‡æ•°ã®è–„ã„çŸ©å½¢ã§æ®µéšçš„ãªè‰²å‘³ã®ãƒ¬ã‚¤ãƒ¤ãƒ¼ã‚’è¿½åŠ ï¼ˆä¸»ã«é›°å›²æ°—ä½œã‚Šï¼‰
     for (int i = 0; i < 3; ++i) {
         float pad = i * 40.0f * intensity * (1.0f + 0.2f * stage);
         float a = 0.02f + 0.06f * intensity * (1.0f + 0.6f * stage) * (1.0f + 0.5f * std::sin(timeSeconds * (1.2f + i)));
-        // ÔˆêF‚É‚µ‚È‚¢iƒOƒŒ[Šñ‚è‚ÌˆÃF‚ğg‚¤j
+        // èµ¤ä¸€è‰²ã«ã—ãªã„ï¼ˆã‚°ãƒ¬ãƒ¼å¯„ã‚Šã®æš—è‰²ã‚’ä½¿ã†ï¼‰
         float r = std::fmin(1.0f, 0.2f + 0.15f * i * stageBoost);
         float g = std::fmax(0.0f, 0.05f - 0.01f * i);
         float b = std::fmax(0.0f, 0.05f - 0.01f * i);
@@ -59,7 +59,7 @@ inline void DrawFearOverlay(float intensity, float timeSeconds, int stage = 0)
         dl->AddRectFilled(ImVec2(pad, pad), ImVec2(disp.x - pad, disp.y - pad), col);
     }
 
-    // ‰æ–ÊƒmƒCƒY‚Ì”–‚¢—±i”’‚Á‚Û‚­j‚ğU‚ç‚·i’áƒRƒXƒg”Åj
+    // ç”»é¢ãƒã‚¤ã‚ºã®è–„ã„ç²’ï¼ˆç™½ã£ã½ãï¼‰ã‚’æ•£ã‚‰ã™ï¼ˆä½ã‚³ã‚¹ãƒˆç‰ˆï¼‰
     int noiseCount = static_cast<int>(20 + stage * 10);
     noiseCount = clamp_val(noiseCount, 8, 200);
     for (int i = 0; i < noiseCount; ++i) {

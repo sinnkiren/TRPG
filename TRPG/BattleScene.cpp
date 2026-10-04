@@ -1,4 +1,4 @@
-#include "BattleScene.h"
+ï»¿#include "BattleScene.h"
 #include "Dice.h"
 #include "FearEffects.h"
 #include "system/imgui/imgui.h"
@@ -16,7 +16,7 @@ void BattleScene::Initialize()
     // Ensure we don't reference g_SceneManager here.
     player.endurance = player.maxEndurance;
 
-    // “G‚Ì‰Šú‰»
+    // æ•µã®åˆæœŸåŒ–
     enemies.clear();
     enemies.push_back({ "Eerie Shadow", 12, 12, 1, 3 });
     enemies.push_back({ "Unnamable Stirring", 12, 12, 2, 2 });
@@ -26,22 +26,22 @@ void BattleScene::Initialize()
     lastRoll = 0;
     timeAccum = 0.0f;
 
-    // UI/‰‰o—p‚Ì‰Šú‰»
+    // UI/æ¼”å‡ºç”¨ã®åˆæœŸåŒ–
     prevEndurance = player.endurance;
     damageFlashTimer = 0.0f;
     persistentStage = 0;
     persistentTimer = 0.0f;
-    // •\¦—p‘Ï‹v—Í‚ğ‰Šú‰»iƒo[‚ÌƒAƒjƒ[ƒVƒ‡ƒ“—pj
+    // è¡¨ç¤ºç”¨è€ä¹…åŠ›ã‚’åˆæœŸåŒ–ï¼ˆãƒãƒ¼ã®ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ç”¨ï¼‰
     displayedEndurance = static_cast<float>(player.endurance);
 
-    // ImGui ƒƒO‰Šú‰»i‹ój
+    // ImGui ãƒ­ã‚°åˆæœŸåŒ–ï¼ˆç©ºï¼‰
     logLines.clear();
-    // reserve ‚µ‚Ä•p”É‚ÈÄŠ„“–‚ğ–h‚®imaxLogLines ‚ÍƒNƒ‰ƒXƒƒ“ƒo‘z’èj
+    // reserve ã—ã¦é »ç¹ãªå†å‰²å½“ã‚’é˜²ãï¼ˆmaxLogLines ã¯ã‚¯ãƒ©ã‚¹ãƒ¡ãƒ³ãƒæƒ³å®šï¼‰
     // deque does not support reserve; no-op
     scrollLogToBottom = false;
 
-    // UI ƒAƒgƒ‰ƒX“Ç‚İ‚İiTextureManager Œo—RjBassetRoot ‚Í TextureManager ‚Åİ’è‚µ‚Ä‚¢‚é‘z’è
-    // ƒtƒ@ƒCƒ‹‚Í assets/texture/UIblok.png ‚ğ‘z’è‚µ‚Ä‚¢‚Ü‚·B‘¶İ‚µ‚È‚¢ê‡‚Í nullptr ‚Ì‚Ü‚ÜB
+    // UI ã‚¢ãƒˆãƒ©ã‚¹èª­ã¿è¾¼ã¿ï¼ˆTextureManager çµŒç”±ï¼‰ã€‚assetRoot ã¯ TextureManager ã§è¨­å®šã—ã¦ã„ã‚‹æƒ³å®š
+    // ãƒ•ã‚¡ã‚¤ãƒ«ã¯ assets/texture/UIblok.png ã‚’æƒ³å®šã—ã¦ã„ã¾ã™ã€‚å­˜åœ¨ã—ãªã„å ´åˆã¯ nullptr ã®ã¾ã¾ã€‚
     // Load UI atlas and background texture with null checks
     uiAtlas = nullptr;
     try {
@@ -49,7 +49,7 @@ void BattleScene::Initialize()
     }
     catch (...) { uiAtlas = nullptr; }
 
-    // ”wŒiƒeƒNƒXƒ`ƒƒ“Ç‚İ‚İ
+    // èƒŒæ™¯ãƒ†ã‚¯ã‚¹ãƒãƒ£èª­ã¿è¾¼ã¿
     bgTexture = nullptr;
     try {
         bgTexture = TextureManager::GetImGuiTexture("texture/dark-tunnel2.jpg");

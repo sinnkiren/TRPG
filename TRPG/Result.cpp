@@ -1,14 +1,14 @@
-#include "Result.h"
+ï»¿#include "Result.h"
 #include "SceneManager.h"
-// DirectXŠÖ˜A‚Ì•`‰æ‚ğ‹Lq
-//ƒLƒƒƒ‰ƒNƒ^[‚Ìì¬E‘I‘ğEŒ÷Ñ“_‚ÌƒŒƒxƒ‹ã‚°
+// DirectXé–¢é€£ã®æç”»ã‚’è¨˜è¿°
+//ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã®ä½œæˆãƒ»é¸æŠãƒ»åŠŸç¸¾ç‚¹ã®ãƒ¬ãƒ™ãƒ«ä¸Šã’
 
 void Result::Initialize() {
-    // ‰æ‘œ/‰¹ºƒ[ƒh‚È‚Ç
+    // ç”»åƒ/éŸ³å£°ãƒ­ãƒ¼ãƒ‰ãªã©
 }
 
 void Result::Update() {
-    // “ü—Íˆ—iSpace‚ÅƒQ[ƒ€ƒXƒ^[ƒgj
+    // å…¥åŠ›å‡¦ç†ï¼ˆSpaceã§ã‚²ãƒ¼ãƒ ã‚¹ã‚¿ãƒ¼ãƒˆï¼‰
     ImGui::Begin("Result");
     ImGui::Text("Now:Result");
 
@@ -32,5 +32,5 @@ void Result::Update() {
 }
 
 void Result::Render() {
-    // ƒ^ƒCƒgƒ‹‚Ì•`‰æi•¶š‚â”wŒi‚È‚Çj
+    // ã‚¿ã‚¤ãƒˆãƒ«ã®æç”»ï¼ˆæ–‡å­—ã‚„èƒŒæ™¯ãªã©ï¼‰
 }

@@ -1,10 +1,10 @@
-#include "StoryPlayer.h"
+ï»¿#include "StoryPlayer.h"
 #include "system/imgui/imgui.h"
 #include <algorithm>
 
 void StoryPlayer::RenderNodeGraphCanvas()
 {
-    // Node graph canvas: ‰E‘¤‚Éƒm[ƒh‚ÌƒOƒ‰ƒt‚ğ•`‰æ‚µAƒhƒ‰ƒbƒO‚ÅˆÊ’u‚ğ•ÒW‰Â”\‚É‚·‚é
+    // Node graph canvas: å³å´ã«ãƒãƒ¼ãƒ‰ã®ã‚°ãƒ©ãƒ•ã‚’æç”»ã—ã€ãƒ‰ãƒ©ãƒƒã‚°ã§ä½ç½®ã‚’ç·¨é›†å¯èƒ½ã«ã™ã‚‹
     ImGui::SameLine();
     ImGui::BeginGroup();
     ImGui::Text("Node Graph View");

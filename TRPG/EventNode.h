@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <optional>
@@ -7,29 +7,29 @@
 
 using json = nlohmann::json;
 
-// ‚±‚Ìƒwƒbƒ_‚Í’Tõƒm[ƒh‚Æ‘I‘ğˆiChoicej‚ğ•\Œ»‚µ‚Ü‚·B
-// JSON ‚©‚çƒm[ƒh‚ğ“Ç‚İ‚İA‘I‘ğˆ‚Ì—vŒ‚âŒø‰Ê‚ğƒf[ƒ^‹ì“®‚Å•\Œ»‚·‚é‚½‚ß‚Ì\‘¢‘ÌŒQ‚ğ’è‹`‚µ‚Ü‚·B
+// ã“ã®ãƒ˜ãƒƒãƒ€ã¯æ¢ç´¢ãƒãƒ¼ãƒ‰ã¨é¸æŠè‚¢ï¼ˆChoiceï¼‰ã‚’è¡¨ç¾ã—ã¾ã™ã€‚
+// JSON ã‹ã‚‰ãƒãƒ¼ãƒ‰ã‚’èª­ã¿è¾¼ã¿ã€é¸æŠè‚¢ã®è¦ä»¶ã‚„åŠ¹æœã‚’ãƒ‡ãƒ¼ã‚¿é§†å‹•ã§è¡¨ç¾ã™ã‚‹ãŸã‚ã®æ§‹é€ ä½“ç¾¤ã‚’å®šç¾©ã—ã¾ã™ã€‚
 
-// ƒTƒCƒRƒ”»’è‚ÌğŒ‚ğ•\‚µ‚Ü‚·i–Ê”Aè‡’lA”äŠr•û–@j
-// ƒTƒCƒRƒ”»’è‚ÌğŒ‚ğ•\‚µ‚Ü‚·B
-// - sides: ƒTƒCƒRƒ‚Ì–Ê”i—á:6j
-// - threshold: ”»’è‚Å”äŠr‚·‚éè‡’l
-// - greaterOrEqual: true ‚Ìê‡‚Í roll >= threshold ‚Å¬Œ÷”»’è
+// ã‚µã‚¤ã‚³ãƒ­åˆ¤å®šã®æ¡ä»¶ã‚’è¡¨ã—ã¾ã™ï¼ˆé¢æ•°ã€é–¾å€¤ã€æ¯”è¼ƒæ–¹æ³•ï¼‰
+// ã‚µã‚¤ã‚³ãƒ­åˆ¤å®šã®æ¡ä»¶ã‚’è¡¨ã—ã¾ã™ã€‚
+// - sides: ã‚µã‚¤ã‚³ãƒ­ã®é¢æ•°ï¼ˆä¾‹:6ï¼‰
+// - threshold: åˆ¤å®šã§æ¯”è¼ƒã™ã‚‹é–¾å€¤
+// - greaterOrEqual: true ã®å ´åˆã¯ roll >= threshold ã§æˆåŠŸåˆ¤å®š
 struct RollCond {
     int sides = 6;
     int threshold = 0; // success if roll >= threshold when greaterOrEqual true
     bool greaterOrEqual = true;
 };
 
-// 1‚Â‚Ì‘I‘ğˆi‰æ–Êã‚É•\¦‚³‚ê‚é‘I‘ğˆƒ{ƒ^ƒ“j‚ğ•\Œ»‚µ‚Ü‚·B
-// —vŒ(require_*)AŠù‘¶‚ÌƒŒƒKƒV[ƒtƒB[ƒ‹ƒhA‚»‚µ‚Äƒf[ƒ^‹ì“®‰»‚³‚ê‚½ effects ‚ğ•Û‚µ‚Ü‚·B
-// Choice: ƒVƒiƒŠƒI“à‚Ì‘I‘ğˆ‚ğ•\‚·\‘¢‘Ì
-// - text: ‰æ–Ê‚É•\¦‚³‚ê‚éà–¾•¶
-// - nextNodeID: ‘I‘ğ‚É‘JˆÚ‚·‚éƒm[ƒh IDi’Êí‚Ì•ªŠòj
-// - rollCond: ƒ[ƒ‹”»’è‚ª‚ ‚éê‡‚Í RollCond ‚ğİ’è‚·‚é
-// - requireFlags / requireInventory “™: ‘I‘ğˆ©‘Ì‚ª—LŒø‚Æ‚È‚é‚½‚ß‚Ì—vŒ
-// - setFlags / addInventory “™‚ÌŠù‘¶ƒtƒB[ƒ‹ƒh‚ÍŒİŠ·«‚Ì‚½‚ßc‚·‚ªA
-//   “à•”‚Å‚Í data-driven ‚È Effect ‚É•ÏŠ·‚µ‚ÄÀs‚³‚ê‚Ü‚·B
+// 1ã¤ã®é¸æŠè‚¢ï¼ˆç”»é¢ä¸Šã«è¡¨ç¤ºã•ã‚Œã‚‹é¸æŠè‚¢ãƒœã‚¿ãƒ³ï¼‰ã‚’è¡¨ç¾ã—ã¾ã™ã€‚
+// è¦ä»¶(require_*)ã€æ—¢å­˜ã®ãƒ¬ã‚¬ã‚·ãƒ¼ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã€ãã—ã¦ãƒ‡ãƒ¼ã‚¿é§†å‹•åŒ–ã•ã‚ŒãŸ effects ã‚’ä¿æŒã—ã¾ã™ã€‚
+// Choice: ã‚·ãƒŠãƒªã‚ªå†…ã®é¸æŠè‚¢ã‚’è¡¨ã™æ§‹é€ ä½“
+// - text: ç”»é¢ã«è¡¨ç¤ºã•ã‚Œã‚‹èª¬æ˜æ–‡
+// - nextNodeID: é¸æŠæ™‚ã«é·ç§»ã™ã‚‹ãƒãƒ¼ãƒ‰ IDï¼ˆé€šå¸¸ã®åˆ†å²ï¼‰
+// - rollCond: ãƒ­ãƒ¼ãƒ«åˆ¤å®šãŒã‚ã‚‹å ´åˆã¯ RollCond ã‚’è¨­å®šã™ã‚‹
+// - requireFlags / requireInventory ç­‰: é¸æŠè‚¢è‡ªä½“ãŒæœ‰åŠ¹ã¨ãªã‚‹ãŸã‚ã®è¦ä»¶
+// - setFlags / addInventory ç­‰ã®æ—¢å­˜ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã¯äº’æ›æ€§ã®ãŸã‚æ®‹ã™ãŒã€
+//   å†…éƒ¨ã§ã¯ data-driven ãª Effect ã«å¤‰æ›ã—ã¦å®Ÿè¡Œã•ã‚Œã¾ã™ã€‚
 struct Choice {
     std::string text;
     int nextNodeID = -1;
@@ -58,14 +58,14 @@ struct Choice {
     std::unordered_map<std::string,int> requireVarMax;
     std::unordered_map<std::string,int> addVar;
     std::unordered_map<std::string,int> setVar;
-    // ƒf[ƒ^‹ì“®‰»‚³‚ê‚½Œø‰ÊiEffectj
-    // JSON ‚Ì "effects" ”z—ñ‚©‚ç“Ç‚İ‚Ü‚êAÀs‚É•]‰¿‚³‚ê‚Ü‚·B
+    // ãƒ‡ãƒ¼ã‚¿é§†å‹•åŒ–ã•ã‚ŒãŸåŠ¹æœï¼ˆEffectï¼‰
+    // JSON ã® "effects" é…åˆ—ã‹ã‚‰èª­ã¿è¾¼ã¾ã‚Œã€å®Ÿè¡Œæ™‚ã«è©•ä¾¡ã•ã‚Œã¾ã™ã€‚
     struct Effect {
         std::string op; // e.g. "add_inventory", "remove_inventory", "add_var", "set_var", "set_flag", "clear_flag"
         std::string key; // for var name or single-item ops
         int intValue = 0; // numeric value for var ops
         std::vector<std::string> items; // list of items for inventory/flags
-        // Œø‰ÊÀs‚ÌğŒi‚±‚ÌğŒ‚ª–‚½‚³‚ê‚é‚ÆŒø‰Ê‚ª“K—p‚³‚ê‚éj
+        // åŠ¹æœå®Ÿè¡Œã®æ¡ä»¶ï¼ˆã“ã®æ¡ä»¶ãŒæº€ãŸã•ã‚Œã‚‹ã¨åŠ¹æœãŒé©ç”¨ã•ã‚Œã‚‹ï¼‰
         struct Condition {
             enum class Mode { ALL=0, ANY=1 } mode = Mode::ALL;
             std::vector<std::string> requireFlags;
@@ -74,16 +74,16 @@ struct Choice {
             std::unordered_map<std::string,int> requireVarMin;
             std::unordered_map<std::string,int> requireVarMax;
         } condition;
-        // ğŒ•ªŠòƒTƒ|[ƒg: if ‚Ì then / else ‚ÉŠY“–‚·‚éŒø‰ÊƒŠƒXƒg
-        std::vector<Effect> thenEffects; // ğŒ‚ª true ‚Ìê‡‚ÉÀs‚³‚ê‚éŒø‰ÊŒQ
-        std::vector<Effect> elseEffects; // ğŒ‚ª false ‚Ìê‡‚ÉÀs‚³‚ê‚éŒø‰ÊŒQ
+        // æ¡ä»¶åˆ†å²ã‚µãƒãƒ¼ãƒˆ: if ã® then / else ã«è©²å½“ã™ã‚‹åŠ¹æœãƒªã‚¹ãƒˆ
+        std::vector<Effect> thenEffects; // æ¡ä»¶ãŒ true ã®å ´åˆã«å®Ÿè¡Œã•ã‚Œã‚‹åŠ¹æœç¾¤
+        std::vector<Effect> elseEffects; // æ¡ä»¶ãŒ false ã®å ´åˆã«å®Ÿè¡Œã•ã‚Œã‚‹åŠ¹æœç¾¤
     };
     std::vector<Effect> effects; // base effects when choice taken
     std::vector<Effect> effectsOnSuccess; // extra effects applied on roll success
     std::vector<Effect> effectsOnFail; // extra effects applied on roll fail
 };
 
-// EventNode: 1‚Â‚Ì’Tõƒm[ƒhiƒeƒLƒXƒg‚Æ•¡”‚Ì‘I‘ğˆj‚ğ•\‚µ‚Ü‚·
+// EventNode: 1ã¤ã®æ¢ç´¢ãƒãƒ¼ãƒ‰ï¼ˆãƒ†ã‚­ã‚¹ãƒˆã¨è¤‡æ•°ã®é¸æŠè‚¢ï¼‰ã‚’è¡¨ã—ã¾ã™
 struct EventNode {
     int id = -1;
     std::string text;
@@ -91,9 +91,9 @@ struct EventNode {
     std::string speaker; // character id to mark as speaking
     std::string speakerExpression; // optional expression/variant for speaker
     std::vector<Choice> choices;
-    // JSON ‚©‚ç EventNode ‚ğ\’z‚·‚éƒwƒ‹ƒp[ŠÖ”
-    // Šù‘¶‚ÌƒŒƒKƒV[ƒtƒB[ƒ‹ƒh‚à effects ‚É•ÏŠ·‚µ‚ÄŒİŠ·«‚ğ•Û‚¿‚Â‚ÂA
-    // V‚µ‚¢ data-driven ‚È effects ”z—ñ‚ğƒp[ƒX‚µ‚Ü‚·B
+    // JSON ã‹ã‚‰ EventNode ã‚’æ§‹ç¯‰ã™ã‚‹ãƒ˜ãƒ«ãƒ‘ãƒ¼é–¢æ•°
+    // æ—¢å­˜ã®ãƒ¬ã‚¬ã‚·ãƒ¼ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚‚ effects ã«å¤‰æ›ã—ã¦äº’æ›æ€§ã‚’ä¿ã¡ã¤ã¤ã€
+    // æ–°ã—ã„ data-driven ãª effects é…åˆ—ã‚’ãƒ‘ãƒ¼ã‚¹ã—ã¾ã™ã€‚
     static EventNode FromJson(const json &j) {
         EventNode n;
         if (j.contains("id")) n.id = j["id"].get<int>();

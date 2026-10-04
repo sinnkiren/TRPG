@@ -1,22 +1,22 @@
-#include "ScenarioScene.h"
+ï»¿#include "ScenarioScene.h"
 #include "SceneManager.h"
 #include "system/imgui/imgui.h"
 #include "AssetManager.h"
 #include "Logging.h"
-// DirectXŠÖ˜A‚Ì•`‰æ‚ğ‹Lq
+// DirectXé–¢é€£ã®æç”»ã‚’è¨˜è¿°
 #include <filesystem>
 #include <cctype>
-//ƒVƒiƒŠƒI‚Ì‘I‘ği¡l‚¦‚Ä‚¢‚é‚Ì‚Í“Å“ü‚èƒX[ƒvjisó‹µ‚Ì‹L˜^‚ÌŠm”F
+//ã‚·ãƒŠãƒªã‚ªã®é¸æŠï¼ˆä»Šè€ƒãˆã¦ã„ã‚‹ã®ã¯æ¯’å…¥ã‚Šã‚¹ãƒ¼ãƒ—ï¼‰é€²è¡ŒçŠ¶æ³ã®è¨˜éŒ²ã®ç¢ºèª
 
 
 
 void ScenarioScene::Initialize() {
-    // ‰æ‘œ/‰¹ºƒ[ƒh‚È‚Ç
+    // ç”»åƒ/éŸ³å£°ãƒ­ãƒ¼ãƒ‰ãªã©
 
 }
 
 void ScenarioScene::Update() {
-    // “ü—Íˆ—iSpace‚ÅƒQ[ƒ€ƒXƒ^[ƒgj
+    // å…¥åŠ›å‡¦ç†ï¼ˆSpaceã§ã‚²ãƒ¼ãƒ ã‚¹ã‚¿ãƒ¼ãƒˆï¼‰
 
     ImGui::Begin("Scenario Scene");
     ImGui::Text("Now:Scenario Scene");
@@ -84,5 +84,5 @@ void ScenarioScene::Update() {
 }
 
 void ScenarioScene::Render() {
-    // ƒ^ƒCƒgƒ‹‚Ì•`‰æi•¶š‚â”wŒi‚È‚Çj
+    // ã‚¿ã‚¤ãƒˆãƒ«ã®æç”»ï¼ˆæ–‡å­—ã‚„èƒŒæ™¯ãªã©ï¼‰
 }

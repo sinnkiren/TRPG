@@ -1,4 +1,4 @@
-#include "BattleScene.h"
+ï»¿#include "BattleScene.h"
 #include "SceneManager.h"
 #include "BattleLogic.h"
 #include "DiceVisual.h"
@@ -18,45 +18,45 @@ void BattleScene::Update()
     if (dt > 0.5f) dt = 0.5f;
     timeAccum += dt;
 
-    // •\¦—p‘Ï‹v—Í‚ğŠŠ‚ç‚©‚ÉƒvƒŒƒCƒ„[‘Ï‹v—Í‚Ö’Ç]‚³‚¹‚éiŠÈˆÕƒC[ƒWƒ“ƒOj
+    // è¡¨ç¤ºç”¨è€ä¹…åŠ›ã‚’æ»‘ã‚‰ã‹ã«ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼è€ä¹…åŠ›ã¸è¿½å¾“ã•ã›ã‚‹ï¼ˆç°¡æ˜“ã‚¤ãƒ¼ã‚¸ãƒ³ã‚°ï¼‰
     {
         float target = static_cast<float>(player.endurance);
-        float alpha = dt * 6.0f; // ƒXƒ€[ƒWƒ“ƒOŒW”i’²®‰Âj
+        float alpha = dt * 6.0f; // ã‚¹ãƒ ãƒ¼ã‚¸ãƒ³ã‚°ä¿‚æ•°ï¼ˆèª¿æ•´å¯ï¼‰
         if (alpha < 0.0f) alpha = 0.0f;
         else if (alpha > 1.0f) alpha = 1.0f;
         displayedEndurance += (target - displayedEndurance) * alpha;
     }
 
 
-    // ƒ_ƒ[ƒW‘MŒõ‚Æc­‚Ìƒ^ƒCƒ}[ˆ—
+    // ãƒ€ãƒ¡ãƒ¼ã‚¸é–ƒå…‰ã¨æ®‹ç—•ã®ã‚¿ã‚¤ãƒãƒ¼å‡¦ç†
     if (damageFlashTimer > 0.0f) {
         damageFlashTimer = std::fmax(0.0f, damageFlashTimer - dt);
     }
     if (persistentTimer > 0.0f) {
         persistentTimer = std::fmax(0.0f, persistentTimer - dt);
         if (persistentTimer <= 0.0f) {
-            // c­‚Ì•\¦ŠÔ‚ªØ‚ê‚½‚çƒNƒŠƒA
+            // æ®‹ç—•ã®è¡¨ç¤ºæ™‚é–“ãŒåˆ‡ã‚ŒãŸã‚‰ã‚¯ãƒªã‚¢
             persistentStage = 0;
         }
     }
 
-    // ‘Ï‹v—Í‚Ì•Ï‰»‚ğŒŸoiƒ_ƒ[ƒW‚ğó‚¯‚½‚©j
+    // è€ä¹…åŠ›ã®å¤‰åŒ–ã‚’æ¤œå‡ºï¼ˆãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’å—ã‘ãŸã‹ï¼‰
     if (prevEndurance != -1 && player.endurance < prevEndurance) {
-        // uŠÔ“I‚Èƒtƒ‰ƒbƒVƒ…‚ğŠJn
+        // ç¬é–“çš„ãªãƒ•ãƒ©ãƒƒã‚·ãƒ¥ã‚’é–‹å§‹
         damageFlashTimer = damageFlashDuration;
 
-        //¸‚Á‚½Š„‡‚ÉŠî‚Ã‚«’iŠK‚ğŒˆ’èi4“™•ª)
+        //å¤±ã£ãŸå‰²åˆã«åŸºã¥ãæ®µéšã‚’æ±ºå®šï¼ˆ4ç­‰åˆ†)
             if (player.maxEndurance > 0) {
             float lostPercent = static_cast<float>(player.maxEndurance - player.endurance) / static_cast<float>(player.maxEndurance); //0..1
             int tmp = static_cast<int>(lostPercent * 4.0f);
             if (tmp < 0) tmp = 0;
             if (tmp > 4) tmp = 4;
             int stage = tmp;
-            // ƒXƒe[ƒW1ˆÈã‚È‚çc­‚ğİ’è
+            // ã‚¹ãƒ†ãƒ¼ã‚¸1ä»¥ä¸Šãªã‚‰æ®‹ç—•ã‚’è¨­å®š
             if (stage >= 1) {
                 persistentStage = stage;
-                // ƒXƒe[ƒW‚É‰‚¶‚Äc­‚Ì•\¦ŠÔ‚ğİ’è
-                persistentTimer = 6.0f + stage * 4.0f; //—á: stage1->10s, stage4->22s
+                // ã‚¹ãƒ†ãƒ¼ã‚¸ã«å¿œã˜ã¦æ®‹ç—•ã®è¡¨ç¤ºæ™‚é–“ã‚’è¨­å®š
+                persistentTimer = 6.0f + stage * 4.0f; //ä¾‹: stage1->10s, stage4->22s
             }
         }
     }
@@ -70,11 +70,11 @@ void BattleScene::Update()
     // Update dice visual
     DiceVisual::Instance().Update(dt);
 
-    // ‘S‚Ä‚Ì“G‚ª“|‚³‚ê‚½‚©”»’è
+    // å…¨ã¦ã®æ•µãŒå€’ã•ã‚ŒãŸã‹åˆ¤å®š
     bool anyAlive = false;
     for (auto& e : enemies) if (e.hp > 0) { anyAlive = true; break; }
     if (!anyAlive) phase = Phase::Victory;
-    // ƒvƒŒƒCƒ„[‚Ì”s–k”»’èi‚±‚±‚Å‚Í‘Ï‹v—Í0‚Å”s–kj
+    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã®æ•—åŒ—åˆ¤å®šï¼ˆã“ã“ã§ã¯è€ä¹…åŠ›0ã§æ•—åŒ—ï¼‰
     if (player.endurance <= 0) phase = Phase::Defeat;
 
     // If we've reached an end phase, set result flag and request scene change to Result

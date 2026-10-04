@@ -97,7 +97,7 @@
     <ClInclude Include="AtlasTools.h" />
     <ClInclude Include="BattleLogic.h" />
     <ClInclude Include="BattleScene.h" />
-    <ClInclude Include="CharacterDateManeger.h" />
+    <ClInclude Include="CharacterDataManager.h" />
     <ClInclude Include="CharacterSelect.h" />
     <ClInclude Include="Dice.h" />
     <ClInclude Include="DiceVisual.h" />

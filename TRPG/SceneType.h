@@ -1,14 +1,14 @@
-#pragma once
+ï»¿#pragma once
 
 enum class SceneType {
-	TITLE,				//ƒ^ƒCƒgƒ‹
-	TRPG_SELECT,		//TRPG‚Ì‘I‘ðiƒNƒgƒDƒ‹ƒtAƒ\[ƒhƒ[ƒ‹ƒhj
-	SCENARIO_SELECT,	//ƒVƒiƒŠƒI‚Ì‘I‘ðE•\Ž¦
-	CHARACTER_SELECT,	//ƒLƒƒƒ‰ƒNƒ^[i‘I‘ðEì¬j
-	EXPLORE,				// ’Tõƒp[ƒgiƒm[ƒhŒ^j
-    STORY_EDITOR,        // Story ì¬/•ÒW—pƒV[ƒ“ (Dev only)
-	GAME_PLAY,			//–{•Ò
-	BATTLE,				//í“¬ƒV[ƒ“iƒIƒvƒVƒ‡ƒ“j
-	RESULT,				//ƒŠƒUƒ‹ƒg
-	RECORD,				//•¨Œê‚Ìisó‹µ‹L˜^
+	TITLE,				//ã‚¿ã‚¤ãƒˆãƒ«
+	TRPG_SELECT,		//TRPGã®é¸æŠžï¼ˆã‚¯ãƒˆã‚¥ãƒ«ãƒ•ã€ã‚½ãƒ¼ãƒ‰ãƒ¯ãƒ¼ãƒ«ãƒ‰ï¼‰
+	SCENARIO_SELECT,	//ã‚·ãƒŠãƒªã‚ªã®é¸æŠžãƒ»è¡¨ç¤º
+	CHARACTER_SELECT,	//ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ï¼ˆé¸æŠžãƒ»ä½œæˆï¼‰
+	EXPLORE,				// æŽ¢ç´¢ãƒ‘ãƒ¼ãƒˆï¼ˆãƒŽãƒ¼ãƒ‰åž‹ï¼‰
+    STORY_EDITOR,        // Story ä½œæˆ/ç·¨é›†ç”¨ã‚·ãƒ¼ãƒ³ (Dev only)
+	GAME_PLAY,			//æœ¬ç·¨
+	BATTLE,				//æˆ¦é—˜ã‚·ãƒ¼ãƒ³ï¼ˆã‚ªãƒ—ã‚·ãƒ§ãƒ³ï¼‰
+	RESULT,				//ãƒªã‚¶ãƒ«ãƒˆ
+	RECORD,				//ç‰©èªžã®é€²è¡ŒçŠ¶æ³è¨˜éŒ²
 };

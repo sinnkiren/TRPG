@@ -1,18 +1,18 @@
-#include "TRPGSelectScene.h"
+ï»¿#include "TRPGSelectScene.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
 #include "system/imgui/imgui.h"
 
-// TRPG‘I‘ğƒV[ƒ“: ‰æ–Ê‚ğ¶‰E‚É•ªŠ„‚µ‚Ä2‚Â‚Ì‘I‘ğˆ‚ğ•\¦i‰æ‘œ‚ª‚ ‚ê‚Î‰æ‘œ‚ğ•\¦j
-// ƒ†[ƒU[‚ª‚Ç‚¿‚ç‚©‚ğƒNƒŠƒbƒN‚·‚é‚ÆƒVƒiƒŠƒI‘I‘ğ‚Ö‘JˆÚ‚µ‚Ü‚·B
+// TRPGé¸æŠã‚·ãƒ¼ãƒ³: ç”»é¢ã‚’å·¦å³ã«åˆ†å‰²ã—ã¦2ã¤ã®é¸æŠè‚¢ã‚’è¡¨ç¤ºï¼ˆç”»åƒãŒã‚ã‚Œã°ç”»åƒã‚’è¡¨ç¤ºï¼‰
+// ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒã©ã¡ã‚‰ã‹ã‚’ã‚¯ãƒªãƒƒã‚¯ã™ã‚‹ã¨ã‚·ãƒŠãƒªã‚ªé¸æŠã¸é·ç§»ã—ã¾ã™ã€‚
 
 static ImTextureID g_tex_cthulhu = nullptr;
 static ImTextureID g_tex_sw25 = nullptr;
 static bool g_texturesLoaded = false;
-static int g_selectedIndex = -1; // 0 = ƒNƒgƒDƒ‹ƒt, 1 = SW2.5
+static int g_selectedIndex = -1; // 0 = ã‚¯ãƒˆã‚¥ãƒ«ãƒ•, 1 = SW2.5
 
 void TRPGSelectScene::Initialize() {
-     //assets/texture/ ‚©‚ç•\†‰æ‘œ‚ğ“Ç‚İ‚à‚¤‚Æ‚µ‚Ü‚·B‰æ‘œ‚Í”CˆÓ‚ÅA–³‚¯‚ê‚Î‘ã‘Ö•\¦‚É‚È‚è‚Ü‚·B
+     //assets/texture/ ã‹ã‚‰è¡¨ç´™ç”»åƒã‚’èª­ã¿è¾¼ã‚‚ã†ã¨ã—ã¾ã™ã€‚ç”»åƒã¯ä»»æ„ã§ã€ç„¡ã‘ã‚Œã°ä»£æ›¿è¡¨ç¤ºã«ãªã‚Šã¾ã™ã€‚
     g_tex_cthulhu = TextureManager::GetImGuiTexture("texture/buki.png");
     g_tex_sw25 = TextureManager::GetImGuiTexture("texture/funpng.png");
     g_texturesLoaded = true;
@@ -25,14 +25,14 @@ void TRPGSelectScene::Update() {
     ImGui::Text("Select TRPG System");
     ImGui::Separator();
 
-    // ‰æ–Ê•‚ğ¶‰E”¼•ª‚É•ª‚¯‚Ä‚»‚ê‚¼‚ê‚Ì€–Ú‚ğ•\¦‚·‚éƒŒƒCƒAƒEƒg
+    // ç”»é¢å¹…ã‚’å·¦å³åŠåˆ†ã«åˆ†ã‘ã¦ãã‚Œãã‚Œã®é …ç›®ã‚’è¡¨ç¤ºã™ã‚‹ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆ
     float availW = ImGui::GetContentRegionAvail().x;
     float spacing = ImGui::GetStyle().ItemSpacing.x;
     float halfW = (availW - spacing) * 0.5f;
-    // •\†‰æ‘œ‚Íc’·‚ğ‘z’è‚µA•‚æ‚è‚à‚‚ß‚ÌƒTƒCƒY‚ğg‚¤
+    // è¡¨ç´™ç”»åƒã¯ç¸¦é•·ã‚’æƒ³å®šã—ã€å¹…ã‚ˆã‚Šã‚‚é«˜ã‚ã®ã‚µã‚¤ã‚ºã‚’ä½¿ã†
     ImVec2 imgSize(halfW, halfW * 1.4f);
 
-    // ¶‘¤: ƒNƒgƒDƒ‹ƒt
+    // å·¦å´: ã‚¯ãƒˆã‚¥ãƒ«ãƒ•
     ImGui::BeginGroup();
     ImGui::Text("Call of Cthulhu");
     ImVec2 pos1 = ImGui::GetCursorScreenPos();
@@ -42,7 +42,7 @@ void TRPGSelectScene::Update() {
     } else {
         if (ImGui::Button("Call of Cthulhu (no image)", imgSize)) clicked1 = true;
     }
-    // ‘I‘ğ‚ÌƒnƒCƒ‰ƒCƒg‚ğ•`‰æ
+    // é¸æŠæ™‚ã®ãƒã‚¤ãƒ©ã‚¤ãƒˆã‚’æç”»
     if (g_selectedIndex == 0) {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddRect(ImVec2(pos1.x - 2, pos1.y - 2), ImVec2(pos1.x + imgSize.x + 2, pos1.y + imgSize.y + 2), IM_COL32(255,200,0,255), 4.0f, 0, 3.0f);
@@ -51,7 +51,7 @@ void TRPGSelectScene::Update() {
 
     ImGui::SameLine();
 
-    // ‰E‘¤: ƒ\[ƒhƒ[ƒ‹ƒh2.5
+    // å³å´: ã‚½ãƒ¼ãƒ‰ãƒ¯ãƒ¼ãƒ«ãƒ‰2.5
     ImGui::BeginGroup();
     ImGui::Text("Sword World 2.5");
     ImVec2 pos2 = ImGui::GetCursorScreenPos();
@@ -67,7 +67,7 @@ void TRPGSelectScene::Update() {
     }
     ImGui::EndGroup();
 
-    // ƒNƒŠƒbƒNˆ—
+    // ã‚¯ãƒªãƒƒã‚¯å‡¦ç†
     if (clicked1) {
         g_selectedIndex = 0;
         // Move to scenario selection (TRPG type can be stored elsewhere if needed)
@@ -85,5 +85,5 @@ void TRPGSelectScene::Update() {
 }
 
 void TRPGSelectScene::Render() {
-    // ‚±‚±‚Å‚Í“Á•Ê‚ÈDirectX•`‰æ‚Í•s—viUpdate() “à‚Å ImGui ‚É‚æ‚é•`‰æ‚ğs‚Á‚Ä‚¢‚éj
+    // ã“ã“ã§ã¯ç‰¹åˆ¥ãªDirectXæç”»ã¯ä¸è¦ï¼ˆUpdate() å†…ã§ ImGui ã«ã‚ˆã‚‹æç”»ã‚’è¡Œã£ã¦ã„ã‚‹ï¼‰
 }

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "TextureManager.h"
 #include "Application.h"
 #include "system/stb_image.h"
@@ -11,12 +11,12 @@
 
 namespace TextureManager
 {
-    // Direct3D11 ƒfƒoƒCƒX‚ÆƒAƒZƒbƒgƒ‹[ƒg
+    // Direct3D11 ãƒ‡ãƒã‚¤ã‚¹ã¨ã‚¢ã‚»ãƒƒãƒˆãƒ«ãƒ¼ãƒˆ
     static ID3D11Device* g_device = nullptr;
     static std::string g_assetRoot = "assets/";
     static std::unordered_map<std::string, ID3D11ShaderResourceView*> g_cache;
 
-    // ‰Šú‰»
+    // åˆæœŸåŒ–
     void Initialize(ID3D11Device* device, const std::string& assetRoot)
     {
         g_device = device;
@@ -25,7 +25,7 @@ namespace TextureManager
             g_assetRoot += "/";
     }
 
-    // I—¹ˆ—
+    // çµ‚äº†å‡¦ç†
     void Shutdown()
     {
         for (auto& p : g_cache) {
@@ -35,7 +35,7 @@ namespace TextureManager
         g_device = nullptr;
     }
 
-    // ƒtƒ@ƒCƒ‹ƒpƒX‰ğŒˆ
+    // ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹è§£æ±º
     // Accepts absolute paths as-is. For relative paths, try assetRoot first, then current_path.
     // Simple path resolver without std::filesystem.
     // Uses fixed asset root + relative path concatenation as a stable approach for student projects.
@@ -55,20 +55,20 @@ namespace TextureManager
     {
         if (p.empty()) return false;
 
-        // Windowsƒhƒ‰ƒCƒu C:\~
+        // Windowsãƒ‰ãƒ©ã‚¤ãƒ– C:\~
         if (p.size() >= 2 &&
             std::isalpha(static_cast<unsigned char>(p[0])) &&
             p[1] == ':')
             return true;
 
-        // ƒ‹[ƒgƒpƒX / ‚Ü‚½‚Í \\ ‚Ån‚Ü‚é
+        // ãƒ«ãƒ¼ãƒˆãƒ‘ã‚¹ / ã¾ãŸã¯ \\ ã§å§‹ã¾ã‚‹
         if (p[0] == '/' || p[0] == '\\')
             return true;
 
         return false;
     }
 
-    // ƒeƒNƒXƒ`ƒƒ“Ç‚İ‚İ
+    // ãƒ†ã‚¯ã‚¹ãƒãƒ£èª­ã¿è¾¼ã¿
     ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath)
     {
         if (!g_device) return nullptr;
@@ -97,7 +97,7 @@ namespace TextureManager
             Log::Log(Log::Level::Info, o.str());
         }
 
-        // stbi ‚Åƒ[ƒh
+        // stbi ã§ãƒ­ãƒ¼ãƒ‰
         int w = 0, h = 0, channels = 0;
         unsigned char* pixels = stbi_load(p.c_str(), &w, &h, &channels, 4);
         if (!pixels || w <= 0 || h <= 0) {
@@ -108,7 +108,7 @@ namespace TextureManager
             return nullptr;
         }
 
-        // Texture2D ì¬
+        // Texture2D ä½œæˆ
         D3D11_TEXTURE2D_DESC desc{};
         desc.Width = static_cast<UINT>(w);
         desc.Height = static_cast<UINT>(h);
@@ -135,7 +135,7 @@ namespace TextureManager
             return nullptr;
         }
 
-        // ShaderResourceView ì¬
+        // ShaderResourceView ä½œæˆ
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
         srvDesc.Format = desc.Format;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
@@ -161,19 +161,19 @@ namespace TextureManager
         return srv;
     }
 
-    // ImGui —pƒ‰ƒbƒp[
+    // ImGui ç”¨ãƒ©ãƒƒãƒ‘ãƒ¼
     ImTextureID GetImGuiTexture(const std::string& relativePath)
     {
         ID3D11ShaderResourceView* srv = LoadTexture(relativePath);
         return reinterpret_cast<ImTextureID>(srv);
     }
 
-    ImTextureID GetImGuiTextureID(const std::string& relativePath) // ŒİŠ·—p
+    ImTextureID GetImGuiTextureID(const std::string& relativePath) // äº’æ›ç”¨
     {
         return GetImGuiTexture(relativePath);
     }
 
-    // ŒÂ•Ê‰ğ•ú
+    // å€‹åˆ¥è§£æ”¾
     void ReleaseTexture(const std::string& relativePath)
     {
         // Resolve and use same keying as LoadTexture

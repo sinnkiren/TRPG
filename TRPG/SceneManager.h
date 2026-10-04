@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "SceneType.h"
 #include <memory>
@@ -8,7 +8,7 @@
 #include "IScene.h"
 #include <unordered_map>
 
-// CharacterSelect's CharcterDate is used for storing player data
+// CharacterSelect's CharacterData is used for storing player data
 #include "CharacterSelect.h"
 
 class IScene;
@@ -22,26 +22,26 @@ public:
     // Request that the next StoryPlayer created (on scene change to GAME_PLAY) loads this JSON path.
     void SetPendingStoryPath(const std::string& path) { pendingStoryPath = path; }
 
-    // ƒV[ƒ“‘JˆÚŠÇ—
+    // ã‚·ãƒ¼ãƒ³é·ç§»ç®¡ç†
     void ChangeScene(SceneType Next);
     void ApplyPendingChange();
     SceneType GetCurrentScene() const;
 
-    // ƒEƒBƒ“ƒhƒEƒnƒ“ƒhƒ‹İ’èiApplication ‚©‚çŒÄ‚Ô‘z’èj
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒãƒ³ãƒ‰ãƒ«è¨­å®šï¼ˆApplication ã‹ã‚‰å‘¼ã¶æƒ³å®šï¼‰
     void SetWindowHandle(HWND hwnd) { m_hWnd = hwnd; }
 
-    // ƒvƒŒƒCƒ„[ƒf[ƒ^‘€ì
-    void SetPlayer(const CharcterScene::CharcterDate& p);
-    CharcterScene::CharcterDate& GetPlayer();
-    const CharcterScene::CharcterDate& GetPlayer() const;
+    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ‡ãƒ¼ã‚¿æ“ä½œ
+    void SetPlayer(const CharacterScene::CharacterData& p);
+    CharacterScene::CharacterData& GetPlayer();
+    const CharacterScene::CharacterData& GetPlayer() const;
     // Multi-player roster management
     // Adds a player to the roster and returns its index
-    int AddPlayer(const CharcterScene::CharcterDate& p);
+    int AddPlayer(const CharacterScene::CharacterData& p);
     // Removes player at index, returns true on success
     bool RemovePlayer(int index);
     // Access to full roster
-    const std::vector<CharcterScene::CharcterDate>& GetPlayers() const;
-    std::vector<CharcterScene::CharcterDate>& GetPlayers();
+    const std::vector<CharacterScene::CharacterData>& GetPlayers() const;
+    std::vector<CharacterScene::CharacterData>& GetPlayers();
     // Active player index control
     void SetActivePlayerIndex(int idx);
     int GetActivePlayerIndex() const;
@@ -73,15 +73,15 @@ public:
     bool HasPendingChange() const;
 
 private:
-    // ƒtƒŒ[ƒ€ˆ—‚Ì•â•iSceneManager.cpp ‚ÅÀ‘•j
+    // ãƒ•ãƒ¬ãƒ¼ãƒ å‡¦ç†ã®è£œåŠ©ï¼ˆSceneManager.cpp ã§å®Ÿè£…ï¼‰
     void HandleInput();
 
-    std::unique_ptr<IScene> currentScene;    // Œ»İ‚ÌƒV[ƒ“ƒCƒ“ƒXƒ^ƒ“ƒX
-    SceneType currentType = SceneType::TITLE; // Œ»İ‚ÌƒV[ƒ“í—Ş
-    HWND m_hWnd = nullptr;                    // ƒEƒBƒ“ƒhƒEƒnƒ“ƒhƒ‹
-    bool spacePressedLastFrame = false;       // ‘OƒtƒŒ[ƒ€‚ÌƒXƒy[ƒXƒL[ó‘Ô
+    std::unique_ptr<IScene> currentScene;    // ç¾åœ¨ã®ã‚·ãƒ¼ãƒ³ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹
+    SceneType currentType = SceneType::TITLE; // ç¾åœ¨ã®ã‚·ãƒ¼ãƒ³ç¨®é¡
+    HWND m_hWnd = nullptr;                    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒãƒ³ãƒ‰ãƒ«
+    bool spacePressedLastFrame = false;       // å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã®ã‚¹ãƒšãƒ¼ã‚¹ã‚­ãƒ¼çŠ¶æ…‹
 
-    // ƒV[ƒ“‘JˆÚƒ}ƒbƒv
+    // ã‚·ãƒ¼ãƒ³é·ç§»ãƒãƒƒãƒ—
     std::unordered_map<SceneType, SceneType> nextSceneMap = {
         { SceneType::TITLE, SceneType::TRPG_SELECT },
         { SceneType::TRPG_SELECT, SceneType::SCENARIO_SELECT },
@@ -93,9 +93,9 @@ private:
         { SceneType::RESULT, SceneType::TITLE },
     };
 
-    // SceneManager ‚ªŠ—L‚·‚éƒvƒŒƒCƒ„[ƒf[ƒ^i’l‚Å•Ûj
+    // SceneManager ãŒæ‰€æœ‰ã™ã‚‹ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ‡ãƒ¼ã‚¿ï¼ˆå€¤ã§ä¿æŒï¼‰
     // Player data: support multiple characters (party)
-    std::vector<CharcterScene::CharcterDate> players;
+    std::vector<CharacterScene::CharacterData> players;
     int activePlayerIndex = -1; // index into players, -1 if none
 
     // Backwards-compatible single-player setters/getters operate on the active player.
@@ -111,7 +111,7 @@ private:
     // Update window title to reflect current scene and dev/play mode
     void UpdateWindowTitle();
 
-    // ƒyƒ“ƒfƒBƒ“ƒO‘JˆÚƒtƒ‰ƒO
+    // ãƒšãƒ³ãƒ‡ã‚£ãƒ³ã‚°é·ç§»ãƒ•ãƒ©ã‚°
     bool pendingChange = false;
     SceneType pendingSceneType = SceneType::TITLE;
     // Path to a story JSON to load when switching to StoryPlayer (GAME_PLAY).

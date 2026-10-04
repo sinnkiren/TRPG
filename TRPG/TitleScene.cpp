@@ -1,4 +1,4 @@
-#include "TitleScene.h"
+ï»¿#include "TitleScene.h"
 #include "system/imgui/imgui.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
@@ -14,7 +14,7 @@ static inline T max_t(T a, T b) { return (a > b) ? a : b; }
 template<typename T>
 static inline T min_t(T a, T b) { return (a < b) ? a : b; }
 
-// ===== ƒtƒF[ƒhŠÖ˜A =====
+// ===== ãƒ•ã‚§ãƒ¼ãƒ‰é–¢é€£ =====
 static float s_titleAlpha = 0.0f;
 static float s_titleFadeInDuration = 1.0f;
 static float s_titleFadeOutDuration = 0.8f;
@@ -22,7 +22,7 @@ static float s_titleFadeElapsed = 0.0f;
 static bool  s_fadingIn = true;
 static bool  s_fadingOut = false;
 
-// ===== ƒtƒ‹ƒXƒNƒŠ[ƒ“ƒtƒF[ƒh =====
+// ===== ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ãƒ•ã‚§ãƒ¼ãƒ‰ =====
 static float s_fsFadeAlpha = 0.0f;
 static float s_fsFadeDurationIn = 1.0f;
 static float s_fsFadeDurationOut = 0.8f;
@@ -30,11 +30,11 @@ static float s_fsFadeElapsed = 0.0f;
 static bool  s_fsFadingOut = false;
 static bool  s_fsFadingIn = true;
 
-// ===== ƒ^ƒCƒgƒ‹‰æ‘œ =====
+// ===== ã‚¿ã‚¤ãƒˆãƒ«ç”»åƒ =====
 static ImTextureID s_titleTex = nullptr;
 static bool s_titleLoadAttempted = false;
 
-// ===== ƒmƒCƒY‰‰o =====
+// ===== ãƒã‚¤ã‚ºæ¼”å‡º =====
 static bool s_noiseActive = false;
 static float s_noiseDuration = 1.0f;
 static float s_noiseElapsed = 0.0f;
@@ -44,23 +44,23 @@ static float s_noiseIntensity = 1.0f;
 
 void TitleScene::Initialize()
 {
-    // ƒtƒF[ƒh‰Šú‰»
+    // ãƒ•ã‚§ãƒ¼ãƒ‰åˆæœŸåŒ–
     s_titleAlpha = 0.0f;
     s_titleFadeElapsed = 0.0f;
     s_fadingIn = true;
     s_fadingOut = false;
 
-    // ƒtƒ‹ƒXƒNƒŠ[ƒ“ƒtƒF[ƒhi‹N“®‚Í•¨•\¦j
+    // ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ãƒ•ã‚§ãƒ¼ãƒ‰ï¼ˆèµ·å‹•æ™‚ã¯é»’â†’è¡¨ç¤ºï¼‰
     s_fsFadeAlpha = 1.0f;
     s_fsFadeElapsed = 0.0f;
     s_fsFadingIn = true;
     s_fsFadingOut = false;
 
-    // ‰æ‘œ‚Í Render ‚É’x‰„ƒ[ƒh‚·‚éiTextureManager ‚ª‰Šú‰»Ï‚İ‚Å‚ ‚é‚±‚Æ‚ğŠú‘Òj
+    // ç”»åƒã¯ Render æ™‚ã«é…å»¶ãƒ­ãƒ¼ãƒ‰ã™ã‚‹ï¼ˆTextureManager ãŒåˆæœŸåŒ–æ¸ˆã¿ã§ã‚ã‚‹ã“ã¨ã‚’æœŸå¾…ï¼‰
     s_titleTex = nullptr;
     s_titleLoadAttempted = false;
 
-    // ƒmƒCƒYó‘ÔƒŠƒZƒbƒg
+    // ãƒã‚¤ã‚ºçŠ¶æ…‹ãƒªã‚»ãƒƒãƒˆ
     s_noiseActive = false;
     s_noiseElapsed = 0.0f;
     s_noiseSeed = 0;
@@ -86,17 +86,17 @@ void TitleScene::Update()
         }
     }
 
-    // ƒmƒCƒYƒ^ƒCƒ}[iƒmƒCƒYŠ®—¹Œã‚ÉƒtƒF[ƒhƒAƒEƒg‚ğŠJnj
+    // ãƒã‚¤ã‚ºã‚¿ã‚¤ãƒãƒ¼ï¼ˆãƒã‚¤ã‚ºå®Œäº†å¾Œã«ãƒ•ã‚§ãƒ¼ãƒ‰ã‚¢ã‚¦ãƒˆã‚’é–‹å§‹ï¼‰
     if (s_noiseActive) {
         s_noiseElapsed += dt;
         if (s_noiseElapsed >= s_noiseDuration) {
             s_noiseActive = false;
             s_noiseElapsed = 0.0f;
-            // ƒmƒCƒYI—¹ ¨ ƒtƒ‹ƒXƒNƒŠ[ƒ“ƒtƒF[ƒhƒAƒEƒgŠJn
+            // ãƒã‚¤ã‚ºçµ‚äº† â†’ ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ãƒ•ã‚§ãƒ¼ãƒ‰ã‚¢ã‚¦ãƒˆé–‹å§‹
             s_fsFadingOut = true;
             s_fsFadingIn = false;
             s_fsFadeElapsed = 0.0f;
-            // ‰æ–Ê“àƒ^ƒCƒgƒ‹‚àƒtƒF[ƒhƒAƒEƒg‚³‚¹‚é
+            // ç”»é¢å†…ã‚¿ã‚¤ãƒˆãƒ«ã‚‚ãƒ•ã‚§ãƒ¼ãƒ‰ã‚¢ã‚¦ãƒˆã•ã›ã‚‹
             s_fadingOut = true;
             s_titleFadeElapsed = 0.0f;
         }
@@ -123,11 +123,11 @@ void TitleScene::Update()
 
 void TitleScene::Render()
 {
-    // ƒtƒ‹ƒXƒNƒŠ[ƒ“‚Å‰æ‘œ‚Ì‚İ•\¦‚·‚éÀ‘•B
+    // ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã§ç”»åƒã®ã¿è¡¨ç¤ºã™ã‚‹å®Ÿè£…ã€‚
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     if (!vp) return;
 
-    // ’x‰„ƒ[ƒhiTextureManager ‚ª‰Šú‰»‚³‚ê‚Ä‚¢‚éƒ^ƒCƒ~ƒ“ƒO‚Åsj
+    // é…å»¶ãƒ­ãƒ¼ãƒ‰ï¼ˆTextureManager ãŒåˆæœŸåŒ–ã•ã‚Œã¦ã„ã‚‹ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã§è©¦è¡Œï¼‰
     if (!s_titleTex && !s_titleLoadAttempted) {
         s_titleLoadAttempted = true;
         s_titleTex = TextureManager::GetImGuiTextureID("texture/dark-tunnel2.png");
@@ -135,7 +135,7 @@ void TitleScene::Render()
         if (!s_titleTex) OutputDebugStringA("TitleScene: title image not found: texturedark-tunnel2.png/.jpg\n");
     }
 
-    // ”wŒiƒŒƒCƒ„‚É‰æ‘œ‚ğƒtƒ‹ƒXƒNƒŠ[ƒ“‚Å•`‰æic‰¡”ä‚Í‰æ‘œ‚É‚æ‚èLk‚³‚ê‚éj
+    // èƒŒæ™¯ãƒ¬ã‚¤ãƒ¤ã«ç”»åƒã‚’ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã§æç”»ï¼ˆç¸¦æ¨ªæ¯”ã¯ç”»åƒã«ã‚ˆã‚Šä¼¸ç¸®ã•ã‚Œã‚‹ï¼‰
     ImDrawList* bg = ImGui::GetBackgroundDrawList();
     if (bg) {
         if (s_titleTex) {
@@ -147,18 +147,18 @@ void TitleScene::Render()
         }
     }
 
-    // ---- ƒmƒCƒY•`‰æi‘OŒiƒŒƒCƒ„j ----
+    // ---- ãƒã‚¤ã‚ºæç”»ï¼ˆå‰æ™¯ãƒ¬ã‚¤ãƒ¤ï¼‰ ----
     if (s_noiseActive) {
         ImDrawList* fg = ImGui::GetForegroundDrawList();
         if (fg) {
-            // ƒmƒCƒYƒpƒ‰ƒ[ƒ^
+            // ãƒã‚¤ã‚ºãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
             float progress = s_noiseElapsed / max_t(0.0001f, s_noiseDuration);
             float inv = 1.0f - progress;
-            float alphaBase = s_noiseIntensity * inv; // ™X‚Éã‚Ü‚é
+            float alphaBase = s_noiseIntensity * inv; // å¾ã€…ã«å¼±ã¾ã‚‹
             int screenW = (int)vp->Size.x;
             int screenH = (int)vp->Size.y;
 
-            // •`‰æ”‚Í‰æ–ÊƒTƒCƒY‚É‡‚í‚¹‚ÄƒXƒP[ƒ‹id‚·‚¬‚È‚¢’ö“x‚É—}‚¦‚éj
+            // æç”»æ•°ã¯ç”»é¢ã‚µã‚¤ã‚ºã«åˆã‚ã›ã¦ã‚¹ã‚±ãƒ¼ãƒ«ï¼ˆé‡ã™ããªã„ç¨‹åº¦ã«æŠ‘ãˆã‚‹ï¼‰
             int approxCells = (int)clamp_t((screenW * screenH) / (128 * 128), 80, 800);
             std::mt19937 rng(s_noiseSeed + (unsigned int)(s_noiseElapsed * 1000.0f));
             std::uniform_int_distribution<int> dx(0, screenW - 1);
@@ -179,20 +179,20 @@ void TitleScene::Render()
         }
     }
 
-    // “ü—Í: ‰æ–Ê‚Ç‚±‚©‚ğƒNƒŠƒbƒN‚µ‚½‚çƒmƒCƒY¨ƒtƒF[ƒh‚ÌƒV[ƒPƒ“ƒX‚ğŠJn
-    // ‚½‚¾‚µ ImGui ‚ªƒ}ƒEƒX‚ğƒLƒƒƒvƒ`ƒƒ‚µ‚Ä‚¢‚éê‡iDev UI ‘€ì’†‚È‚Çj‚Í”½‰‚µ‚È‚¢
+    // å…¥åŠ›: ç”»é¢ã©ã“ã‹ã‚’ã‚¯ãƒªãƒƒã‚¯ã—ãŸã‚‰ãƒã‚¤ã‚ºâ†’ãƒ•ã‚§ãƒ¼ãƒ‰ã®ã‚·ãƒ¼ã‚±ãƒ³ã‚¹ã‚’é–‹å§‹
+    // ãŸã ã— ImGui ãŒãƒã‚¦ã‚¹ã‚’ã‚­ãƒ£ãƒ—ãƒãƒ£ã—ã¦ã„ã‚‹å ´åˆï¼ˆDev UI æ“ä½œä¸­ãªã©ï¼‰ã¯åå¿œã—ãªã„
     ImGuiIO& io = ImGui::GetIO();
     // If SceneManager has a pending dev-forced scene change, ignore title clicks to avoid
     // starting the title's click-to-next behavior which can block the pending change.
     if (!s_noiseActive && !s_fsFadingOut && !io.WantCaptureMouse && !g_SceneManager.HasPendingChange() && ImGui::IsMouseClicked(0)) {
         s_noiseActive = true;
         s_noiseElapsed = 0.0f;
-        // ƒ‰ƒ“ƒ_ƒ€í‚ğ¶¬i–ˆ‰ñˆÙ‚È‚éƒmƒCƒYj
+        // ãƒ©ãƒ³ãƒ€ãƒ ç¨®ã‚’ç”Ÿæˆï¼ˆæ¯å›ç•°ãªã‚‹ãƒã‚¤ã‚ºï¼‰
         std::random_device rd;
         s_noiseSeed = rd();
     }
 
-    // ƒtƒ‹ƒXƒNƒŠ[ƒ“‚Ì•‹éŒ`‚ÅƒtƒF[ƒhiÅ‘OŒij
+    // ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³ã®é»’çŸ©å½¢ã§ãƒ•ã‚§ãƒ¼ãƒ‰ï¼ˆæœ€å‰æ™¯ï¼‰
     ImDrawList* fg2 = ImGui::GetForegroundDrawList();
     if (fg2) {
         ImU32 col = ImGui::GetColorU32(ImVec4(0, 0, 0, s_fsFadeAlpha));

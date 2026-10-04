@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "IScene.h"
 
 class ExploreScene : public IScene {
@@ -12,5 +12,5 @@ public:
     static void LoadStateNow();
 };
 
-// ’ˆÓ: ExploreScene ‚Ì SaveStateNow / LoadStateNow ‚Í“à•”‚Ì SaveExploreState / LoadExploreState ‚ğ
-// ƒ‰ƒbƒv‚µ‚Ä‚¢‚Ü‚·BŠO•”‚©‚çƒvƒŒƒCƒ„[ƒf[ƒ^‚â’Tõó‘Ô‚ğ‘¦•Û‘¶/“Ç‚İ‚İ‚µ‚½‚¢ê‡‚Ég—p‚µ‚Ä‚­‚¾‚³‚¢B
+// æ³¨æ„: ExploreScene ã® SaveStateNow / LoadStateNow ã¯å†…éƒ¨ã® SaveExploreState / LoadExploreState ã‚’
+// ãƒ©ãƒƒãƒ—ã—ã¦ã„ã¾ã™ã€‚å¤–éƒ¨ã‹ã‚‰ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ‡ãƒ¼ã‚¿ã‚„æ¢ç´¢çŠ¶æ…‹ã‚’å³æ™‚ä¿å­˜/èª­ã¿è¾¼ã¿ã—ãŸã„å ´åˆã«ä½¿ç”¨ã—ã¦ãã ã•ã„ã€‚

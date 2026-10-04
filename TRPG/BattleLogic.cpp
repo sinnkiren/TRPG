@@ -1,4 +1,4 @@
-#include "BattleLogic.h"
+ï»¿#include "BattleLogic.h"
 #include "Dice.h"
 #include <algorithm>
 #include "Logging.h"
@@ -6,7 +6,7 @@
 namespace BattleLogic {
 
     void PlayerAttack(BattleScene::Enemy& target,
-                      CharcterScene::CharcterDate& player,
+                      CharacterScene::CharacterData& player,
                       int& lastRoll,
                       BattleScene::Phase& phase,
                       PushLog pushLog)
@@ -18,19 +18,19 @@ namespace BattleLogic {
             // roll damage without triggering an extra single-die visual (keep percentile visual visible)
             int dmg = 4 + Dice::RollDieNoVisual(3); // 4 + d3
             target.hp = std::max(0, target.hp - dmg);
-            if (pushLog) pushLog(player.name + " ‚Í " + target.name + " ‚É " + std::to_string(dmg) + " ‚Ìƒ_ƒ[ƒW‚ğ—^‚¦‚½B", 1);
-            if (target.hp == 0 && pushLog) pushLog(target.name + " ‚ğ“|‚µ‚½I", 1);
+            if (pushLog) pushLog(player.name + " ã¯ " + target.name + " ã« " + std::to_string(dmg) + " ã®ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’ä¸ãˆãŸã€‚", 1);
+            if (target.hp == 0 && pushLog) pushLog(target.name + " ã‚’å€’ã—ãŸï¼", 1);
         }
         else {
             int dmg = target.fearDamage;
             player.ApplyEnduranceLoss(dmg);
-            if (pushLog) pushLog(player.name + " ‚ÌUŒ‚‚Í¸”s‚µ‚½B‘Ï‹v—Í‚ª " + std::to_string(dmg) + " Œ¸­‚µ‚½B", 1);
+            if (pushLog) pushLog(player.name + " ã®æ”»æ’ƒã¯å¤±æ•—ã—ãŸã€‚è€ä¹…åŠ›ãŒ " + std::to_string(dmg) + " æ¸›å°‘ã—ãŸã€‚", 1);
             phase = BattleScene::Phase::EnemyTurn;
         }
     }
 
     void ExecuteEnemyTurn(std::vector<BattleScene::Enemy>& enemies,
-                          CharcterScene::CharcterDate& player,
+                          CharacterScene::CharacterData& player,
                           PushLog pushLog)
     {
         std::vector<BattleScene::Enemy*> alive;
@@ -42,11 +42,11 @@ namespace BattleLogic {
         int hit = Dice::RollDie(20);
         int dmg = (hit >= 6) ? attacker->atk : 1;
         player.ApplyEnduranceLoss(dmg);
-        if (pushLog) pushLog(attacker->name + " ‚ªUŒ‚‚µ " + std::to_string(dmg) + " ‚Ì‘Ï‹v—Í‚ğ’D‚Á‚½B", 1);
+        if (pushLog) pushLog(attacker->name + " ãŒæ”»æ’ƒã— " + std::to_string(dmg) + " ã®è€ä¹…åŠ›ã‚’å¥ªã£ãŸã€‚", 1);
     }
 
     void UpdateTurn(std::vector<BattleScene::Enemy>& enemies,
-                    CharcterScene::CharcterDate& player,
+                    CharacterScene::CharacterData& player,
                     BattleScene::Phase& phase,
                     PushLog pushLog)
     {
@@ -62,7 +62,7 @@ namespace BattleLogic {
         return true;
     }
 
-    bool CheckDefeat(const CharcterScene::CharcterDate& player)
+    bool CheckDefeat(const CharacterScene::CharacterData& player)
     {
         return player.endurance <= 0;
     }

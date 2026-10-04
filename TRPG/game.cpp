@@ -1,4 +1,4 @@
-#include "game.h"
+ï»¿#include "game.h"
 #include "system/imgui/imgui.h"
 #include "system/imgui/imgui_impl_dx11.h"
 #include "system/imgui/imgui_impl_win32.h"
@@ -7,39 +7,39 @@ static SceneManager g_SceneManager;
 
 void gameinit(HWND hwnd, ID3D11Device* device, ID3D11DeviceContext* deviceContext)
 {
-    g_SceneManager.Initialize(); // ƒV[ƒ“‰Šú‰»
+    g_SceneManager.Initialize(); // ã‚·ãƒ¼ãƒ³åˆæœŸåŒ–
 
-    // ImGui ‰Šú‰»
-    ImGui::CreateContext();                         // ƒRƒ“ƒeƒLƒXƒgì¬
-    ImGuiIO& io = ImGui::GetIO();                   // “ü—Íİ’è‚È‚Ç
-    ImGui::StyleColorsDark();                       // ƒXƒ^ƒCƒ‹İ’èi”CˆÓj
+    // ImGui åˆæœŸåŒ–
+    ImGui::CreateContext();                         // ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆä½œæˆ
+    ImGuiIO& io = ImGui::GetIO();                   // å…¥åŠ›è¨­å®šãªã©
+    ImGui::StyleColorsDark();                       // ã‚¹ã‚¿ã‚¤ãƒ«è¨­å®šï¼ˆä»»æ„ï¼‰
 
-    ImGui_ImplWin32_Init(hwnd);                     // Win32˜AŒg
-    ImGui_ImplDX11_Init(device, deviceContext);     // DirectX11˜AŒg
+    ImGui_ImplWin32_Init(hwnd);                     // Win32é€£æº
+    ImGui_ImplDX11_Init(device, deviceContext);     // DirectX11é€£æº
 
 }
 
 void gameloop()
 {
-    // ImGui ƒtƒŒ[ƒ€ŠJn
+    // ImGui ãƒ•ãƒ¬ãƒ¼ãƒ é–‹å§‹
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
-    // ƒV[ƒ“XVE•`‰æiImGui::Button ‚È‚Ç‚ğŠÜ‚Şj
+    // ã‚·ãƒ¼ãƒ³æ›´æ–°ãƒ»æç”»ï¼ˆImGui::Button ãªã©ã‚’å«ã‚€ï¼‰
     g_SceneManager.Update();
     g_SceneManager.Render();
 
-    // ImGui •`‰æ
+    // ImGui æç”»
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
 void gamedispose()
 {
-    g_SceneManager.Finalize(); // ƒV[ƒ“‚ÌŒãˆ—
+    g_SceneManager.Finalize(); // ã‚·ãƒ¼ãƒ³ã®å¾Œå‡¦ç†
 
-    // ImGui I—¹ˆ—
+    // ImGui çµ‚äº†å‡¦ç†
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();

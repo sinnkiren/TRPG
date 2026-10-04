@@ -10,23 +10,23 @@ namespace BattleLogic {
 
     // Player attack logic: roll d100, determine success and damage, update target/player/phase
     void PlayerAttack(BattleScene::Enemy& target,
-                      CharcterScene::CharcterDate& player,
+                      CharacterScene::CharacterData& player,
                       int& lastRoll,
                       BattleScene::Phase& phase,
                       PushLog pushLog);
 
     // Execute a single enemy turn (simple AI)
     void ExecuteEnemyTurn(std::vector<BattleScene::Enemy>& enemies,
-                          CharcterScene::CharcterDate& player,
+                          CharacterScene::CharacterData& player,
                           PushLog pushLog);
 
     // Advance/update turn: if phase==EnemyTurn, run enemy actions and flip phase
     void UpdateTurn(std::vector<BattleScene::Enemy>& enemies,
-                    CharcterScene::CharcterDate& player,
+                    CharacterScene::CharacterData& player,
                     BattleScene::Phase& phase,
                     PushLog pushLog);
 
     // Victory/defeat checks
     bool CheckVictory(const std::vector<BattleScene::Enemy>& enemies);
-    bool CheckDefeat(const CharcterScene::CharcterDate& player);
+    bool CheckDefeat(const CharacterScene::CharacterData& player);
 }

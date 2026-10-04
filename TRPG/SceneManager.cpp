@@ -1,4 +1,4 @@
-#include "SceneManager.h"
+ï»¿#include "SceneManager.h"
 #include "TitleScene.h"
 #include "TRPGSelectScene.h"
 #include "ScenarioScene.h"
@@ -14,8 +14,8 @@
 // ImGui for input capture checks
 #include "system/imgui/imgui.h"
 
-// Windows ƒwƒbƒ_‚ğæ‚É“Ç‚İ‚İ‚Ü‚·B
-// WIN32_LEAN_AND_MEAN ‚Æ NOMINMAX ‚ğ’è‹`‚µ‚Ä•s—v‚È’è‹`Eƒ}ƒNƒŠ±Â‚ğ”ğ‚¯‚éB
+// Windows ãƒ˜ãƒƒãƒ€ã‚’å…ˆã«èª­ã¿è¾¼ã¿ã¾ã™ã€‚
+// WIN32_LEAN_AND_MEAN ã¨ NOMINMAX ã‚’å®šç¾©ã—ã¦ä¸è¦ãªå®šç¾©ãƒ»ãƒã‚¯ãƒ­å¹²æ¸‰ã‚’é¿ã‘ã‚‹ã€‚
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -24,10 +24,10 @@
 #endif
 #include <Windows.h>
 
-// Direct3D ‚ğ–¾¦“I‚ÉƒCƒ“ƒNƒ‹[ƒhid3d11.h ‚Ì‘O‚É Windows.h ‚ª•K—vj
+// Direct3D ã‚’æ˜ç¤ºçš„ã«ã‚¤ãƒ³ã‚¯ãƒ«ãƒ¼ãƒ‰ï¼ˆd3d11.h ã®å‰ã« Windows.h ãŒå¿…è¦ï¼‰
 #include <d3d11.h>
 
-// DirectXMathiDirectX ŠÖ˜Aƒwƒbƒ_‚Í Windows.h ‚ÌŒã‚Éj
+// DirectXMathï¼ˆDirectX é–¢é€£ãƒ˜ãƒƒãƒ€ã¯ Windows.h ã®å¾Œã«ï¼‰
 #include <DirectXMath.h>
 #include <string>
 #include <cstdint>
@@ -36,7 +36,7 @@
 #include <algorithm>
 #include <set>
 
-SceneManager g_SceneManager; // À‘Ì’è‹`‚Í‚±‚±‚¾‚¯I
+SceneManager g_SceneManager; // å®Ÿä½“å®šç¾©ã¯ã“ã“ã ã‘ï¼
 
 // Set default dev mode based on build type
 static bool s_defaultDevMode =
@@ -143,7 +143,7 @@ void SceneManager::HandleFileDrop(const std::string& path)
             }
 
             if (currentType == SceneType::CHARACTER_SELECT) {
-                CharcterScene* cs = dynamic_cast<CharcterScene*>(currentScene.get());
+                CharacterScene* cs = dynamic_cast<CharacterScene*>(currentScene.get());
                 if (!cs) return;
                 cs->SetPortraitPath(p);
                 return;
@@ -173,14 +173,14 @@ void SceneManager::UpdateWindowTitle()
     // base title depending on currentType
     const wchar_t* base = L"TRPG";
     switch (currentType) {
-    case SceneType::TITLE: base = L"TRPG - ƒ^ƒCƒgƒ‹"; break;
-    case SceneType::TRPG_SELECT: base = L"TRPG - TRPG‘I‘ğ"; break;
-    case SceneType::SCENARIO_SELECT: base = L"TRPG - ƒVƒiƒŠƒI‘I‘ğ"; break;
-    case SceneType::CHARACTER_SELECT: base = L"TRPG - ƒLƒƒƒ‰ƒNƒ^[‘I‘ğ"; break;
-    case SceneType::GAME_PLAY: base = L"TRPG - –{•Ò"; break;
+    case SceneType::TITLE: base = L"TRPG - ã‚¿ã‚¤ãƒˆãƒ«"; break;
+    case SceneType::TRPG_SELECT: base = L"TRPG - TRPGé¸æŠ"; break;
+    case SceneType::SCENARIO_SELECT: base = L"TRPG - ã‚·ãƒŠãƒªã‚ªé¸æŠ"; break;
+    case SceneType::CHARACTER_SELECT: base = L"TRPG - ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼é¸æŠ"; break;
+    case SceneType::GAME_PLAY: base = L"TRPG - æœ¬ç·¨"; break;
     case SceneType::STORY_EDITOR: base = L"TRPG - Story Editor"; break;
-    case SceneType::BATTLE: base = L"TRPG - ƒoƒgƒ‹"; break;
-    case SceneType::RESULT: base = L"TRPG - ƒŠƒUƒ‹ƒg"; break;
+    case SceneType::BATTLE: base = L"TRPG - ãƒãƒˆãƒ«"; break;
+    case SceneType::RESULT: base = L"TRPG - ãƒªã‚¶ãƒ«ãƒˆ"; break;
     }
 
     std::wstring title = base;
@@ -254,7 +254,7 @@ void SceneManager::HandleInput() {
 }
 
 // Backwards-compatible single-player setters/getters operate on the active player.
-CharcterScene::CharcterDate& SceneManager::GetPlayer() { 
+CharacterScene::CharacterData& SceneManager::GetPlayer() { 
     if (activePlayerIndex < 0 || activePlayerIndex >= (int)players.size()) {
         players.emplace_back();
         activePlayerIndex = (int)players.size() - 1;
@@ -262,13 +262,13 @@ CharcterScene::CharcterDate& SceneManager::GetPlayer() {
     return players[activePlayerIndex];
 }
 
-const CharcterScene::CharcterDate& SceneManager::GetPlayer() const { 
-    static CharcterScene::CharcterDate dummy;
+const CharacterScene::CharacterData& SceneManager::GetPlayer() const { 
+    static CharacterScene::CharacterData dummy;
     if (activePlayerIndex < 0 || activePlayerIndex >= (int)players.size()) return dummy;
     return players[activePlayerIndex];
 }
 
-void SceneManager::SetPlayer(const CharcterScene::CharcterDate& p) {
+void SceneManager::SetPlayer(const CharacterScene::CharacterData& p) {
     if (activePlayerIndex < 0 || activePlayerIndex >= (int)players.size()) {
         players.push_back(p);
         activePlayerIndex = (int)players.size() - 1;
@@ -446,23 +446,23 @@ void SceneManager::ApplyPendingChange() {
     switch (pendingSceneType) {
     case SceneType::TITLE:
         currentScene = std::make_unique<TitleScene>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒ^ƒCƒgƒ‹");
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ã‚¿ã‚¤ãƒˆãƒ«");
         break;
     case SceneType::TRPG_SELECT:
         currentScene = std::make_unique<TRPGSelectScene>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - TRPG‘I‘ğ");
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - TRPGé¸æŠ");
         break;
     case SceneType::SCENARIO_SELECT:
         currentScene = std::make_unique<ScenarioScene>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒVƒiƒŠƒI‘I‘ğ");
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ã‚·ãƒŠãƒªã‚ªé¸æŠ");
         break;
     case SceneType::CHARACTER_SELECT:
-        currentScene = std::make_unique<CharcterScene>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒLƒƒƒ‰ƒNƒ^[‘I‘ğ");
+        currentScene = std::make_unique<CharacterScene>();
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼é¸æŠ");
         break;
     case SceneType::GAME_PLAY:
         currentScene = std::make_unique<StoryPlayer>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - –{•Ò");
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - æœ¬ç·¨");
         break;
     case SceneType::STORY_EDITOR:
         currentScene = std::make_unique<StoryEditorScene>();
@@ -470,36 +470,36 @@ void SceneManager::ApplyPendingChange() {
         break;
     case SceneType::EXPLORE:
         currentScene = std::make_unique<ExploreScene>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ’Tõ");
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - æ¢ç´¢");
         break;
-            // --- ApplyPendingChange() “àABATTLE ƒP[ƒX’¼‘O‚ÉƒfƒoƒbƒOƒƒO‚ğ’Ç‰Á ---
+            // --- ApplyPendingChange() å†…ã€BATTLE ã‚±ãƒ¼ã‚¹ç›´å‰ã«ãƒ‡ãƒãƒƒã‚°ãƒ­ã‚°ã‚’è¿½åŠ  ---
     case SceneType::BATTLE: {
             auto battle = std::make_unique<BattleScene>();
 
-            // ƒfƒoƒbƒO: ƒvƒŒƒCƒ„[ƒf[ƒ^‚ÌƒAƒhƒŒƒX‚Æå—vƒtƒB[ƒ‹ƒh‚ğƒƒOo—Í
-            CharcterScene::CharcterDate &pd = GetPlayer();
+            // ãƒ‡ãƒãƒƒã‚°: ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ‡ãƒ¼ã‚¿ã®ã‚¢ãƒ‰ãƒ¬ã‚¹ã¨ä¸»è¦ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚’ãƒ­ã‚°å‡ºåŠ›
+            CharacterScene::CharacterData &pd = GetPlayer();
             if (m_devMode) {
                 std::string s = std::string("SceneManager: copying active player -> BattleScene (addr=") + std::to_string(reinterpret_cast<intptr_t>(static_cast<void*>(&pd)))
                     + " name=" + pd.name + " endurance=" + std::to_string(pd.endurance) + "/" + std::to_string(pd.maxEndurance);
                 ::Log::Log(::Log::Level::Debug, s);
             }
 
-            // ’lƒRƒs[‚Å“n‚·
+            // å€¤ã‚³ãƒ”ãƒ¼ã§æ¸¡ã™
             battle->player = pd;
 
-            // ƒfƒoƒbƒO: ƒRƒs[æ‚ÌƒAƒhƒŒƒX / ’l‚ğŠm”F
+            // ãƒ‡ãƒãƒƒã‚°: ã‚³ãƒ”ãƒ¼å…ˆã®ã‚¢ãƒ‰ãƒ¬ã‚¹ / å€¤ã‚’ç¢ºèª
             if (m_devMode) {
                 std::string s = std::string("SceneManager: after copy battle->player (name=") + battle->player.name + " endurance=" + std::to_string(battle->player.endurance) + "/" + std::to_string(battle->player.maxEndurance);
                 ::Log::Log(::Log::Level::Debug, s);
             }
 
             currentScene = std::move(battle);
-            if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒoƒgƒ‹");
+            if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ãƒãƒˆãƒ«");
             break;
         }
     case SceneType::RESULT:
         currentScene = std::make_unique<Result>();
-        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒŠƒUƒ‹ƒg");
+        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ãƒªã‚¶ãƒ«ãƒˆ");
         break;
     }
 
@@ -526,7 +526,7 @@ void SceneManager::ApplyPendingChange() {
                 currentType = SceneType::SCENARIO_SELECT;
                 currentScene.reset();
                 currentScene = std::make_unique<ScenarioScene>();
-                if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒVƒiƒŠƒI‘I‘ğ");
+                if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ã‚·ãƒŠãƒªã‚ªé¸æŠ");
                 try { currentScene->Initialize(); } catch(...) {}
             }
             else {
@@ -540,7 +540,7 @@ void SceneManager::ApplyPendingChange() {
                         currentType = SceneType::SCENARIO_SELECT;
                         currentScene.reset();
                         currentScene = std::make_unique<ScenarioScene>();
-                        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ƒVƒiƒŠƒI‘I‘ğ");
+                        if (m_hWnd) SetWindowTextW(m_hWnd, L"TRPG - ã‚·ãƒŠãƒªã‚ªé¸æŠ");
                         try { currentScene->Initialize(); } catch(...) {}
                     }
                     else {
@@ -565,7 +565,7 @@ void SceneManager::Finalize() {}
 // Public accessor implementation placed in cpp to avoid multiple-definition issues
 bool SceneManager::HasPendingChange() const { return pendingChange; }
 
-int SceneManager::AddPlayer(const CharcterScene::CharcterDate& p)
+int SceneManager::AddPlayer(const CharacterScene::CharacterData& p)
 {
     players.push_back(p);
     if (activePlayerIndex == -1) activePlayerIndex = (int)players.size() - 1;
@@ -581,8 +581,8 @@ bool SceneManager::RemovePlayer(int index)
     return true;
 }
 
-const std::vector<CharcterScene::CharcterDate>& SceneManager::GetPlayers() const { return players; }
-std::vector<CharcterScene::CharcterDate>& SceneManager::GetPlayers() { return players; }
+const std::vector<CharacterScene::CharacterData>& SceneManager::GetPlayers() const { return players; }
+std::vector<CharacterScene::CharacterData>& SceneManager::GetPlayers() { return players; }
 
 void SceneManager::SetActivePlayerIndex(int idx)
 {

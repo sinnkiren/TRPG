@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #pragma comment(lib, "winmm.lib")
 
@@ -8,50 +8,50 @@
 #include "system/NonCopyable.h"
 
 /**
- * @brief ƒAƒvƒŠƒP[ƒVƒ‡ƒ“ƒNƒ‰ƒX‚Å‚·.
+ * @brief ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã‚¯ãƒ©ã‚¹ã§ã™.
  * @details
- * - ƒAƒvƒŠ‘S‘Ì‚Ì‰Šú‰»EI—¹ˆ—EƒƒCƒ“ƒ‹[ƒv‚ğŠÇ—
- * - DirectX11 ƒfƒoƒCƒX‚âƒEƒBƒ“ƒhƒEƒnƒ“ƒhƒ‹‚ğ•Û
- * - ”ñƒRƒs[‰Â”\‚É‚·‚é‚½‚ß‚É NonCopyable ‚ğŒp³
+ * - ã‚¢ãƒ—ãƒªå…¨ä½“ã®åˆæœŸåŒ–ãƒ»çµ‚äº†å‡¦ç†ãƒ»ãƒ¡ã‚¤ãƒ³ãƒ«ãƒ¼ãƒ—ã‚’ç®¡ç†
+ * - DirectX11 ãƒ‡ãƒã‚¤ã‚¹ã‚„ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒãƒ³ãƒ‰ãƒ«ã‚’ä¿æŒ
+ * - éã‚³ãƒ”ãƒ¼å¯èƒ½ã«ã™ã‚‹ãŸã‚ã« NonCopyable ã‚’ç¶™æ‰¿
  */
 class Application : NonCopyable
 {
 public:
-    Application(uint32_t width, uint32_t height);  ///< ƒRƒ“ƒXƒgƒ‰ƒNƒ^iƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğw’èj
-    ~Application();                               ///< ƒfƒXƒgƒ‰ƒNƒ^iƒŠƒ\[ƒX‰ğ•új
+    Application(uint32_t width, uint32_t height);  ///< ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ï¼ˆã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’æŒ‡å®šï¼‰
+    ~Application();                               ///< ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿ï¼ˆãƒªã‚½ãƒ¼ã‚¹è§£æ”¾ï¼‰
 
-    void Run();                                   ///< ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ÌÀsiƒƒCƒ“ƒ‹[ƒvŠJnj
+    void Run();                                   ///< ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã®å®Ÿè¡Œï¼ˆãƒ¡ã‚¤ãƒ³ãƒ«ãƒ¼ãƒ—é–‹å§‹ï¼‰
 
-    /// ƒEƒBƒ“ƒhƒEî•ñ‚ÌƒQƒbƒ^[
-    static uint32_t GetWidth();    ///< ƒEƒBƒ“ƒhƒE‚Ì‰¡•
-    static uint32_t GetHeight();   ///< ƒEƒBƒ“ƒhƒE‚Ìc•
-    static HWND GetWindow();       ///< ƒEƒBƒ“ƒhƒEƒnƒ“ƒhƒ‹
-    static HINSTANCE GetHInstance(); ///< ƒCƒ“ƒXƒ^ƒ“ƒXƒnƒ“ƒhƒ‹
+    /// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦æƒ…å ±ã®ã‚²ãƒƒã‚¿ãƒ¼
+    static uint32_t GetWidth();    ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®æ¨ªå¹…
+    static uint32_t GetHeight();   ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ç¸¦å¹…
+    static HWND GetWindow();       ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒãƒ³ãƒ‰ãƒ«
+    static HINSTANCE GetHInstance(); ///< ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãƒãƒ³ãƒ‰ãƒ«
 
-    // DirectX ƒfƒoƒCƒXæ“¾—pƒAƒNƒZƒTiŠO•”‚©‚ç’¼Ú m_Device ‚ÖG‚ç‚È‚¢j
+    // DirectX ãƒ‡ãƒã‚¤ã‚¹å–å¾—ç”¨ã‚¢ã‚¯ã‚»ã‚µï¼ˆå¤–éƒ¨ã‹ã‚‰ç›´æ¥ m_Device ã¸è§¦ã‚‰ãªã„ï¼‰
     static ID3D11Device* GetDevice();
     static ID3D11DeviceContext* GetDeviceContext();
 
 private:
-    // ========== ƒƒ“ƒo•Ï” ==========
-    static HINSTANCE   m_hInst;    ///< ƒCƒ“ƒXƒ^ƒ“ƒXƒnƒ“ƒhƒ‹
-    static HWND        m_hWnd;     ///< ƒEƒBƒ“ƒhƒEƒnƒ“ƒhƒ‹
-    static uint32_t    m_Width;    ///< ƒEƒBƒ“ƒhƒE‰¡•
-    static uint32_t    m_Height;   ///< ƒEƒBƒ“ƒhƒEc•
+    // ========== ãƒ¡ãƒ³ãƒå¤‰æ•° ==========
+    static HINSTANCE   m_hInst;    ///< ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ãƒãƒ³ãƒ‰ãƒ«
+    static HWND        m_hWnd;     ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒãƒ³ãƒ‰ãƒ«
+    static uint32_t    m_Width;    ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦æ¨ªå¹…
+    static uint32_t    m_Height;   ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ç¸¦å¹…
 
-    // DirectX11 ‚Ìå—v‚ÈƒCƒ“ƒ^[ƒtƒF[ƒX
-    static ID3D11Device* m_Device;             ///< Direct3D ƒfƒoƒCƒX
-    static ID3D11DeviceContext* m_DeviceContext; ///< ƒfƒoƒCƒXƒRƒ“ƒeƒLƒXƒg
-    static IDXGISwapChain* m_SwapChain;       ///< ƒXƒƒbƒvƒ`ƒF[ƒ“i‰æ–Ê‚Ì— •\Ø‚è‘Ö‚¦j
-    static ID3D11RenderTargetView* m_RenderTargetView; // ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒgƒrƒ…[
+    // DirectX11 ã®ä¸»è¦ãªã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹
+    static ID3D11Device* m_Device;             ///< Direct3D ãƒ‡ãƒã‚¤ã‚¹
+    static ID3D11DeviceContext* m_DeviceContext; ///< ãƒ‡ãƒã‚¤ã‚¹ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆ
+    static IDXGISwapChain* m_SwapChain;       ///< ã‚¹ãƒ¯ãƒƒãƒ—ãƒã‚§ãƒ¼ãƒ³ï¼ˆç”»é¢ã®è£è¡¨åˆ‡ã‚Šæ›¿ãˆï¼‰
+    static ID3D11RenderTargetView* m_RenderTargetView; // ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ“ãƒ¥ãƒ¼
 
-    // ========== “à•”ŠÖ” ==========
-    static bool InitApp();   ///< ƒAƒvƒŠ‘S‘Ì‚Ì‰Šú‰»
-    static void TermApp();   ///< ƒAƒvƒŠ‘S‘Ì‚ÌI—¹ˆ—
-    static bool InitWnd();   ///< ƒEƒBƒ“ƒhƒE‚Ì‰Šú‰»
-    static void TermWnd();   ///< ƒEƒBƒ“ƒhƒE‚ÌI—¹ˆ—
-    static void MainLoop();  ///< ƒƒCƒ“ƒ‹[ƒv
+    // ========== å†…éƒ¨é–¢æ•° ==========
+    static bool InitApp();   ///< ã‚¢ãƒ—ãƒªå…¨ä½“ã®åˆæœŸåŒ–
+    static void TermApp();   ///< ã‚¢ãƒ—ãƒªå…¨ä½“ã®çµ‚äº†å‡¦ç†
+    static bool InitWnd();   ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®åˆæœŸåŒ–
+    static void TermWnd();   ///< ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®çµ‚äº†å‡¦ç†
+    static void MainLoop();  ///< ãƒ¡ã‚¤ãƒ³ãƒ«ãƒ¼ãƒ—
 
-    // ƒEƒBƒ“ƒhƒEƒvƒƒV[ƒWƒƒiƒCƒxƒ“ƒgˆ—j
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£ï¼ˆã‚¤ãƒ™ãƒ³ãƒˆå‡¦ç†ï¼‰
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 };

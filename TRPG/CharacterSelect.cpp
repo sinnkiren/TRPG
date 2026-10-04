@@ -1,4 +1,4 @@
-#include "CharacterSelect.h"
+ï»¿#include "CharacterSelect.h"
 #include "Dice.h"
 #include "DiceVisual.h"
 #include "system/imgui/imgui.h"
@@ -6,26 +6,26 @@
 #include "TextureManager.h"
 #include "ExploreScene.h"
 #include <regex>
-#include <cstring> // strncpy —p
+#include <cstring> // strncpy ç”¨
 #include <vector>
 #include <sstream>
 
-// Še”\—Í‚²‚Æ‚Ì’¼‹ßƒ[ƒ‹iŒÂX‚Ìƒ_ƒCƒX‚Ìo–Új‚ğ•Û‚·‚éiƒtƒ@ƒCƒ‹ƒXƒR[ƒvj
+// å„èƒ½åŠ›ã”ã¨ã®ç›´è¿‘ãƒ­ãƒ¼ãƒ«ï¼ˆå€‹ã€…ã®ãƒ€ã‚¤ã‚¹ã®å‡ºç›®ï¼‰ã‚’ä¿æŒã™ã‚‹ï¼ˆãƒ•ã‚¡ã‚¤ãƒ«ã‚¹ã‚³ãƒ¼ãƒ—ï¼‰
 static std::vector<std::vector<int>> abilityFaces;
 
 /*
- * CharcterScene::Initialize
+ * CharacterScene::Initialize
  * -------------------------
- * ƒLƒƒƒ‰ƒNƒ^[‘I‘ğƒV[ƒ“‚Ì‰Šú‰»ˆ—B
- * - ƒTƒ“ƒvƒ‹ƒLƒƒƒ‰ƒNƒ^[‚ğ—pˆÓ‚µ‚Ü‚·B
- * - SceneManager ‚ÉŠù‚ÉƒƒXƒ^[‚ª‚ ‚ê‚Î‚»‚ê‚ğ•ÒW‘ÎÛ‚É‚µA‚È‚¯‚ê‚ÎƒTƒ“ƒvƒ‹‚ğ1‘Ì’Ç‰Á‚µ‚Ü‚·B
- * - ”\—Ís (abilities) ‚Æo–ÚƒLƒƒƒbƒVƒ… (abilityFaces) ‚Ì‰Šú‰»‚ğs‚¢‚Ü‚·B
+ * ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼é¸æŠã‚·ãƒ¼ãƒ³ã®åˆæœŸåŒ–å‡¦ç†ã€‚
+ * - ã‚µãƒ³ãƒ—ãƒ«ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚’ç”¨æ„ã—ã¾ã™ã€‚
+ * - SceneManager ã«æ—¢ã«ãƒ­ã‚¹ã‚¿ãƒ¼ãŒã‚ã‚Œã°ãã‚Œã‚’ç·¨é›†å¯¾è±¡ã«ã—ã€ãªã‘ã‚Œã°ã‚µãƒ³ãƒ—ãƒ«ã‚’1ä½“è¿½åŠ ã—ã¾ã™ã€‚
+ * - èƒ½åŠ›è¡Œ (abilities) ã¨å‡ºç›®ã‚­ãƒ£ãƒƒã‚·ãƒ¥ (abilityFaces) ã®åˆæœŸåŒ–ã‚’è¡Œã„ã¾ã™ã€‚
  */
-void CharcterScene::Initialize()
+void CharacterScene::Initialize()
 {
     sampleCharacters.clear();
 
-    CharcterDate a;
+    CharacterData a;
     a.name = "Researcher Sample";
     a.job = "Investigator";
     a.str =6; a.con =10; a.dex =8; a.int_ =14; a.pow =12; a.cha =9; a.app =10; a.siz =9; a.edu =12;
@@ -33,7 +33,7 @@ void CharcterScene::Initialize()
     a.skills = { "Library Use", "Psychology", "Dodge" };
     sampleCharacters.push_back(a);
 
-    CharcterDate b;
+    CharacterData b;
     b.name = "Officer Sample";
     b.job = "Police Officer";
     b.str =12; b.con =11; b.dex =12; b.int_ =10; b.pow =10; b.cha =9; b.app =8; b.siz =11; b.edu =9;
@@ -41,7 +41,7 @@ void CharcterScene::Initialize()
     b.skills = { "Firearms", "Negotiation", "Tracking" };
     sampleCharacters.push_back(b);
 
-    CharcterDate c;
+    CharacterData c;
     c.name = "Student Sample";
     c.job = "Student";
     c.str =7; c.con =8; c.dex =9; c.int_ =12; c.pow =8; c.cha =11; c.app =10; c.siz =8; c.edu =14;
@@ -49,7 +49,7 @@ void CharcterScene::Initialize()
     c.skills = { "Persuade", "Translation", "Stealth" };
     sampleCharacters.push_back(c);
 
-    // ‰Šú‘I‘ğ‚ğİ’è
+    // åˆæœŸé¸æŠã‚’è¨­å®š
     selectedSampleIndex =0;
     // If SceneManager already has players, use active player; otherwise create one from sample
     auto &roster = g_SceneManager.GetPlayers();
@@ -68,9 +68,9 @@ void CharcterScene::Initialize()
 
     lastDiceRoll = 0;
 
-    // ”\—Í’ls‚Ì‰Šú‰»
+    // èƒ½åŠ›å€¤è¡Œã®åˆæœŸåŒ–
     abilities.clear();
-    // •\Œ`®‚Å‰Šúƒf[ƒ^‚ğ’è‹`‚µ‚Ä‚©‚çˆêŠ‡‚Å abilities ‚ÉŠi”[‚·‚é
+    // è¡¨å½¢å¼ã§åˆæœŸãƒ‡ãƒ¼ã‚¿ã‚’å®šç¾©ã—ã¦ã‹ã‚‰ä¸€æ‹¬ã§ abilities ã«æ ¼ç´ã™ã‚‹
     struct AbilityInit { const char* name; const char* expr; int value; bool locked; };
     AbilityInit initList[] = {
         {"STR", "3D6",  charcter.str,  false},
@@ -86,13 +86,13 @@ void CharcterScene::Initialize()
         abilities.push_back({ std::string(it.name), std::string(it.expr), it.value, it.locked });
     }
 
-    // abilityFaces ‚ğ”\—Í”‚É‡‚í‚¹‚Ä‰Šú‰»
+    // abilityFaces ã‚’èƒ½åŠ›æ•°ã«åˆã‚ã›ã¦åˆæœŸåŒ–
     abilityFaces.clear();
     abilityFaces.resize(abilities.size());
 }
 
-// abilities <-> character ‚Ì“¯Šúƒwƒ‹ƒpiUI ‚©‚çŒÄ‚Î‚ê‚éj
-void CharcterScene::RefreshAbilitiesFromCharacter()
+// abilities <-> character ã®åŒæœŸãƒ˜ãƒ«ãƒ‘ï¼ˆUI ã‹ã‚‰å‘¼ã°ã‚Œã‚‹ï¼‰
+void CharacterScene::RefreshAbilitiesFromCharacter()
 {
     for (auto &a : abilities) {
         if (a.name == "STR") a.value = charcter.str;
@@ -106,8 +106,8 @@ void CharcterScene::RefreshAbilitiesFromCharacter()
     }
 }
 
-// UI ‚©‚çŠm’è‘€ì‚ğs‚¤Û‚É abilities ‚Ì’l‚ğ character ‚É“K—p‚·‚é
-void CharcterScene::ApplyAbilitiesToCharacter()
+// UI ã‹ã‚‰ç¢ºå®šæ“ä½œã‚’è¡Œã†éš›ã« abilities ã®å€¤ã‚’ character ã«é©ç”¨ã™ã‚‹
+void CharacterScene::ApplyAbilitiesToCharacter()
 {
     for (auto &a : abilities) {
         if (a.name == "STR") charcter.str = a.value;
@@ -124,12 +124,12 @@ void CharcterScene::ApplyAbilitiesToCharacter()
 /*
  * EvalDiceExpr
  * -------------
- * ŠÈˆÕ“I‚Èƒ_ƒCƒX®ƒp[ƒT: "nDm" ‚Ü‚½‚Í "nDm+k" ‚ÌŒ`®‚ğó‚¯æ‚è‡Œv’l‚ğ•Ô‚µ‚Ü‚·B
- * - ƒƒOo—Í‚âŒÂ•Ê‚Ìo–ÚÚ×‚Í RollDiceDetailed ‚ğg—p‚µ‚Ä‚­‚¾‚³‚¢B
+ * ç°¡æ˜“çš„ãªãƒ€ã‚¤ã‚¹å¼ãƒ‘ãƒ¼ã‚µ: "nDm" ã¾ãŸã¯ "nDm+k" ã®å½¢å¼ã‚’å—ã‘å–ã‚Šåˆè¨ˆå€¤ã‚’è¿”ã—ã¾ã™ã€‚
+ * - ãƒ­ã‚°å‡ºåŠ›ã‚„å€‹åˆ¥ã®å‡ºç›®è©³ç´°ã¯ RollDiceDetailed ã‚’ä½¿ç”¨ã—ã¦ãã ã•ã„ã€‚
  */
 static int EvalDiceExpr(const std::string& expr)
 {
-    // ŠÈˆÕ“I‚Èƒp[ƒT: nDm [+ add]
+    // ç°¡æ˜“çš„ãªãƒ‘ãƒ¼ã‚µ: nDm [+ add]
     std::regex re(R"((\d+)D(\d+)(?:\s*\+\s*(\d+))?)", std::regex::icase);
     std::smatch m;
     if (!std::regex_match(expr, m, re)) return 0;
@@ -143,15 +143,15 @@ static int EvalDiceExpr(const std::string& expr)
     return total;
 }
 
-// o–Ú‚ÌÚ×‚ğ•Ô‚·ƒwƒ‹ƒp: ŒÂX‚Ìƒ_ƒCƒX‚Ìo–Ú‚ğ”z—ñ‚Å•Ô‚µA‡Œv‚ğ outTotal ‚Éİ’è‚·‚é
+// å‡ºç›®ã®è©³ç´°ã‚’è¿”ã™ãƒ˜ãƒ«ãƒ‘: å€‹ã€…ã®ãƒ€ã‚¤ã‚¹ã®å‡ºç›®ã‚’é…åˆ—ã§è¿”ã—ã€åˆè¨ˆã‚’ outTotal ã«è¨­å®šã™ã‚‹
 // If outSides != nullptr, it will be set to the parsed sides value.
 /*
  * RollDiceDetailed
  * -----------------
- * ƒ_ƒCƒX®‚ğ‰ğÍ‚µ‚ÄŒÂX‚Ìƒ_ƒCƒXo–Ú‚ğ¶¬‚µAo–Ú”z—ñ‚ğ•Ô‚µ‚Ü‚·B
- * - outTotal ‚É‡Œv’l‚ğİ’è‚µ‚Ü‚·B
- * - outSides ‚ª nullptr ‚Å‚È‚¯‚ê‚ÎƒTƒCƒRƒ‚Ì–Ê”‚ğŠi”[‚µ‚Ü‚·B
- * - ƒrƒWƒ…ƒAƒ‹—p‚Ì DiceVisual ‚Æ‘g‚İ‡‚í‚¹‚Äg‚¢‚Ü‚·B
+ * ãƒ€ã‚¤ã‚¹å¼ã‚’è§£æã—ã¦å€‹ã€…ã®ãƒ€ã‚¤ã‚¹å‡ºç›®ã‚’ç”Ÿæˆã—ã€å‡ºç›®é…åˆ—ã‚’è¿”ã—ã¾ã™ã€‚
+ * - outTotal ã«åˆè¨ˆå€¤ã‚’è¨­å®šã—ã¾ã™ã€‚
+ * - outSides ãŒ nullptr ã§ãªã‘ã‚Œã°ã‚µã‚¤ã‚³ãƒ­ã®é¢æ•°ã‚’æ ¼ç´ã—ã¾ã™ã€‚
+ * - ãƒ“ã‚¸ãƒ¥ã‚¢ãƒ«ç”¨ã® DiceVisual ã¨çµ„ã¿åˆã‚ã›ã¦ä½¿ã„ã¾ã™ã€‚
  */
 static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal, int* outSides = nullptr)
 {
@@ -175,12 +175,12 @@ static std::vector<int> RollDiceDetailed(const std::string& expr, int& outTotal,
 }
 
 /*
- * CharcterScene::Update
+ * CharacterScene::Update
  * ----------------------
- * –ˆƒtƒŒ[ƒ€XVˆ—B
- * - DiceVisual ‚ÌXV‚È‚ÇŒy”÷‚Èó‘ÔXV‚ğs‚¢‚Ü‚·B
+ * æ¯ãƒ•ãƒ¬ãƒ¼ãƒ æ›´æ–°å‡¦ç†ã€‚
+ * - DiceVisual ã®æ›´æ–°ãªã©è»½å¾®ãªçŠ¶æ…‹æ›´æ–°ã‚’è¡Œã„ã¾ã™ã€‚
  */
-void CharcterScene::Update()
+void CharacterScene::Update()
 {
     // Update Dice visual (use ImGui delta time when available)
     if (ImGui::GetCurrentContext() != nullptr) {
@@ -193,12 +193,12 @@ void CharcterScene::Update()
 }
 
 /*
- * CharcterScene::SetPortraitPath
+ * CharacterScene::SetPortraitPath
  * -------------------------------
- * ŠJ”­ƒ‚[ƒh‚Ì‚İŒÄ‚Ño‚µ‰Â”\Bw’è‚³‚ê‚½ƒpƒX‚ğ“–ŠYƒLƒƒƒ‰ƒNƒ^[‚Ì portraitPath ‚Éİ’è‚µA
- * ƒeƒNƒXƒ`ƒƒ‚ğ—\‚ßƒ[ƒh‚µ‚ÄƒLƒƒƒbƒVƒ…‚ğƒEƒH[ƒ€ƒAƒbƒv‚µ‚Ü‚·B
+ * é–‹ç™ºãƒ¢ãƒ¼ãƒ‰æ™‚ã®ã¿å‘¼ã³å‡ºã—å¯èƒ½ã€‚æŒ‡å®šã•ã‚ŒãŸãƒ‘ã‚¹ã‚’å½“è©²ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã® portraitPath ã«è¨­å®šã—ã€
+ * ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’äºˆã‚ãƒ­ãƒ¼ãƒ‰ã—ã¦ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚’ã‚¦ã‚©ãƒ¼ãƒ ã‚¢ãƒƒãƒ—ã—ã¾ã™ã€‚
  */
-void CharcterScene::SetPortraitPath(const std::string& path)
+void CharacterScene::SetPortraitPath(const std::string& path)
 {
     // Only allow in dev mode
     if (!g_SceneManager.IsDevMode()) return;
@@ -213,15 +213,15 @@ void CharcterScene::SetPortraitPath(const std::string& path)
 }
 
 /*
- * CharcterScene::Render
+ * CharacterScene::Render
  * ----------------------
- * ƒLƒƒƒ‰ƒNƒ^[ì¬/•ÒW UI ‚ğ•`‰æ‚µ‚Ü‚·B
- * - ƒp[ƒeƒBƒƒXƒ^[A”\—Íƒ[ƒ‹A”h¶’lAApply ƒ{ƒ^ƒ““™‚ğ•\¦‚µ‚Ü‚·B
- * - Apply ‘€ì‚Å SceneManager ‚ÉƒLƒƒƒ‰î•ñ‚ğ”½‰f‚µAExplore ‚Ì Save ‚ğŒÄ‚Ño‚µ‚Ä‰i‘±‰»‚µ‚Ü‚·B
+ * ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ä½œæˆ/ç·¨é›† UI ã‚’æç”»ã—ã¾ã™ã€‚
+ * - ãƒ‘ãƒ¼ãƒ†ã‚£ãƒ­ã‚¹ã‚¿ãƒ¼ã€èƒ½åŠ›ãƒ­ãƒ¼ãƒ«ã€æ´¾ç”Ÿå€¤ã€Apply ãƒœã‚¿ãƒ³ç­‰ã‚’è¡¨ç¤ºã—ã¾ã™ã€‚
+ * - Apply æ“ä½œã§ SceneManager ã«ã‚­ãƒ£ãƒ©æƒ…å ±ã‚’åæ˜ ã—ã€Explore ã® Save ã‚’å‘¼ã³å‡ºã—ã¦æ°¸ç¶šåŒ–ã—ã¾ã™ã€‚
  */
-void CharcterScene::Render()
+void CharacterScene::Render()
 {
-    // ˆÀ‘S: ImGui ‚ª‰Šú‰»‚³‚ê‚Ä‚¢‚È‚¯‚ê‚Î‰½‚à‚µ‚È‚¢
+    // å®‰å…¨: ImGui ãŒåˆæœŸåŒ–ã•ã‚Œã¦ã„ãªã‘ã‚Œã°ä½•ã‚‚ã—ãªã„
     if (ImGui::GetCurrentContext() == nullptr) {
         if (g_SceneManager.IsDevMode()) OutputDebugStringA("CharacterSelect::Render skipped - ImGui context not initialized\n");
         return;
@@ -267,7 +267,7 @@ void CharcterScene::Render()
     ImGui::NewLine();
     // controls for roster management
     if (ImGui::Button("New Empty")) {
-        CharcterDate nd;
+        CharacterData nd;
         nd.name = "New Character";
         int idx = g_SceneManager.AddPlayer(nd);
         g_SceneManager.SetActivePlayerIndex(idx);
@@ -288,7 +288,7 @@ void CharcterScene::Render()
             RefreshAbilitiesFromCharacter();
         } else {
             selectedSampleIndex = -1;
-            charcter = sampleCharacters.empty() ? CharcterDate() : sampleCharacters[0];
+            charcter = sampleCharacters.empty() ? CharacterData() : sampleCharacters[0];
             RefreshAbilitiesFromCharacter();
         }
     }
@@ -303,7 +303,7 @@ void CharcterScene::Render()
         ImGui::Text("(Dev) You can drag image files from Explorer onto the application window to set Portrait.");
     }
 
-    // ƒTƒ“ƒvƒ‹‚ÌŠÈˆÕ‘I‘ğƒRƒ“ƒ{
+    // ã‚µãƒ³ãƒ—ãƒ«ã®ç°¡æ˜“é¸æŠã‚³ãƒ³ãƒœ
     if (!sampleCharacters.empty()) {
         const char* names[16];
         int total = (int)sampleCharacters.size();
@@ -320,20 +320,20 @@ void CharcterScene::Render()
 
     ImGui::Separator();
 
-    // ----- –¼‘O‚ÆE‹Æ‚ğ•ÒW‰Â”\‚É‚·‚é -----
+    // ----- åå‰ã¨è·æ¥­ã‚’ç·¨é›†å¯èƒ½ã«ã™ã‚‹ -----
     {
-        // ƒoƒbƒtƒ@ƒTƒCƒY‚Í•K—v‚É‰‚¶‚ÄŠg’£‚µ‚Ä‚­‚¾‚³‚¢
+        // ãƒãƒƒãƒ•ã‚¡ã‚µã‚¤ã‚ºã¯å¿…è¦ã«å¿œã˜ã¦æ‹¡å¼µã—ã¦ãã ã•ã„
         char nameBuf[128];
         char jobBuf[128];
         std::memset(nameBuf, 0, sizeof(nameBuf));
         std::memset(jobBuf, 0, sizeof(jobBuf));
 
 #if defined(_MSC_VER)
-        // MSVC ŠÂ‹«: strncpy_s ‚ğg‚Á‚ÄˆÀ‘S‚ÉƒRƒs[iI’[‚Í©“®•ÛØj
+        // MSVC ç’°å¢ƒ: strncpy_s ã‚’ä½¿ã£ã¦å®‰å…¨ã«ã‚³ãƒ”ãƒ¼ï¼ˆçµ‚ç«¯ã¯è‡ªå‹•ä¿è¨¼ï¼‰
         strncpy_s(nameBuf, sizeof(nameBuf), charcter.name.c_str(), _TRUNCATE);
         strncpy_s(jobBuf, sizeof(jobBuf), charcter.job.c_str(), _TRUNCATE);
 #else
-        // ”ñ MSVC: strncpy ‚ğg‚¢‚Â‚Â–¾¦“I‚ÉI’[‚ğ•ÛØ‚·‚é
+        // é MSVC: strncpy ã‚’ä½¿ã„ã¤ã¤æ˜ç¤ºçš„ã«çµ‚ç«¯ã‚’ä¿è¨¼ã™ã‚‹
         std::strncpy(nameBuf, charcter.name.c_str(), sizeof(nameBuf) - 1);
         nameBuf[sizeof(nameBuf) - 1] = '\0';
         std::strncpy(jobBuf, charcter.job.c_str(), sizeof(jobBuf) - 1);
@@ -349,16 +349,16 @@ void CharcterScene::Render()
     }
     ImGui::Separator();
 
-    // ƒŒƒCƒAƒEƒg: ¶—ñ”\—ÍA‰E—ñ”h¶’l
+    // ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆ: å·¦åˆ—èƒ½åŠ›ã€å³åˆ—æ´¾ç”Ÿå€¤
     ImGui::Columns(2, nullptr, true);
 
-    // ¶: ”\—Íƒe[ƒuƒ‹
+    // å·¦: èƒ½åŠ›ãƒ†ãƒ¼ãƒ–ãƒ«
     ImGui::BeginChild("Abilities", ImVec2(0, 0), false);
-    ImGui::Text("”\—Í");
+    ImGui::Text("èƒ½åŠ›");
     ImGui::Separator();
 
     if (ImGui::Button("Roll All")) {
-        // abilityFaces ‚ª•s‘«‚µ‚Ä‚¢‚½‚ç‘µ‚¦‚é
+        // abilityFaces ãŒä¸è¶³ã—ã¦ã„ãŸã‚‰æƒãˆã‚‹
         if (abilityFaces.size() < abilities.size()) abilityFaces.resize(abilities.size());
 
         int lastTotal = 0;
@@ -366,7 +366,7 @@ void CharcterScene::Render()
             auto& a = abilities[i];
             if (!a.locked) {
                 int total = 0;
-                // ŒÂX‚Ìo–Ú‚ğæ“¾‚µ‚Ä faces ‚ğ•Û‘¶i‰æ‘œ•\¦‚Æ”’l•\¦‚Ì‚½‚ßj
+                // å€‹ã€…ã®å‡ºç›®ã‚’å–å¾—ã—ã¦ faces ã‚’ä¿å­˜ï¼ˆç”»åƒè¡¨ç¤ºã¨æ•°å€¤è¡¨ç¤ºã®ãŸã‚ï¼‰
                 auto faces = RollDiceDetailed(a.expr, total);
                 a.value = total;
                 if (i < abilityFaces.size()) abilityFaces[i] = faces;
@@ -384,16 +384,16 @@ void CharcterScene::Render()
 
     ImGui::Separator();
 
-    // ƒŒƒCƒAƒEƒg‰ü—Ç: ƒ{ƒ^ƒ“•‚ğŒÅ’è‚µâ‘ÎˆÊ’u‚Å”z’u‚µ‚Äd‚È‚è‚ğ–h‚®
+    // ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆæ”¹è‰¯: ãƒœã‚¿ãƒ³å¹…ã‚’å›ºå®šã—çµ¶å¯¾ä½ç½®ã§é…ç½®ã—ã¦é‡ãªã‚Šã‚’é˜²ã
     for (int i = 0; i < (int)abilities.size(); ++i) {
         auto& a = abilities[i];
         ImGui::PushID(i);
 
-        // –¼‘O—ñ
+        // åå‰åˆ—
         ImGui::Text("%s", a.name.c_str());
-        ImGui::SameLine(90); // –¼‘O—“‚Ì•i•K—v‚É‰‚¶‚Ä’²®j
+        ImGui::SameLine(90); // åå‰æ¬„ã®å¹…ï¼ˆå¿…è¦ã«å¿œã˜ã¦èª¿æ•´ï¼‰
 
-        // ƒ_ƒCƒX®ƒ{ƒ^ƒ“iŒÅ’è•j
+        // ãƒ€ã‚¤ã‚¹å¼ãƒœã‚¿ãƒ³ï¼ˆå›ºå®šå¹…ï¼‰
         if (ImGui::Button(a.expr.c_str(), ImVec2(64, 0))) {
             int total = 0;
             int sides = 6;
@@ -404,14 +404,14 @@ void CharcterScene::Render()
             if (!faces.empty()) DiceVisual::Instance().StartRollFaces(sides, faces);
         }
 
-        // ƒƒbƒNƒ`ƒFƒbƒNƒ{ƒbƒNƒXiˆÊ’uŒÅ’èj
+        // ãƒ­ãƒƒã‚¯ãƒã‚§ãƒƒã‚¯ãƒœãƒƒã‚¯ã‚¹ï¼ˆä½ç½®å›ºå®šï¼‰
         ImGui::SameLine(170);
         ImGui::Checkbox("Lock", &a.locked);
 
-        // o–Ú•\¦—Ìˆæ
+        // å‡ºç›®è¡¨ç¤ºé ˜åŸŸ
         ImGui::SameLine(240);
         if (i >= 0 && i < (int)abilityFaces.size() && !abilityFaces[i].empty()) {
-            // o–Ú•¶š—ñ‚ğì¬i—á: "1+4+3+6"A‰ÁZ•ª‚ª‚ ‚ê‚Î––”ö‚É +6 ‚È‚Çj
+            // å‡ºç›®æ–‡å­—åˆ—ã‚’ä½œæˆï¼ˆä¾‹: "1+4+3+6"ã€åŠ ç®—åˆ†ãŒã‚ã‚Œã°æœ«å°¾ã« +6 ãªã©ï¼‰
             int sumFaces = 0;
             std::string facesStr;
             {
@@ -429,7 +429,7 @@ void CharcterScene::Render()
             ImTextureID sheet = TextureManager::GetImGuiTextureID("texture/dice.jpg");
             if (!sheet) {
                 OutputDebugStringA("CharacterSelect: TextureManager returned NULL for texture/dice.jpg\n");
-                // ƒtƒH[ƒ‹ƒoƒbƒNF”’l‚ğ•À‚×‚Ä•\¦
+                // ãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯ï¼šæ•°å€¤ã‚’ä¸¦ã¹ã¦è¡¨ç¤º
                 for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
                     ImGui::Text("%d", abilityFaces[i][fi]);
                     ImGui::SameLine();
@@ -441,7 +441,7 @@ void CharcterScene::Render()
             else {
                 const float cols = 3.0f;
                 const float rows = 2.0f;
-                // ‰æ‘œ‚ğ‰¡•À‚Ñ‚É•\¦
+                // ç”»åƒã‚’æ¨ªä¸¦ã³ã«è¡¨ç¤º
                 for (size_t fi = 0; fi < abilityFaces[i].size(); ++fi) {
                     int face = abilityFaces[i][fi];
                     if (face < 1 || face > 6) continue;
@@ -458,12 +458,12 @@ void CharcterScene::Render()
             }
         }
         else {
-            // –¢ƒ[ƒ‹‚Ío–Ú—“‚ğ‹ó‚¯‚Ä‚¨‚­iˆÊ’u‡‚í‚¹j
+            // æœªãƒ­ãƒ¼ãƒ«æ™‚ã¯å‡ºç›®æ¬„ã‚’ç©ºã‘ã¦ãŠãï¼ˆä½ç½®åˆã‚ã›ï¼‰
             ImGui::SameLine(240);
             ImGui::Text("-");
         }
 
-        // ‡Œv’l‚Íí‚É‰E’[‚É•\¦iˆÊ’uŒÅ’èj
+        // åˆè¨ˆå€¤ã¯å¸¸ã«å³ç«¯ã«è¡¨ç¤ºï¼ˆä½ç½®å›ºå®šï¼‰
         ImGui::SameLine(420);
         ImGui::Text("%d", a.value);
 
@@ -473,12 +473,12 @@ void CharcterScene::Render()
 
     ImGui::NextColumn();
 
-    //‰E: ”h¶’l
+    //å³: æ´¾ç”Ÿå€¤
     ImGui::BeginChild("Derived", ImVec2(0,0), false);
     ImGui::Text("SAN and Derived Values");
     ImGui::Separator();
 
-    // ƒ[ƒJƒ‹‚ÅŒ»İ‚Ì”\—Í’l‚ğQÆ
+    // ãƒ­ãƒ¼ã‚«ãƒ«ã§ç¾åœ¨ã®èƒ½åŠ›å€¤ã‚’å‚ç…§
     auto findVal = [&](const std::string &name)->int {
         for (auto &a : abilities) if (a.name == name) return a.value;
         return 0;
@@ -491,9 +491,9 @@ void CharcterScene::Render()
     int SIZ = findVal("SIZ");
     int STR = findVal("STR");
 
-    ImGui::Text("SAN (Sanity): %d", POW*5);//³‹C“x
-    ImGui::Text("Luck: %d", POW*5);//K‰^
-    ImGui::Text("Idea: %d", INT*5);//ƒAƒCƒfƒA
+    ImGui::Text("SAN (Sanity): %d", POW*5);//æ­£æ°—åº¦
+    ImGui::Text("Luck: %d", POW*5);//å¹¸é‹
+    ImGui::Text("Idea: %d", INT*5);//ã‚¢ã‚¤ãƒ‡ã‚¢
     ImGui::Text("Occupational Skill Points: %d", EDU*20);
     ImGui::Text("Hobby Skill Points: %d", EDU*10);
 
@@ -517,8 +517,8 @@ void CharcterScene::Render()
 
     ImGui::Separator();
     ImGui::Text("Last Dice Roll: %d", lastDiceRoll);
-    ImGui::Text("Endurance: %d", (CON+SIZ)/2);//‘Ï‹v—Í
-    ImGui::Text("Magic Points: %d", POW*1);//ƒ}ƒWƒbƒNƒ|ƒCƒ“ƒg
+    ImGui::Text("Endurance: %d", (CON+SIZ)/2);//è€ä¹…åŠ›
+    ImGui::Text("Magic Points: %d", POW*1);//ãƒã‚¸ãƒƒã‚¯ãƒã‚¤ãƒ³ãƒˆ
     ImGui::Text("Occupational Skill Points: %d", EDU*20);
     ImGui::Text("Hobby Skill Points: %d", INT*10);
     ImGui::Text("Damage Bonus: %d", STR + SIZ);
@@ -551,14 +551,14 @@ void CharcterScene::Render()
 
     ImGui::Separator();
 
-    // Œ»İ‚ÌHP•\¦i‘Ï‹v—Íj
+    // ç¾åœ¨ã®HPè¡¨ç¤ºï¼ˆè€ä¹…åŠ›ï¼‰
     float hpRatio = (charcter.maxEndurance>0) ? float(charcter.endurance) / float(charcter.maxEndurance) :0.0f;
     ImGui::ProgressBar(hpRatio, ImVec2(-1,0), "HP");
     ImGui::Text("HP: %d / %d", charcter.endurance, charcter.maxEndurance);
 
     ImGui::Separator();
 
-    // ŠÈˆÕ”»’èUI
+    // ç°¡æ˜“åˆ¤å®šUI
     if (ImGui::Button("Roll d100")) {
         lastDiceRoll = Dice::RollDie(100);
     }
@@ -567,7 +567,7 @@ void CharcterScene::Render()
         lastDiceRoll = Dice::RollDie(100);
         bool success = (lastDiceRoll <= charcter.pow *5);
         if (!success) {
-            // ƒTƒ“ƒvƒ‹‚Å‚Í‘Ï‹v—Í‚ğŒ¸‚ç‚·iƒ_ƒ[ƒWŠm”F—pj
+            // ã‚µãƒ³ãƒ—ãƒ«ã§ã¯è€ä¹…åŠ›ã‚’æ¸›ã‚‰ã™ï¼ˆãƒ€ãƒ¡ãƒ¼ã‚¸ç¢ºèªç”¨ï¼‰
             charcter.ApplyEnduranceLoss(1);
         }
     }
@@ -575,9 +575,9 @@ void CharcterScene::Render()
 
     ImGui::Separator();
 
-    // ƒV[ƒ“ŠJnƒ{ƒ^ƒ“
+    // ã‚·ãƒ¼ãƒ³é–‹å§‹ãƒœã‚¿ãƒ³
     if (ImGui::Button("Start Play (Quick)")) {
-        // HP‚ª–¢İ’è‚È‚çÄŒvZ
+        // HPãŒæœªè¨­å®šãªã‚‰å†è¨ˆç®—
         charcter.maxEndurance = (charcter.con + charcter.siz) / 2;
         charcter.endurance = charcter.maxEndurance;
 

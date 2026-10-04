@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <string>
 #include <unordered_map>
 #include <d3d11.h>
@@ -15,7 +15,7 @@ namespace TextureManager {
     // Load texture
     ID3D11ShaderResourceView* LoadTexture(const std::string& relativePath);
 
-    // ImGui �p
+    // ImGui 用
     ImTextureID GetImGuiTexture(const std::string& relativePath);
     ImTextureID GetImGuiTextureID(const std::string& relativePath);
 

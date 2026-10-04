@@ -1,4 +1,4 @@
-#include "ImGuiFontLoader.h"
+ï»¿#include "ImGuiFontLoader.h"
 #include "system/imgui/imgui.h"
 #include <filesystem>
 #include <iostream>
@@ -29,16 +29,16 @@ namespace ImGuiFontLoader
             return false;
         }
 
-        // ƒtƒHƒ“ƒg‚ğƒfƒtƒHƒ‹ƒg‚Éİ’è
+        // ãƒ•ã‚©ãƒ³ãƒˆã‚’ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã«è¨­å®š
         io.FontDefault = font;
-        io.Fonts->Build(); // –¾¦“I‚Éƒrƒ‹ƒhi’Êí‚Í•s—v‚¾‚ªŠmÀ‚É‚·‚éj
+        io.Fonts->Build(); // æ˜ç¤ºçš„ã«ãƒ“ãƒ«ãƒ‰ï¼ˆé€šå¸¸ã¯ä¸è¦ã ãŒç¢ºå®Ÿã«ã™ã‚‹ï¼‰
 
         // If DX11 backend is active, upload font atlas to GPU
     #ifdef IMGUI_IMPL_DIRECTX11
         if (io.BackendRendererName && std::string(io.BackendRendererName) == "imgui_impl_dx11") {
             if (!ImGui_ImplDX11_CreateDeviceObjects()) {
                 LogDebug("ImGuiFontLoader: ImGui_ImplDX11_CreateDeviceObjects() failed\n");
-                // ¸”s‚µ‚½‚ç‘±s‚Í‰Â”\iƒtƒH[ƒ‹ƒoƒbƒN‚ÅCPUƒtƒHƒ“ƒg•`‰æ“™‚Í–³‚¢j‚ªƒƒOo—Í‚µ‚Ä‚¨‚­
+                // å¤±æ•—ã—ãŸã‚‰ç¶šè¡Œã¯å¯èƒ½ï¼ˆãƒ•ã‚©ãƒ¼ãƒ«ãƒãƒƒã‚¯ã§CPUãƒ•ã‚©ãƒ³ãƒˆæç”»ç­‰ã¯ç„¡ã„ï¼‰ãŒãƒ­ã‚°å‡ºåŠ›ã—ã¦ãŠã
             } else {
                 LogDebug("ImGuiFontLoader: ImGui_ImplDX11_CreateDeviceObjects() succeeded\n");
             }
@@ -56,7 +56,7 @@ namespace ImGuiFontLoader
     {
         ImGuiIO& io = ImGui::GetIO();
 
-        // preferred ‚ªw’è‚³‚ê‚Ä‚¢‚ê‚Î—Dæ‚µ‚Ä‚·
+        // preferred ãŒæŒ‡å®šã•ã‚Œã¦ã„ã‚Œã°å„ªå…ˆã—ã¦è©¦ã™
         if (!preferredFontPath.empty()) {
             try {
                 if (std::filesystem::exists(std::filesystem::path(preferredFontPath))) {
@@ -74,12 +74,12 @@ namespace ImGuiFontLoader
             }
         }
 
-        // resources “à‚ÌŒó•â‚ğæ‚É‚·
+        // resources å†…ã®å€™è£œã‚’å…ˆã«è©¦ã™
         const std::vector<std::string> candidatePaths = {
             "resources/fonts/NotoSansJP-Regular.otf",
             "resources/fonts/NotoSansJP-Regular.ttf",
             "resources/fonts/NotoSansCJKjp-Regular.otf",
-            // Windows ƒVƒXƒeƒ€ƒtƒHƒ“ƒg‚ÌŒó•âiŒÅ’èƒŠƒXƒg‚Ì‚İA‘SƒXƒLƒƒƒ“‚Ís‚í‚È‚¢j
+            // Windows ã‚·ã‚¹ãƒ†ãƒ ãƒ•ã‚©ãƒ³ãƒˆã®å€™è£œï¼ˆå›ºå®šãƒªã‚¹ãƒˆã®ã¿ã€å…¨ã‚¹ã‚­ãƒ£ãƒ³ã¯è¡Œã‚ãªã„ï¼‰
             "C:/Windows/Fonts/meiryo.ttc",
             "C:/Windows/Fonts/Meiryo.ttf",
             "C:/Windows/Fonts/msgothic.ttc",
@@ -104,8 +104,8 @@ namespace ImGuiFontLoader
             }
         }
 
-        //ˆÈ‘O‚Í Windows/Fonts ‘S‘Ì‚ğ‘–¸‚µ‚Ä‚¢‚Ü‚µ‚½‚ªAƒtƒ@ƒCƒ‹”‚ª‘½‚­”ñí‚Éd‚¢‚½‚ß”p~‚µ‚Ü‚µ‚½B
-        // •K—v‚È‚çƒ†[ƒU[‚ªâ‘ÎƒpƒX‚ğ“n‚·‚©Aresources/fonts ‚ÉƒtƒHƒ“ƒg‚ğ”z’u‚µ‚Ä‚­‚¾‚³‚¢B
+        //ä»¥å‰ã¯ Windows/Fonts å…¨ä½“ã‚’èµ°æŸ»ã—ã¦ã„ã¾ã—ãŸãŒã€ãƒ•ã‚¡ã‚¤ãƒ«æ•°ãŒå¤šãéå¸¸ã«é‡ã„ãŸã‚å»ƒæ­¢ã—ã¾ã—ãŸã€‚
+        // å¿…è¦ãªã‚‰ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒçµ¶å¯¾ãƒ‘ã‚¹ã‚’æ¸¡ã™ã‹ã€resources/fonts ã«ãƒ•ã‚©ãƒ³ãƒˆã‚’é…ç½®ã—ã¦ãã ã•ã„ã€‚
         LogDebug("ImGuiFontLoader: failed to load any Japanese font. Place a TTF/OTF in resources/fonts/ or call InitializeImGuiFonts(\"path\").\n");
         return false;
     }

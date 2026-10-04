@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "IScene.h"
 #include "CharacterSelect.h"
 #include <vector>
@@ -24,20 +24,20 @@ public:
 
     BattleScene() = default;
 
-    // ƒvƒŒƒCƒ„[î•ñ‚ğó‚¯æ‚éiSceneManager‚©‚çŒÄ‚Î‚ê‚éj
-    void SetPlayer(const CharcterScene::CharcterDate& p) { player = p; prevEndurance = player.endurance; persistentStage = 0; persistentTimer = 0.0f; }
+    // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼æƒ…å ±ã‚’å—ã‘å–ã‚‹ï¼ˆSceneManagerã‹ã‚‰å‘¼ã°ã‚Œã‚‹ï¼‰
+    void SetPlayer(const CharacterScene::CharacterData& p) { player = p; prevEndurance = player.endurance; persistentStage = 0; persistentTimer = 0.0f; }
 
-    // ƒV[ƒ“Ø‘Ö—v‹ƒnƒ“ƒhƒ‰iSceneManager ‚ÉƒZƒbƒg‚³‚ê‚éj
+    // ã‚·ãƒ¼ãƒ³åˆ‡æ›¿è¦æ±‚ãƒãƒ³ãƒ‰ãƒ©ï¼ˆSceneManager ã«ã‚»ãƒƒãƒˆã•ã‚Œã‚‹ï¼‰
     std::function<void(int)> RequestSceneChange;
 
-    CharcterScene::CharcterDate player;
+    CharacterScene::CharacterData player;
     // Public Enemy and Phase types so external BattleLogic can operate on them
     struct Enemy {
         std::string name;
         int hp = 10;
         int maxHp = 10;
         int atk = 3;
-        int fearDamage = 2; // “G‚ª—^‚¦‚é¸_“Iƒ_ƒ[ƒW—Ê
+        int fearDamage = 2; // æ•µãŒä¸ãˆã‚‹ç²¾ç¥çš„ãƒ€ãƒ¡ãƒ¼ã‚¸é‡
     };
 
     enum class Phase { PlayerTurn, EnemyTurn, Victory, Defeat } phase = Phase::PlayerTurn;
@@ -48,29 +48,29 @@ private:
     int selectedEnemy = -1;
     int lastRoll = 0;
 
-    // UI / ŠÔŠÇ—
+    // UI / æ™‚é–“ç®¡ç†
     float timeAccum = 0.0f;
 
-    // •\¦—p‘Ï‹v—Íiƒo[‚ÌƒAƒjƒ—pj
+    // è¡¨ç¤ºç”¨è€ä¹…åŠ›ï¼ˆãƒãƒ¼ã®ã‚¢ãƒ‹ãƒ¡ç”¨ï¼‰
     float displayedEndurance = 0.0f;
 
-    // ƒ_ƒ[ƒW‘MŒõEc­ŠÇ—
-    int prevEndurance = -1; // ‘OƒtƒŒ[ƒ€‚Ì‘Ï‹v—ÍiHPj
-    float damageFlashTimer = 0.0f; // ƒ_ƒ[ƒW‚ğó‚¯‚½uŠÔ‚Ìƒtƒ‰ƒbƒVƒ…—pƒ^ƒCƒ}[
-    float damageFlashDuration = 0.35f; // ƒtƒ‰ƒbƒVƒ…‚Ì‘±ŠÔi•bj
+    // ãƒ€ãƒ¡ãƒ¼ã‚¸é–ƒå…‰ãƒ»æ®‹ç—•ç®¡ç†
+    int prevEndurance = -1; // å‰ãƒ•ãƒ¬ãƒ¼ãƒ ã®è€ä¹…åŠ›ï¼ˆHPï¼‰
+    float damageFlashTimer = 0.0f; // ãƒ€ãƒ¡ãƒ¼ã‚¸ã‚’å—ã‘ãŸç¬é–“ã®ãƒ•ãƒ©ãƒƒã‚·ãƒ¥ç”¨ã‚¿ã‚¤ãƒãƒ¼
+    float damageFlashDuration = 0.35f; // ãƒ•ãƒ©ãƒƒã‚·ãƒ¥ã®æŒç¶šæ™‚é–“ï¼ˆç§’ï¼‰
 
-    int persistentStage = 0; // ‚Ìc‚è’iŠKi0..4j
-    float persistentTimer = 0.0f; // ‚ªc‚éŠÔ
+    int persistentStage = 0; // å‚·ã®æ®‹ã‚Šæ®µéšï¼ˆ0..4ï¼‰
+    float persistentTimer = 0.0f; // å‚·ãŒæ®‹ã‚‹æ™‚é–“
 
-    // ImGui —p‚Ì UI ƒAƒgƒ‰ƒXƒeƒNƒXƒ`ƒƒ
+    // ImGui ç”¨ã® UI ã‚¢ãƒˆãƒ©ã‚¹ãƒ†ã‚¯ã‚¹ãƒãƒ£
     ImTextureID uiAtlas = nullptr;
     AtlasTools::AtlasMap atlasMap;
-    // ”wŒi—pƒeƒNƒXƒ`ƒƒ
+    // èƒŒæ™¯ç”¨ãƒ†ã‚¯ã‚¹ãƒãƒ£
     ImTextureID bgTexture = nullptr;
     // Dev: allow hiding main Battle UI so Dev windows behind can be interacted with
     bool m_hideBattleUIInDev = false;
 
-    // --- ƒƒO•\¦—p ---
+    // --- ãƒ­ã‚°è¡¨ç¤ºç”¨ ---
     // msg: text to append. level: 0=Error,1=Info,2=Debug (higher is more verbose)
     void PushLog(const std::string& msg, int level = 1);
 #ifndef NDEBUG

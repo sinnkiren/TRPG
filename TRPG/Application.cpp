@@ -1,4 +1,4 @@
-#include "Application.h"
+ï»¿#include "Application.h"
 #include <chrono>
 #include <thread>
 #include "system/imgui/imgui_impl_dx11.h"
@@ -6,14 +6,14 @@
 #include "system/imgui/imgui_impl_win32.h"
 #include "SceneManager.h"
 #include "TextureManager.h"
-#include "ImGuiFontLoader.h" // ’Ç‰Á
+#include "ImGuiFontLoader.h" // è¿½åŠ 
 #include "Logging.h"
 #include "AssetManager.h"
 #include <sstream>
 #include <system_error>
 #include <typeinfo>
 
-// Ã“Iƒƒ“ƒo•Ï”‚Ì’è‹`
+// é™çš„ãƒ¡ãƒ³ãƒå¤‰æ•°ã®å®šç¾©
 HINSTANCE  Application::m_hInst = nullptr;
 HWND       Application::m_hWnd = nullptr;
 uint32_t   Application::m_Width = 0;
@@ -48,10 +48,10 @@ static void LogAndBreakException(const std::exception& ex, const char* where);
 
 
 /**
- * @brief ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+ * @brief ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
  * @details
- * - ƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğ•Û
- * - ƒ^ƒCƒ}[¸“x‚ğ 1ms ‚Éİ’è
+ * - ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’ä¿æŒ
+ * - ã‚¿ã‚¤ãƒãƒ¼ç²¾åº¦ã‚’ 1ms ã«è¨­å®š
  */
 Application::Application(uint32_t width, uint32_t height)
 {
@@ -61,8 +61,8 @@ Application::Application(uint32_t width, uint32_t height)
 }
 
 /**
- * @brief ƒfƒXƒgƒ‰ƒNƒ^
- * @details ƒ^ƒCƒ}[¸“x‚ğŒ³‚É–ß‚·
+ * @brief ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
+ * @details ã‚¿ã‚¤ãƒãƒ¼ç²¾åº¦ã‚’å…ƒã«æˆ»ã™
  */
 Application::~Application()
 {
@@ -70,28 +70,28 @@ Application::~Application()
 }
 
 /**
- * @brief ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚ÌÀs
+ * @brief ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ã®å®Ÿè¡Œ
  */
 void Application::Run()
 {
-    // SceneManager ‰Šú‰»
+    // SceneManager åˆæœŸåŒ–
     g_SceneManager.Initialize();
-    if (InitApp())   // ‰Šú‰»‚É¬Œ÷‚µ‚½‚ç
+    if (InitApp())   // åˆæœŸåŒ–ã«æˆåŠŸã—ãŸã‚‰
     {
-        MainLoop();  // ƒƒCƒ“ƒ‹[ƒv‚ğÀs
+        MainLoop();  // ãƒ¡ã‚¤ãƒ³ãƒ«ãƒ¼ãƒ—ã‚’å®Ÿè¡Œ
     }
-    TermApp();       // I—¹ˆ—
+    TermApp();       // çµ‚äº†å‡¦ç†
 }
 
 /**
- * @brief ƒAƒvƒŠ‘S‘Ì‚Ì‰Šú‰»
+ * @brief ã‚¢ãƒ—ãƒªå…¨ä½“ã®åˆæœŸåŒ–
  */
 bool Application::InitApp()
 {
-    // 1. ƒEƒBƒ“ƒhƒEì¬
+    // 1. ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ä½œæˆ
     if (!InitWnd()) return false;
 
-    // 2. DirectX11 ‰Šú‰»
+    // 2. DirectX11 åˆæœŸåŒ–
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferCount = 1;
     sd.BufferDesc.Width = m_Width;
@@ -123,30 +123,30 @@ bool Application::InitApp()
     );
 
     if (FAILED(hr)) {
-        MessageBox(m_hWnd, L"DirectX11‚Ì‰Šú‰»‚É¸”s‚µ‚Ü‚µ‚½", L"ƒGƒ‰[", MB_OK);
+        MessageBox(m_hWnd, L"DirectX11ã®åˆæœŸåŒ–ã«å¤±æ•—ã—ã¾ã—ãŸ", L"ã‚¨ãƒ©ãƒ¼", MB_OK);
         return false;
     }
 
-    // ƒoƒbƒNƒoƒbƒtƒ@æ“¾
+    // ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡å–å¾—
     ID3D11Texture2D* pBackBuffer = nullptr;
     hr = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&pBackBuffer);
     if (FAILED(hr) || !pBackBuffer) {
-        MessageBox(m_hWnd, L"ƒoƒbƒNƒoƒbƒtƒ@‚Ìæ“¾‚É¸”s‚µ‚Ü‚µ‚½", L"ƒGƒ‰[", MB_OK);
+        MessageBox(m_hWnd, L"ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ã®å–å¾—ã«å¤±æ•—ã—ã¾ã—ãŸ", L"ã‚¨ãƒ©ãƒ¼", MB_OK);
         return false;
     }
 
-    // ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒgƒrƒ…[ì¬
+    // ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ“ãƒ¥ãƒ¼ä½œæˆ
     hr = m_Device->CreateRenderTargetView(pBackBuffer, nullptr, &m_RenderTargetView);
     pBackBuffer->Release();
     if (FAILED(hr) || !m_RenderTargetView) {
-        MessageBox(m_hWnd, L"ƒŒƒ“ƒ_[ƒ^[ƒQƒbƒgƒrƒ…[‚Ìì¬‚É¸”s‚µ‚Ü‚µ‚½", L"ƒGƒ‰[", MB_OK);
+        MessageBox(m_hWnd, L"ãƒ¬ãƒ³ãƒ€ãƒ¼ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ“ãƒ¥ãƒ¼ã®ä½œæˆã«å¤±æ•—ã—ã¾ã—ãŸ", L"ã‚¨ãƒ©ãƒ¼", MB_OK);
         return false;
     }
 
-    // o—Íæ‚Éİ’è
+    // å‡ºåŠ›å…ˆã«è¨­å®š
     m_DeviceContext->OMSetRenderTargets(1, &m_RenderTargetView, nullptr);
 
-    // 3. ImGui ‰Šú‰»iDirectX ƒfƒoƒCƒX‚ªì¬‚³‚ê‚½Œãj
+    // 3. ImGui åˆæœŸåŒ–ï¼ˆDirectX ãƒ‡ãƒã‚¤ã‚¹ãŒä½œæˆã•ã‚ŒãŸå¾Œï¼‰
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -183,7 +183,7 @@ bool Application::InitApp()
         }
     });
 
-    // TextureManager ‰Šú‰»iAssetManager::GetAssetRoot ‚ğg‚Á‚ÄÀsƒtƒ@ƒCƒ‹ü‚è‚Ì assets ‚ğ‰ğŒˆj
+    // TextureManager åˆæœŸåŒ–ï¼ˆAssetManager::GetAssetRoot ã‚’ä½¿ã£ã¦å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«å‘¨ã‚Šã® assets ã‚’è§£æ±ºï¼‰
     std::string assetRoot = AssetManager::GetAssetRoot();
     {
         std::ostringstream ss; ss << "Application: asset root = " << assetRoot;
@@ -191,7 +191,7 @@ bool Application::InitApp()
     }
     TextureManager::Initialize(m_Device, assetRoot);
 
-    // ƒtƒHƒ“ƒgƒ[ƒh...
+    // ãƒ•ã‚©ãƒ³ãƒˆãƒ­ãƒ¼ãƒ‰...
     bool fontOk = ImGuiFontLoader::InitializeImGuiFonts("resources/fonts/NotoSansJP-Regular.ttf");
 
     return true;
@@ -199,14 +199,14 @@ bool Application::InitApp()
 
 
 /**
- * @brief ƒAƒvƒŠ‘S‘Ì‚ÌI—¹ˆ—
+ * @brief ã‚¢ãƒ—ãƒªå…¨ä½“ã®çµ‚äº†å‡¦ç†
  */
 void Application::TermApp()
 {
-    // TextureManager ‚ÌƒLƒƒƒbƒVƒ…‚ğ‰ğ•ú
+    // TextureManager ã®ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã‚’è§£æ”¾
     TextureManager::Shutdown();
 
-    // DirectXƒŠƒ\[ƒX‰ğ•ú
+    // DirectXãƒªã‚½ãƒ¼ã‚¹è§£æ”¾
     if (m_SwapChain) { m_SwapChain->Release(); m_SwapChain = nullptr; }
     if (m_DeviceContext) { m_DeviceContext->Release(); m_DeviceContext = nullptr; }
     if (m_Device) { m_Device->Release(); m_Device = nullptr; }
@@ -215,11 +215,11 @@ void Application::TermApp()
     ImGui::DestroyContext();
 
 
-    TermWnd(); // ƒEƒBƒ“ƒhƒEI—¹ˆ—
+    TermWnd(); // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦çµ‚äº†å‡¦ç†
 }
 
 /**
- * @brief ƒEƒBƒ“ƒhƒE‰Šú‰»
+ * @brief ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦åˆæœŸåŒ–
  */
 bool Application::InitWnd()
 {
@@ -263,7 +263,7 @@ bool Application::InitWnd()
 }
 
 /**
- * @brief ƒEƒBƒ“ƒhƒEI—¹ˆ—
+ * @brief ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦çµ‚äº†å‡¦ç†
  */
 void Application::TermWnd()
 {
@@ -275,13 +275,13 @@ void Application::TermWnd()
 }
 
 /**
- * @brief ƒƒCƒ“ƒ‹[ƒv
+ * @brief ãƒ¡ã‚¤ãƒ³ãƒ«ãƒ¼ãƒ—
  */
 void Application::MainLoop()
 {
     MSG msg = {};
 
-    // ImGui ‰Šú‰»‚ªÏ‚ñ‚Å‚¢‚é‘O’ñ
+    // ImGui åˆæœŸåŒ–ãŒæ¸ˆã‚“ã§ã„ã‚‹å‰æ
     using clock = std::chrono::steady_clock;
     const std::chrono::duration<double, std::milli> kTargetFrameTimeMs(1000.0 / 60.0); // 60 FPS
 
@@ -295,20 +295,20 @@ void Application::MainLoop()
             auto frameStart = clock::now();
 
             // -----------------------------
-            // 1. ‰æ–ÊƒNƒŠƒA
+            // 1. ç”»é¢ã‚¯ãƒªã‚¢
             // -----------------------------
             float clearColor[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
             m_DeviceContext->ClearRenderTargetView(m_RenderTargetView, clearColor);
 
             // -----------------------------
-            // 2. ImGui VƒtƒŒ[ƒ€ŠJn
+            // 2. ImGui æ–°ãƒ•ãƒ¬ãƒ¼ãƒ é–‹å§‹
             // -----------------------------
             ImGui_ImplDX11_NewFrame();
             ImGui_ImplWin32_NewFrame();
             ImGui::NewFrame();
 
             // -----------------------------
-            // 3. ƒV[ƒ“XV••`‰æ
+            // 3. ã‚·ãƒ¼ãƒ³æ›´æ–°ï¼†æç”»
             // -----------------------------
             try {
                 // Debug: log current scene type when in dev mode (SceneManager logs separately)
@@ -339,13 +339,13 @@ void Application::MainLoop()
             // Do not call them again to avoid operating on destroyed scenes.
 
             // -----------------------------
-            // 4. ImGui •`‰æ
+            // 4. ImGui æç”»
             // -----------------------------
             ImGui::Render();
             ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
             // -----------------------------
-            // 5. ‰æ–Ê•\¦
+            // 5. ç”»é¢è¡¨ç¤º
             // -----------------------------
             m_SwapChain->Present(1, 0);
 
@@ -364,7 +364,7 @@ void Application::MainLoop()
 }
 
 /**
- * @brief ƒEƒBƒ“ƒhƒEƒvƒƒV[ƒWƒƒ
+ * @brief ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãƒ—ãƒ­ã‚·ãƒ¼ã‚¸ãƒ£
  */
 LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -429,7 +429,7 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
     return DefWindowProc(hWnd, msg, wp, lp);
 }
 
-// Šù‘¶‚Ì static ƒƒ“ƒo’è‹`‚Ì’¼Œã‚É’Ç‰Áiƒtƒ@ƒCƒ‹æ“ª•t‹ß‚É‚Ü‚Æ‚ß‚é‚Æ—Ç‚¢‚Å‚·j
+// æ—¢å­˜ã® static ãƒ¡ãƒ³ãƒå®šç¾©ã®ç›´å¾Œã«è¿½åŠ ï¼ˆãƒ•ã‚¡ã‚¤ãƒ«å…ˆé ­ä»˜è¿‘ã«ã¾ã¨ã‚ã‚‹ã¨è‰¯ã„ã§ã™ï¼‰
 ID3D11Device* Application::GetDevice()
 {
     return m_Device;
@@ -440,7 +440,7 @@ ID3D11DeviceContext* Application::GetDeviceContext()
     return m_DeviceContext;
 }
 
-// Šù‘¶‚Ì includes ‚Ì’¼Œã‚ ‚½‚è‚É’Ç‰Á
+// æ—¢å­˜ã® includes ã®ç›´å¾Œã‚ãŸã‚Šã«è¿½åŠ 
 static void LogAndBreakException(const std::exception& ex, const char* where)
 {
     try {

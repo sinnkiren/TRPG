@@ -1,4 +1,4 @@
-#include "BattleScene.h"
+ï»¿#include "BattleScene.h"
 #include "system/imgui/imgui.h"
 #include "FearEffects.h"
 #include "Dice.h"
@@ -22,13 +22,13 @@ namespace {
 // Move Render implementation here to keep BattleScene.cpp focused
 void BattleScene::Render()
 {
-    // ImGui ‚ª‰Šú‰»‚³‚ê‚Ä‚¢‚È‚¯‚ê‚ÎˆÀ‘S‚É‘ŠúƒŠƒ^[ƒ“
+    // ImGui ãŒåˆæœŸåŒ–ã•ã‚Œã¦ã„ãªã‘ã‚Œã°å®‰å…¨ã«æ—©æœŸãƒªã‚¿ãƒ¼ãƒ³
     if (ImGui::GetCurrentContext() == nullptr) {
         if (g_SceneManager.IsDevMode()) ::Log::Log(::Log::Level::Warning, "BattleScene::Render skipped - ImGui context not initialized");
         return;
     }
 
-    // ƒtƒ‹ƒXƒNƒŠ[ƒ“•—‚Éˆµ‚¤ƒƒCƒ“ƒEƒBƒ“ƒhƒE
+    // ãƒ•ãƒ«ã‚¹ã‚¯ãƒªãƒ¼ãƒ³é¢¨ã«æ‰±ã†ãƒ¡ã‚¤ãƒ³ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦
     const ImGuiIO& io = ImGui::GetIO();
     ImVec2 disp = io.DisplaySize;
 
@@ -84,12 +84,12 @@ void BattleScene::Render()
         return;
     }
 
-    // ‘S‘ÌƒTƒCƒY‚Æ‰º•”ƒRƒ}ƒ“ƒh—Ìˆæ‚Ì‚‚³
+    // å…¨ä½“ã‚µã‚¤ã‚ºã¨ä¸‹éƒ¨ã‚³ãƒãƒ³ãƒ‰é ˜åŸŸã®é«˜ã•
     const float cmdHeight = 160.0f;
     // Responsive right panel width: scale with display width but clamp to reasonable range
     const float rightPanelWidth = clamp_local(disp.x * 0.22f, 220.0f, 340.0f);
 
-    // ”wŒi•`‰æi‰æ–Ê‘S‘Ì‚É1–‡ŠG‚ğ•~‚­j
+    // èƒŒæ™¯æç”»ï¼ˆç”»é¢å…¨ä½“ã«1æšçµµã‚’æ•·ãï¼‰
     if (bgTexture) {
         ImDrawList* dl = ImGui::GetBackgroundDrawList();
         if (dl) {
@@ -99,10 +99,10 @@ void BattleScene::Render()
         }
     }
 
-    // --- ã’ii“G—Ìˆæ + ‰E‘¤ƒLƒƒƒ‰ƒXƒe[ƒ^ƒXj ---
+    // --- ä¸Šæ®µï¼ˆæ•µé ˜åŸŸ + å³å´ã‚­ãƒ£ãƒ©ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ï¼‰ ---
     ImGui::BeginChild("TopArea", ImVec2(0, -cmdHeight), false);
 
-    // ¶F“G•\¦—Ìˆæic‚è• - rightPanelWidthj
+    // å·¦ï¼šæ•µè¡¨ç¤ºé ˜åŸŸï¼ˆæ®‹ã‚Šå¹… - rightPanelWidthï¼‰
     float availW = ImGui::GetContentRegionAvail().x;
     float spacing = ImGui::GetStyle().ItemSpacing.x;
     float enemiesW = max_local(0.0f, availW - rightPanelWidth - spacing - 200.0f);
@@ -111,19 +111,19 @@ void BattleScene::Render()
     ImGui::Text("Enemies:");
     ImGui::Separator();
 
-    // ‘å‚«‚ß‚É“Gˆê——‚ğ•\¦i’†‰›Šñ‚¹‚ÌŠÈˆÕ•\Œ»j
+    // å¤§ãã‚ã«æ•µä¸€è¦§ã‚’è¡¨ç¤ºï¼ˆä¸­å¤®å¯„ã›ã®ç°¡æ˜“è¡¨ç¾ï¼‰
     ImGui::Spacing();
     ImGui::Columns(1);
     ImGui::BeginGroup();
 
-    // areaW ‚ÍŒ»İ‚Ì—˜—p‰Â”\•‚ğ“s“xæ“¾‚·‚éiqƒEƒBƒ“ƒhƒE“à‚Ì—˜—p‰Â”\•j
+    // areaW ã¯ç¾åœ¨ã®åˆ©ç”¨å¯èƒ½å¹…ã‚’éƒ½åº¦å–å¾—ã™ã‚‹ï¼ˆå­ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦å†…ã®åˆ©ç”¨å¯èƒ½å¹…ï¼‰
     for (int i = 0; i < (int)enemies.size(); ++i) {
         auto& e = enemies[i];
         ImGui::PushID(i);
 
-        // q—v‘f–ˆ‚Éc•ûŒü‚É•À‚×‚éi’†‰›‘µ‚¦j
+        // å­è¦ç´ æ¯ã«ç¸¦æ–¹å‘ã«ä¸¦ã¹ã‚‹ï¼ˆä¸­å¤®æƒãˆï¼‰
         float areaW = ImGui::GetContentRegionAvail().x;
-        // “G–¼
+        // æ•µå
         {
             float textW = ImGui::CalcTextSize(e.name.c_str()).x;
             float curX = ImGui::GetCursorPosX();
@@ -132,15 +132,15 @@ void BattleScene::Render()
             else ImGui::TextDisabled("%s (defeated)", e.name.c_str());
         }
 
-        // HP siV‚µ‚¢s‚Å•\¦j
+        // HP è¡Œï¼ˆæ–°ã—ã„è¡Œã§è¡¨ç¤ºï¼‰
         {
-            float hpTextW = ImGui::CalcTextSize("HP: 000/000").x; // ‚¨‚¨‚æ‚»‚Ì•
+            float hpTextW = ImGui::CalcTextSize("HP: 000/000").x; // ãŠãŠã‚ˆãã®å¹…
             float curX = ImGui::GetCursorPosX();
             ImGui::SetCursorPosX(curX + max_local(0.0f, (areaW - hpTextW) * 0.5f));
             ImGui::Text("HP: %d/%d", e.hp, e.maxHp);
         }
 
-        // ƒ{ƒ^ƒ“i’†‰›‘µ‚¦j
+        // ãƒœã‚¿ãƒ³ï¼ˆä¸­å¤®æƒãˆï¼‰
         {
             const float btnW = 100.0f;
             float curX = ImGui::GetCursorPosX();
@@ -149,7 +149,7 @@ void BattleScene::Render()
                 if (ImGui::Button("Target", ImVec2(btnW, 0))) selectedEnemy = i;
             }
             else {
-                // ”s–kÏ‚İ‚Í‘I‘ğ•s‰Â‚¾‚ªƒ{ƒ^ƒ“‚Í–³Œø•\¦‚É‚·‚é
+                // æ•—åŒ—æ¸ˆã¿ã¯é¸æŠä¸å¯ã ãŒãƒœã‚¿ãƒ³ã¯ç„¡åŠ¹è¡¨ç¤ºã«ã™ã‚‹
                 ImGui::BeginDisabled();
                 ImGui::Button("Target", ImVec2(btnW, 0));
                 ImGui::EndDisabled();
@@ -166,16 +166,16 @@ void BattleScene::Render()
 
     ImGui::SameLine();
 
-    // ‰EFƒLƒƒƒ‰ƒXƒe[ƒ^ƒX—ÌˆæiŒÅ’è•j
+    // å³ï¼šã‚­ãƒ£ãƒ©ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹é ˜åŸŸï¼ˆå›ºå®šå¹…ï¼‰
     ImGui::BeginChild("StatusArea", ImVec2(rightPanelWidth, 0), true);
     ImGui::Text("Player");
     ImGui::Separator();
 
-    // player ‚ÍƒNƒ‰ƒXƒƒ“ƒoiSceneManager ‚©‚çƒRƒs[‚³‚ê‚é‘z’èj
+    // player ã¯ã‚¯ãƒ©ã‚¹ãƒ¡ãƒ³ãƒï¼ˆSceneManager ã‹ã‚‰ã‚³ãƒ”ãƒ¼ã•ã‚Œã‚‹æƒ³å®šï¼‰
     ImGui::Text("%s (%s)", player.name.c_str(), player.job.c_str());
     ImGui::Separator();
 
-    // HP •\¦
+    // HP è¡¨ç¤º
     float enduranceRatio = (player.maxEndurance > 0) ? float(displayedEndurance) / float(player.maxEndurance) : 0.0f;
     ImGui::Text("HP");
     // If we have an atlas, draw the stylized bar from atlas and overlay a filled rect to represent the current value.
@@ -229,7 +229,7 @@ void BattleScene::Render()
     ImGui::Text("INT: %d  SIZ: %d  CON: %d", player.int_, player.siz, player.con);
 
     ImGui::Separator();
-    // ƒfƒoƒbƒOî•ñ“™
+    // ãƒ‡ãƒãƒƒã‚°æƒ…å ±ç­‰
     ImGui::Text("Last roll: %d", lastRoll);
 
     // Atlas preview disabled per user request: no images drawn under "Last roll".
@@ -239,7 +239,7 @@ void BattleScene::Render()
 
     ImGui::EndChild(); // TopArea
 
-    // --- ‰º’iFí“¬ƒRƒ}ƒ“ƒh—Ìˆæ ---
+    // --- ä¸‹æ®µï¼šæˆ¦é—˜ã‚³ãƒãƒ³ãƒ‰é ˜åŸŸ ---
     ImGui::BeginChild("CommandArea", ImVec2(0, cmdHeight), false);
 
     // Draw command area background from atlas (replace with the medium rectangle from the atlas).
@@ -264,31 +264,31 @@ void BattleScene::Render()
     ImGui::Text("Commands:");
     ImGui::Spacing();
 
-    // ƒRƒ}ƒ“ƒhƒ{ƒ^ƒ“ŒQiƒvƒŒƒCƒ„[‚ªs“®‚Å‚«‚é‚©‚Å–³Œø‰»^”s–kEŸ—˜•\¦j
+    // ã‚³ãƒãƒ³ãƒ‰ãƒœã‚¿ãƒ³ç¾¤ï¼ˆãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒè¡Œå‹•ã§ãã‚‹ã‹ã§ç„¡åŠ¹åŒ–ï¼æ•—åŒ—ãƒ»å‹åˆ©è¡¨ç¤ºï¼‰
     if (phase == Phase::Defeat) {
         ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "You are defeated.");
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-        ImGui::Text("í“¬‚ÍI—¹‚µ‚Ä‚¢‚Ü‚·BƒŠƒgƒ‰ƒC‚âƒƒjƒ…[‚É–ß‚éˆ—‚ğ’Ç‰Á‚µ‚Ä‚­‚¾‚³‚¢B");
+        ImGui::Text("æˆ¦é—˜ã¯çµ‚äº†ã—ã¦ã„ã¾ã™ã€‚ãƒªãƒˆãƒ©ã‚¤ã‚„ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã«æˆ»ã‚‹å‡¦ç†ã‚’è¿½åŠ ã—ã¦ãã ã•ã„ã€‚");
         ImGui::PopStyleColor();
     }
     else if (phase == Phase::Victory) {
         ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f), "Victory!");
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-        ImGui::Text("Ÿ—˜‚µ‚Ü‚µ‚½BŸ‚Ìˆ—‚ğ’Ç‰Á‚µ‚Ä‚­‚¾‚³‚¢B");
+        ImGui::Text("å‹åˆ©ã—ã¾ã—ãŸã€‚æ¬¡ã®å‡¦ç†ã‚’è¿½åŠ ã—ã¦ãã ã•ã„ã€‚");
         ImGui::PopStyleColor();
     }
     else {
-        // ƒvƒŒƒCƒ„[‚ªÀÛ‚És“®‰Â”\‚©”»’èiƒ^[ƒ“‚ªƒvƒŒƒCƒ„[‚ÅAHP>0j
+        // ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãŒå®Ÿéš›ã«è¡Œå‹•å¯èƒ½ã‹åˆ¤å®šï¼ˆã‚¿ãƒ¼ãƒ³ãŒãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã§ã€HP>0ï¼‰
         bool canAct = (phase == Phase::PlayerTurn) && (player.endurance > 0);
 
-        // —LŒø‚Èƒ^[ƒQƒbƒg‚ª‘I‘ğ‚³‚ê‚Ä‚¢‚é‚©i”ÍˆÍƒ`ƒFƒbƒN‚ğ•K{‰»j
+        // æœ‰åŠ¹ãªã‚¿ãƒ¼ã‚²ãƒƒãƒˆãŒé¸æŠã•ã‚Œã¦ã„ã‚‹ã‹ï¼ˆç¯„å›²ãƒã‚§ãƒƒã‚¯ã‚’å¿…é ˆåŒ–ï¼‰
         auto isSelectedValid = [this]() -> bool {
             return (selectedEnemy >= 0 && selectedEnemy < (int)enemies.size() && enemies[selectedEnemy].hp > 0);
             };
         bool validTarget = isSelectedValid();
 
         if (validTarget) {
-            Enemy* target = &enemies[selectedEnemy]; // ˆÀ‘S‚ÉQÆ
+            Enemy* target = &enemies[selectedEnemy]; // å®‰å…¨ã«å‚ç…§
             ImGui::BeginDisabled(!canAct);
             // increase text contrast for buttons when on textured background
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 0.8f));
@@ -301,7 +301,7 @@ void BattleScene::Render()
             ImGui::PopStyleColor(3);
             ImGui::SameLine();
             if (ImGui::Button("Wait")) {
-                PushLog(player.name + " ‚Ís“®‚ğ’x‚ç‚¹‚½B", 1);
+                PushLog(player.name + " ã¯è¡Œå‹•ã‚’é…ã‚‰ã›ãŸã€‚", 1);
                 phase = Phase::EnemyTurn;
             }
             ImGui::EndDisabled();
@@ -315,7 +315,7 @@ void BattleScene::Render()
 
     ImGui::Separator();
 
-    // ©“®“Gƒ^[ƒ“•\¦iÀÛ‚Ì“Gs“®‚Í Update() ‚Åˆ—‚·‚éj
+    // è‡ªå‹•æ•µã‚¿ãƒ¼ãƒ³è¡¨ç¤ºï¼ˆå®Ÿéš›ã®æ•µè¡Œå‹•ã¯ Update() ã§å‡¦ç†ã™ã‚‹ï¼‰
     // NOTE: Do not run game-state changes from Render() - keep Render side-effect free.
     if (phase == Phase::EnemyTurn) {
         ImGui::Text("Enemy's turn...");
@@ -339,7 +339,7 @@ void BattleScene::Render()
         ImGui::PopStyleColor(); // restore text color pushed for Commands label
         ImGui::EndChild(); // CommandArea
 
-        // --- ‚±‚±‚Åæ‚É‘S‘ÌƒeƒLƒXƒgF‚Ì Push ‚ğ–ß‚· ---
+        // --- ã“ã“ã§å…ˆã«å…¨ä½“ãƒ†ã‚­ã‚¹ãƒˆè‰²ã® Push ã‚’æˆ»ã™ ---
         ImGui::PopStyleColor(); // restore global text color pushed after Begin()
     }
 
@@ -347,7 +347,7 @@ void BattleScene::Render()
     // Note: We popped the global text color only if beginDraw was true; now pop the WindowBg color we pushed at the top.
     ImGui::PopStyleColor(); // pop WindowBg
 
-    // --- ‰æ–ÊƒGƒtƒFƒNƒgiƒtƒ‰ƒbƒVƒ…^c­j ---
+    // --- ç”»é¢ã‚¨ãƒ•ã‚§ã‚¯ãƒˆï¼ˆãƒ•ãƒ©ãƒƒã‚·ãƒ¥ï¼æ®‹ç—•ï¼‰ ---
     float intensity = 1.0f - ((player.maxEndurance > 0) ? float(player.endurance) / float(player.maxEndurance) : 0.0f);
     if (damageFlashTimer > 0.001f) {
         float t = damageFlashTimer / damageFlashDuration;
@@ -358,7 +358,7 @@ void BattleScene::Render()
         DrawFearOverlay(intensity, ImGui::GetTime(), persistentStage);
     }
 
-    // Story ‘¤‚â‘¼‚©‚çŠJn‚µ‚½ FearEffects ƒI[ƒo[ƒŒƒC‚ğ•`‰æ
+    // Story å´ã‚„ä»–ã‹ã‚‰é–‹å§‹ã—ãŸ FearEffects ã‚ªãƒ¼ãƒãƒ¼ãƒ¬ã‚¤ã‚’æç”»
     FearEffects::RenderOverlay();
 
     // Dice visual overlay

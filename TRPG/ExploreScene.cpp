@@ -1,4 +1,4 @@
-#include "ExploreScene.h"
+ï»¿#include "ExploreScene.h"
 #include "EventNode.h"
 #include "CharacterSelect.h"
 #include "system/json.hpp"
@@ -16,29 +16,29 @@
 
 using json = nlohmann::json;
 
-// ExploreScene: ’Tõ—p‚Ìƒm[ƒh“Ç‚İ‚İA‘I‘ğˆ•\¦Aó‘ÔŠÇ—iflags/inventory/varsj‚ÌÀ‘•ƒtƒ@ƒCƒ‹
-// ‚±‚Ìƒtƒ@ƒCƒ‹‚Í JSON ƒtƒ@ƒCƒ‹‚©‚ç EventNode ‚ğ“Ç‚İ‚İA‘I‘ğˆ‚ğƒŒƒ“ƒ_ƒŠƒ“ƒO‚µ‚Ä
-// ƒ†[ƒU‘€ì‚É‚æ‚è GameState ‚ğXVE•Û‘¶‚µ‚Ü‚·B
+// ExploreScene: æ¢ç´¢ç”¨ã®ãƒãƒ¼ãƒ‰èª­ã¿è¾¼ã¿ã€é¸æŠè‚¢è¡¨ç¤ºã€çŠ¶æ…‹ç®¡ç†ï¼ˆflags/inventory/varsï¼‰ã®å®Ÿè£…ãƒ•ã‚¡ã‚¤ãƒ«
+// ã“ã®ãƒ•ã‚¡ã‚¤ãƒ«ã¯ JSON ãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ EventNode ã‚’èª­ã¿è¾¼ã¿ã€é¸æŠè‚¢ã‚’ãƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚°ã—ã¦
+// ãƒ¦ãƒ¼ã‚¶æ“ä½œã«ã‚ˆã‚Š GameState ã‚’æ›´æ–°ãƒ»ä¿å­˜ã—ã¾ã™ã€‚
 
 static std::unordered_map<int, EventNode> g_nodes;
 static std::vector<std::string> g_log;
-// ’†‰›‚ÌƒQ[ƒ€ó‘Ôi’TõƒV[ƒ“‚Æ‹¤—L‚³‚ê‚éó‘Ôj
+// ä¸­å¤®ã®ã‚²ãƒ¼ãƒ çŠ¶æ…‹ï¼ˆæ¢ç´¢ã‚·ãƒ¼ãƒ³ã¨å…±æœ‰ã•ã‚Œã‚‹çŠ¶æ…‹ï¼‰
 struct GameState {
-    int currentNode = -1; // Œ»İ‚Ìƒm[ƒhID
-    std::unordered_set<std::string> flags; // ˜_—“I‚Èƒtƒ‰ƒOW‡
-    std::unordered_set<std::string> inventory; // Š•iid•¡•s‰Âj
-    std::unordered_map<std::string,int> vars; // ”’l•Ï”i—á: san, gold “™j
+    int currentNode = -1; // ç¾åœ¨ã®ãƒãƒ¼ãƒ‰ID
+    std::unordered_set<std::string> flags; // è«–ç†çš„ãªãƒ•ãƒ©ã‚°é›†åˆ
+    std::unordered_set<std::string> inventory; // æ‰€æŒå“ï¼ˆé‡è¤‡ä¸å¯ï¼‰
+    std::unordered_map<std::string,int> vars; // æ•°å€¤å¤‰æ•°ï¼ˆä¾‹: san, gold ç­‰ï¼‰
 };
 static GameState g_state;
-static std::string g_saveError; // ƒZ[ƒu/ƒ[ƒhƒGƒ‰[‚Ìà–¾
+static std::string g_saveError; // ã‚»ãƒ¼ãƒ–/ãƒ­ãƒ¼ãƒ‰ã‚¨ãƒ©ãƒ¼ã®èª¬æ˜
 
-// ƒZ[ƒuƒtƒ@ƒCƒ‹‚ÌƒpƒX‚ğŒˆ’è‚µ‚Ä•Ô‚·
+// ã‚»ãƒ¼ãƒ–ãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ‘ã‚¹ã‚’æ±ºå®šã—ã¦è¿”ã™
 /*
  * GetExploreSavePath
  * ------------------
- * ƒZ[ƒuƒtƒ@ƒCƒ‹‚Ìƒtƒ‹ƒpƒX‚ğ•Ô‚µ‚Ü‚·B
- * - AssetManager ‚ğŠî€‚É•Û‘¶æ‚ğŒˆ’è‚µ‚Ü‚·B
- * - ƒeƒXƒg‚âŠJ”­‚ÍÀsƒtƒHƒ‹ƒ_‚É "explore_save.json" ‚ğì¬‚µ‚Ü‚·B
+ * ã‚»ãƒ¼ãƒ–ãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ•ãƒ«ãƒ‘ã‚¹ã‚’è¿”ã—ã¾ã™ã€‚
+ * - AssetManager ã‚’åŸºæº–ã«ä¿å­˜å…ˆã‚’æ±ºå®šã—ã¾ã™ã€‚
+ * - ãƒ†ã‚¹ãƒˆã‚„é–‹ç™ºæ™‚ã¯å®Ÿè¡Œãƒ•ã‚©ãƒ«ãƒ€ã« "explore_save.json" ã‚’ä½œæˆã—ã¾ã™ã€‚
  */
 static std::string GetExploreSavePath()
 {
@@ -57,15 +57,15 @@ static void LoadExploreState();
 // Save format version. Increment when changing saved JSON layout.
 static constexpr int kExploreSaveVersion = 1;
 
-// Œ»İ‚Ì g_state ‚ğ JSON ‚Æ‚µ‚ÄƒfƒBƒXƒN‚É‘‚«o‚·
-// players ‚Í SceneManager ‚ÌƒƒXƒ^[‚©‚çæ“¾‚µ‚Ä•Û‘¶‚·‚é
+// ç¾åœ¨ã® g_state ã‚’ JSON ã¨ã—ã¦ãƒ‡ã‚£ã‚¹ã‚¯ã«æ›¸ãå‡ºã™
+// players ã¯ SceneManager ã®ãƒ­ã‚¹ã‚¿ãƒ¼ã‹ã‚‰å–å¾—ã—ã¦ä¿å­˜ã™ã‚‹
 /*
  * SaveExploreState
  * ----------------
- * Œ»İ‚Ì’Tõó‘Ôig_statej‚Æ SceneManager ‚É“o˜^‚³‚ê‚½ƒvƒŒƒCƒ„[ƒƒXƒ^[‚ğ
- * JSON ‚ÉƒVƒŠƒAƒ‰ƒCƒY‚µ‚ÄƒfƒBƒXƒN‚É•Û‘¶‚µ‚Ü‚·B
- * - ‚±‚±‚Å•Û‘¶‚³‚ê‚é“à—e: saveVersion, currentNode, flags, inventory, vars, players, activePlayerIndex
- * - ¸”s‚Í g_saveError ‚ÉƒƒbƒZ[ƒW‚ğŠi”[‚µƒƒOo—Í‚µ‚Ü‚·B
+ * ç¾åœ¨ã®æ¢ç´¢çŠ¶æ…‹ï¼ˆg_stateï¼‰ã¨ SceneManager ã«ç™»éŒ²ã•ã‚ŒãŸãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ­ã‚¹ã‚¿ãƒ¼ã‚’
+ * JSON ã«ã‚·ãƒªã‚¢ãƒ©ã‚¤ã‚ºã—ã¦ãƒ‡ã‚£ã‚¹ã‚¯ã«ä¿å­˜ã—ã¾ã™ã€‚
+ * - ã“ã“ã§ä¿å­˜ã•ã‚Œã‚‹å†…å®¹: saveVersion, currentNode, flags, inventory, vars, players, activePlayerIndex
+ * - å¤±æ•—æ™‚ã¯ g_saveError ã«ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’æ ¼ç´ã—ãƒ­ã‚°å‡ºåŠ›ã—ã¾ã™ã€‚
  */
 static void SaveExploreState()
 {
@@ -98,7 +98,7 @@ static void SaveExploreState()
         }
         j["activePlayerIndex"] = g_SceneManager.GetActivePlayerIndex();
     }
-    // inventory •Û‘¶ˆ—
+    // inventory ä¿å­˜å‡¦ç†
     try {
         std::ofstream ofs(path);
         if (!ofs.is_open()) { g_saveError = "Failed to open save file for writing: " + path; ::Log::Log(::Log::Level::Error, g_saveError); return; }
@@ -111,13 +111,13 @@ static void SaveExploreState()
     }
 }
 
-// ƒfƒBƒXƒN‚©‚ç JSON ‚ğ“Ç‚İ‚İ g_state ‚Æ SceneManager ‚ÌƒvƒŒƒCƒ„[ƒƒXƒ^[‚ğ•œŒ³‚·‚é
+// ãƒ‡ã‚£ã‚¹ã‚¯ã‹ã‚‰ JSON ã‚’èª­ã¿è¾¼ã¿ g_state ã¨ SceneManager ã®ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ­ã‚¹ã‚¿ãƒ¼ã‚’å¾©å…ƒã™ã‚‹
 /*
  * LoadExploreState
  * ----------------
- * ƒZ[ƒuƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚İAg_state ‚Æ SceneManager ‚ÌƒvƒŒƒCƒ„[ƒƒXƒ^[‚ğ•œŒ³‚µ‚Ü‚·B
- * - ŒİŠ·«‚Ì‚½‚ß saveVersion ‚ğŠm”F‚µAŠù’mƒtƒB[ƒ‹ƒh‚Ì‚İ•œŒ³‚µ‚Ü‚·B
- * - •s³‚È JSON ‚âƒtƒ@ƒCƒ‹‚ª–³‚¢ê‡‚Í g_saveError ‚ğXV‚µ‚Ü‚·B
+ * ã‚»ãƒ¼ãƒ–ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã¿ã€g_state ã¨ SceneManager ã®ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ãƒ­ã‚¹ã‚¿ãƒ¼ã‚’å¾©å…ƒã—ã¾ã™ã€‚
+ * - äº’æ›æ€§ã®ãŸã‚ saveVersion ã‚’ç¢ºèªã—ã€æ—¢çŸ¥ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã®ã¿å¾©å…ƒã—ã¾ã™ã€‚
+ * - ä¸æ­£ãª JSON ã‚„ãƒ•ã‚¡ã‚¤ãƒ«ãŒç„¡ã„å ´åˆã¯ g_saveError ã‚’æ›´æ–°ã—ã¾ã™ã€‚
  */
 static void LoadExploreState()
 {
@@ -166,7 +166,7 @@ static void LoadExploreState()
             auto &plist = g_SceneManager.GetPlayers();
             plist.clear();
             for (auto &pj : j["players"]) {
-                CharcterScene::CharcterDate p;
+                CharacterScene::CharacterData p;
                 if (pj.contains("name")) p.name = pj["name"].get<std::string>();
                 if (pj.contains("job")) p.job = pj["job"].get<std::string>();
                 if (pj.contains("str")) p.str = pj["str"].get<int>();
@@ -201,7 +201,7 @@ static void LoadExploreState()
         ::Log::Log(::Log::Level::Error, g_saveError);
     }
 }
-// UI •\¦‚Ì‚½‚ß‚Éƒm[ƒh‘JˆÚ‚ğ­‚µ’x‚ç‚¹‚é‚½‚ß‚Ìó‘Ô
+// UI è¡¨ç¤ºã®ãŸã‚ã«ãƒãƒ¼ãƒ‰é·ç§»ã‚’å°‘ã—é…ã‚‰ã›ã‚‹ãŸã‚ã®çŠ¶æ…‹
 static bool g_waitingChoice = false;
 static int g_pendingNode = -1;
 static float g_pendingTimer = 0.0f;
@@ -209,9 +209,9 @@ static float g_pendingTimer = 0.0f;
 /*
  * ExploreScene::Initialize
  * -------------------------
- * - ƒAƒZƒbƒg‚©‚ç explore.json ‚ğ“Ç‚İ‚ñ‚Å EventNode ‚ğ\’z‚µ‚Ü‚·B
- * - g_nodes ‚Éƒm[ƒh‚ğŠi”[‚µAŠJnƒm[ƒh‚ğŒˆ’è‚µ‚Ü‚·B
- * - ƒZ[ƒuƒtƒ@ƒCƒ‹‚ª‚ ‚ê‚Î LoadExploreState() ‚ğŒÄ‚ñ‚Åó‘Ô‚ğ•œŒ³‚µ‚Ü‚·B
+ * - ã‚¢ã‚»ãƒƒãƒˆã‹ã‚‰ explore.json ã‚’èª­ã¿è¾¼ã‚“ã§ EventNode ã‚’æ§‹ç¯‰ã—ã¾ã™ã€‚
+ * - g_nodes ã«ãƒãƒ¼ãƒ‰ã‚’æ ¼ç´ã—ã€é–‹å§‹ãƒãƒ¼ãƒ‰ã‚’æ±ºå®šã—ã¾ã™ã€‚
+ * - ã‚»ãƒ¼ãƒ–ãƒ•ã‚¡ã‚¤ãƒ«ãŒã‚ã‚Œã° LoadExploreState() ã‚’å‘¼ã‚“ã§çŠ¶æ…‹ã‚’å¾©å…ƒã—ã¾ã™ã€‚
  */
 void ExploreScene::Initialize() {
     // load nodes from assets/story/explore.json if present
@@ -281,9 +281,9 @@ void ExploreScene::Initialize() {
 /*
  * ExploreScene::Update
  * ---------------------
- * –ˆƒtƒŒ[ƒ€‚ÌXVˆ—B
- * - DiceVisual ‚ğXV‚µ‚Äƒ_ƒCƒX‰‰o‚ği‚ß‚Ü‚·B
- * - ‘I‘ğˆ‚ÌŒãˆ—‚Æ‚µ‚Ä‘JˆÚ‚ğ’x‰„‚³‚¹‚é‚½‚ß‚Ì pending ƒ^ƒCƒ}[‚ğˆµ‚¢‚Ü‚·B
+ * æ¯ãƒ•ãƒ¬ãƒ¼ãƒ ã®æ›´æ–°å‡¦ç†ã€‚
+ * - DiceVisual ã‚’æ›´æ–°ã—ã¦ãƒ€ã‚¤ã‚¹æ¼”å‡ºã‚’é€²ã‚ã¾ã™ã€‚
+ * - é¸æŠè‚¢ã®å¾Œå‡¦ç†ã¨ã—ã¦é·ç§»ã‚’é…å»¶ã•ã›ã‚‹ãŸã‚ã® pending ã‚¿ã‚¤ãƒãƒ¼ã‚’æ‰±ã„ã¾ã™ã€‚
  */
 void ExploreScene::Update() {
     // advance dice visual
@@ -312,9 +312,9 @@ void ExploreScene::Update() {
 /*
  * ExploreScene::RenderUI
  * -----------------------
- * ŠJ”­—p‚ÌƒfƒoƒbƒO UI ‚ğ•`‰æ‚µ‚Ü‚·B
- * - flags / inventory / vars ‚Ì’†g‚ğ•\¦E•ÒW‚Å‚«‚Ü‚·B
- * - Save / Load ƒ{ƒ^ƒ“‚Åè“®•Û‘¶‚â•œŒ³‚ª‰Â”\‚Å‚·B
+ * é–‹ç™ºç”¨ã®ãƒ‡ãƒãƒƒã‚° UI ã‚’æç”»ã—ã¾ã™ã€‚
+ * - flags / inventory / vars ã®ä¸­èº«ã‚’è¡¨ç¤ºãƒ»ç·¨é›†ã§ãã¾ã™ã€‚
+ * - Save / Load ãƒœã‚¿ãƒ³ã§æ‰‹å‹•ä¿å­˜ã‚„å¾©å…ƒãŒå¯èƒ½ã§ã™ã€‚
  */
 void ExploreScene::RenderUI() {
     if (ImGui::GetCurrentContext() == nullptr) return;
@@ -362,10 +362,10 @@ void ExploreScene::RenderUI() {
 /*
  * ExploreScene::Render
  * ---------------------
- * ’Tõƒ_ƒCƒAƒƒOiƒm[ƒhƒeƒLƒXƒg‚Æ‘I‘ğˆj‚ğ•`‰æ‚µ‚Ü‚·B
- * - Še‘I‘ğˆ‚Ì—vŒƒ`ƒFƒbƒN‚ğs‚¢Aƒ{ƒ^ƒ“‰Ÿ‰º‚ÅŒø‰Ê‚ğ“K—p‚µ‚Ü‚·B
- * - ƒ[ƒ‹”»’è‚ª‚ ‚é‘I‘ğˆ‚Íƒ_ƒCƒX‚ğU‚èA¬Œ÷/¸”s‚Å•ªŠò‚³‚¹‚Ü‚·B
- * - Œø‰Ê‚Ì“K—p‚Í ApplyChoiceEffects ‚ÉˆÏ÷‚µAó‘ÔXVŒã‚É©“®ƒZ[ƒu‚µ‚Ü‚·B
+ * æ¢ç´¢ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ï¼ˆãƒãƒ¼ãƒ‰ãƒ†ã‚­ã‚¹ãƒˆã¨é¸æŠè‚¢ï¼‰ã‚’æç”»ã—ã¾ã™ã€‚
+ * - å„é¸æŠè‚¢ã®è¦ä»¶ãƒã‚§ãƒƒã‚¯ã‚’è¡Œã„ã€ãƒœã‚¿ãƒ³æŠ¼ä¸‹ã§åŠ¹æœã‚’é©ç”¨ã—ã¾ã™ã€‚
+ * - ãƒ­ãƒ¼ãƒ«åˆ¤å®šãŒã‚ã‚‹é¸æŠè‚¢ã¯ãƒ€ã‚¤ã‚¹ã‚’æŒ¯ã‚Šã€æˆåŠŸ/å¤±æ•—ã§åˆ†å²ã•ã›ã¾ã™ã€‚
+ * - åŠ¹æœã®é©ç”¨ã¯ ApplyChoiceEffects ã«å§”è­²ã—ã€çŠ¶æ…‹æ›´æ–°å¾Œã«è‡ªå‹•ã‚»ãƒ¼ãƒ–ã—ã¾ã™ã€‚
  */
 void ExploreScene::Render() {
     if (g_state.currentNode < 0 || g_nodes.find(g_state.currentNode) == g_nodes.end()) {
@@ -399,18 +399,18 @@ void ExploreScene::Render() {
     ImGui::Separator();
 
     // choices
-    // ‘I‘ğˆ‚ÌÀs‚ÉŠÖ‚í‚éƒwƒ‹ƒp
-    // ApplyFlags: ƒtƒ‰ƒO‚Ì’Ç‰Á/íœ‚ğ‚Ü‚Æ‚ß‚Äs‚¤
+    // é¸æŠè‚¢ã®å®Ÿè¡Œã«é–¢ã‚ã‚‹ãƒ˜ãƒ«ãƒ‘
+    // ApplyFlags: ãƒ•ãƒ©ã‚°ã®è¿½åŠ /å‰Šé™¤ã‚’ã¾ã¨ã‚ã¦è¡Œã†
     auto ApplyFlags = [&](const std::vector<std::string> &sets, const std::vector<std::string> &clears) {
         for (auto &f : sets) g_state.flags.insert(f);
         for (auto &f : clears) g_state.flags.erase(f);
     };
 
     // apply commandized effects for a given choice
-    // Choice::effects ‚ÌƒRƒ}ƒ“ƒh‚ğ•]‰¿EÀs‚·‚éƒRƒAˆ—B
-    // success ˆø”‚Íƒ[ƒ‹”»’è‚ÌŒ‹‰Êi¬Œ÷:true/¸”s:falsej‚ğ¦‚·B
+    // Choice::effects ã®ã‚³ãƒãƒ³ãƒ‰ã‚’è©•ä¾¡ãƒ»å®Ÿè¡Œã™ã‚‹ã‚³ã‚¢å‡¦ç†ã€‚
+    // success å¼•æ•°ã¯ãƒ­ãƒ¼ãƒ«åˆ¤å®šã®çµæœï¼ˆæˆåŠŸ:true/å¤±æ•—:falseï¼‰ã‚’ç¤ºã™ã€‚
     auto ApplyChoiceEffects = [&](const Choice &c, bool success) {
-        // ğŒ•]‰¿: Condition ‚ğŒ©‚ÄŒ»İ‚Ì g_state ‚ªğŒ‚ğ–‚½‚·‚©”»’è‚·‚é
+        // æ¡ä»¶è©•ä¾¡: Condition ã‚’è¦‹ã¦ç¾åœ¨ã® g_state ãŒæ¡ä»¶ã‚’æº€ãŸã™ã‹åˆ¤å®šã™ã‚‹
         auto CheckCond = [&](const Choice::Effect::Condition &cond)->bool {
             // If no requirements specified, condition passes
             bool hasAnyReq = !cond.requireFlags.empty() || !cond.requireNotFlags.empty() || !cond.requireInventory.empty()
@@ -467,26 +467,26 @@ void ExploreScene::Render() {
                 return false;
             }
         };
-        // Às‘ÎÛ‚ÌŒø‰ÊƒŠƒXƒg‚ğì¬iŠî–{Œø‰Ê + success/fail —pŒø‰Êj
+        // å®Ÿè¡Œå¯¾è±¡ã®åŠ¹æœãƒªã‚¹ãƒˆã‚’ä½œæˆï¼ˆåŸºæœ¬åŠ¹æœ + success/fail ç”¨åŠ¹æœï¼‰
         std::vector<Choice::Effect> exec = c.effects;
         if (success) {
             exec.insert(exec.end(), c.effectsOnSuccess.begin(), c.effectsOnSuccess.end());
         } else {
             exec.insert(exec.end(), c.effectsOnFail.begin(), c.effectsOnFail.end());
         }
-        // Ä‹AÀsq: if/then/else ‚ğƒTƒ|[ƒg‚µ‚Â‚ÂŠe effect ‚ğ•]‰¿E“K—p‚·‚é
+        // å†å¸°å®Ÿè¡Œå­: if/then/else ã‚’ã‚µãƒãƒ¼ãƒˆã—ã¤ã¤å„ effect ã‚’è©•ä¾¡ãƒ»é©ç”¨ã™ã‚‹
         std::function<void(const std::vector<Choice::Effect>&, bool)> ExecEffects;
         ExecEffects = [&](const std::vector<Choice::Effect> &effectsList, bool parentSuccess) {
             for (auto &e : effectsList) {
                 if (e.op == "if") {
-                    // if ƒGƒ“ƒgƒŠ: ğŒ‚ğ•]‰¿‚µ‚Ä then/else ‚ğÄ‹AÀs
+                    // if ã‚¨ãƒ³ãƒˆãƒª: æ¡ä»¶ã‚’è©•ä¾¡ã—ã¦ then/else ã‚’å†å¸°å®Ÿè¡Œ
                     bool condOk = CheckCond(e.condition);
                     g_log.push_back(std::string("IfEffect: ") + (condOk ? "(cond OK)" : "(cond FAIL)"));
                     if (condOk) ExecEffects(e.thenEffects, parentSuccess);
                     else ExecEffects(e.elseEffects, parentSuccess);
                     continue;
                 }
-                // ’Êí‚Ì effect: ğŒ‚ğ•]‰¿‚µ‚Ä“K—p
+                // é€šå¸¸ã® effect: æ¡ä»¶ã‚’è©•ä¾¡ã—ã¦é©ç”¨
                 bool condOk = CheckCond(e.condition);
                 std::string dbg = std::string("Effect: ") + e.op + (condOk ? " (cond OK)" : " (cond FAIL)");
                 g_log.push_back(dbg);
@@ -506,7 +506,7 @@ void ExploreScene::Render() {
                 } else if (e.op == "clear_flag") {
                     for (auto &f : e.items) g_state.flags.erase(f);
                 } else {
-                    // –¢’m‚Ì op ‚ÍƒƒO‚Éc‚µ‚Ä–³‹
+                    // æœªçŸ¥ã® op ã¯ãƒ­ã‚°ã«æ®‹ã—ã¦ç„¡è¦–
                     g_log.push_back(std::string("Unknown effect op: ") + e.op);
                 }
             }

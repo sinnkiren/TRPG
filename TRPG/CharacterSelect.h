@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "IScene.h"
 #include <string>
 #include <vector>
@@ -7,7 +7,7 @@
 
 namespace trpg
 {
-    // ŠÈˆÕ clampiŠÂ‹«‚É‚æ‚Á‚Ä std::clamp ‚ªŒ©‚Â‚©‚ç‚È‚¢–â‘è‚Ì‰ñ”ğ—pj
+    // ç°¡æ˜“ clampï¼ˆç’°å¢ƒã«ã‚ˆã£ã¦ std::clamp ãŒè¦‹ã¤ã‹ã‚‰ãªã„å•é¡Œã®å›é¿ç”¨ï¼‰
     template <typename T>
     constexpr const T& clamp(const T& v, const T& lo, const T& hi) noexcept
     {
@@ -15,24 +15,24 @@ namespace trpg
     }
 }
 
-class CharcterScene : public IScene {
+class CharacterScene : public IScene {
 public:
     void Initialize() override;
     void Update() override;
     void Render() override;
 
-    struct CharcterDate
+    struct CharacterData
     {
         std::string name;
         std::string job;
 
-        int str =0, con =0, dex =0, int_ =0, pow =0, cha =0, app =0, siz =0, edu =0; // ”\—Í’l
-        std::vector<std::string> skills; // ‹Z”\
+        int str =0, con =0, dex =0, int_ =0, pow =0, cha =0, app =0, siz =0, edu =0; // èƒ½åŠ›å€¤
+        std::vector<std::string> skills; // æŠ€èƒ½
 
-        int sanity =100; //‹Œ: ³‹C“xiŒİŠ·‚Ì‚½‚ßc‚·j
-        int maxSanity =100; //‹Œ: Å‘å³‹C“x
+        int sanity =100; //æ—§: æ­£æ°—åº¦ï¼ˆäº’æ›ã®ãŸã‚æ®‹ã™ï¼‰
+        int maxSanity =100; //æ—§: æœ€å¤§æ­£æ°—åº¦
 
-        // V: ‘Ï‹v—ÍiHPj
+        // æ–°: è€ä¹…åŠ›ï¼ˆHPï¼‰
         int endurance =0;
         int maxEndurance = 0;
         // Path to portrait image (relative to asset root or absolute)
@@ -55,28 +55,28 @@ public:
         }
     };
 
-    // ƒV[ƒ“ƒ}ƒl[ƒWƒƒ‚ÖƒV[ƒ“‘JˆÚ—v‹‚ğo‚·ƒR[ƒ‹ƒoƒbƒN
+    // ã‚·ãƒ¼ãƒ³ãƒãƒãƒ¼ã‚¸ãƒ£ã¸ã‚·ãƒ¼ãƒ³é·ç§»è¦æ±‚ã‚’å‡ºã™ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯
     std::function<void(int)> RequestSceneChange;
 
     // Dev-only helper to set portrait path from external input (drag & drop)
     void SetPortraitPath(const std::string& path);
 
 private:
-    CharcterDate charcter;
+    CharacterData charcter;
 
-    // ƒTƒ“ƒvƒ‹ƒLƒƒƒ‰‚ÌƒŠƒXƒg
-    std::vector<CharcterDate> sampleCharacters;
+    // ã‚µãƒ³ãƒ—ãƒ«ã‚­ãƒ£ãƒ©ã®ãƒªã‚¹ãƒˆ
+    std::vector<CharacterData> sampleCharacters;
     int selectedSampleIndex = -1;
 
-    // UI•â•: ÅŒã‚ÉU‚Á‚½ƒ_ƒCƒX
+    // UIè£œåŠ©: æœ€å¾Œã«æŒ¯ã£ãŸãƒ€ã‚¤ã‚¹
     int lastDiceRoll =0;
 
-    // ”\—Í’lsi•\¦‚Æƒ_ƒCƒX®AƒƒbƒN“™j
+    // èƒ½åŠ›å€¤è¡Œï¼ˆè¡¨ç¤ºã¨ãƒ€ã‚¤ã‚¹å¼ã€ãƒ­ãƒƒã‚¯ç­‰ï¼‰
     struct AbilityRow {
         std::string name;
-        std::string expr; //—á: "3D6", "2D6+6"
-        int value =0; // Œ»İ‚Ì’l
-        bool locked = false; // ƒƒbƒN‚³‚ê‚Ä‚¢‚ê‚ÎˆêŠ‡U‚è‚Åã‘‚«‚µ‚È‚¢
+        std::string expr; //ä¾‹: "3D6", "2D6+6"
+        int value =0; // ç¾åœ¨ã®å€¤
+        bool locked = false; // ãƒ­ãƒƒã‚¯ã•ã‚Œã¦ã„ã‚Œã°ä¸€æ‹¬æŒ¯ã‚Šã§ä¸Šæ›¸ãã—ãªã„
     };
 
     std::vector<AbilityRow> abilities;

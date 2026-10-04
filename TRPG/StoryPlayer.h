@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <string>
 #include <vector>
 #include <functional>
@@ -20,16 +20,16 @@ struct StoryEvent
 	std::string faceImage;
 	std::string effect;
 	float duration = 1.0f;
-	json effectParams = nullptr; // JSON ‚Å‚ÌŒø‰Êƒpƒ‰ƒ[ƒ^‚ğ•Û
+	json effectParams = nullptr; // JSON ã§ã®åŠ¹æœãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ä¿æŒ
 };
-// ƒLƒƒƒ‰ƒNƒ^[ó‘Ôi•¡”ƒLƒƒƒ‰‘Î‰‚ÌŠî”Õj
+// ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼çŠ¶æ…‹ï¼ˆè¤‡æ•°ã‚­ãƒ£ãƒ©å¯¾å¿œã®åŸºç›¤ï¼‰
 struct CharacterState {
-	std::string id;              // ¯•ÊqiJSON ‚â StoryEvent ‚Ì speaker ƒtƒB[ƒ‹ƒh‚Æ˜AŒgj
-	std::string imagePath;       // —§‚¿ŠG‚ÌƒpƒX
-	std::string expression;      // •\î·•ª‚âƒoƒŠƒAƒ“ƒg–¼
-	ImVec2 position = ImVec2(0.1f, 0.7f); // ‰æ–Êã‚ÌˆÊ’ui0..1 ‚Ì³‹K‰»À•Wj
-	bool visible = false;        // •\¦ƒtƒ‰ƒO
-	// «—ˆ“I‚ÉƒeƒNƒXƒ`ƒƒƒnƒ“ƒhƒ‹‚ğ•Û‚·‚éê
+	std::string id;              // è­˜åˆ¥å­ï¼ˆJSON ã‚„ StoryEvent ã® speaker ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã¨é€£æºï¼‰
+	std::string imagePath;       // ç«‹ã¡çµµã®ãƒ‘ã‚¹
+	std::string expression;      // è¡¨æƒ…å·®åˆ†ã‚„ãƒãƒªã‚¢ãƒ³ãƒˆå
+	ImVec2 position = ImVec2(0.1f, 0.7f); // ç”»é¢ä¸Šã®ä½ç½®ï¼ˆ0..1 ã®æ­£è¦åŒ–åº§æ¨™ï¼‰
+	bool visible = false;        // è¡¨ç¤ºãƒ•ãƒ©ã‚°
+	// å°†æ¥çš„ã«ãƒ†ã‚¯ã‚¹ãƒãƒ£ãƒãƒ³ãƒ‰ãƒ«ã‚’ä¿æŒã™ã‚‹å ´
 	ImTextureID tex = nullptr;
 };
 
@@ -42,32 +42,32 @@ public:
 	StoryPlayer();
 	~StoryPlayer();
 	void Initialize() override;
-	void Update() override;   // –¢g—p
+	void Update() override;   // æœªä½¿ç”¨
 	void Render() override;
 	void RenderUI() override;
 
-	void UpdateImpl(float dt); // float dt ‚ğó‚¯æ‚éXV
+	void UpdateImpl(float dt); // float dt ã‚’å—ã‘å–ã‚‹æ›´æ–°
 
 	bool LoadFromFile(const std::string& path);
     // Returns a human-readable error message from the last LoadFromFile/LoadGraphFromFile attempt.
 	const std::string& GetLastLoadError() const { return m_lastLoadError; }
 	bool SaveToFile(const std::string& path) const;
-	void Play();//Ä¶
-	void Pause();//ˆê’â~
-	void Next();//Ÿ‚Ö
-	void Reset();//ƒŠƒZƒbƒg
+	void Play();//å†ç”Ÿ
+	void Pause();//ä¸€æ™‚åœæ­¢
+	void Next();//æ¬¡ã¸
+	void Reset();//ãƒªã‚»ãƒƒãƒˆ
 
-	// ƒGƒtƒFƒNƒg“o˜^ API
+	// ã‚¨ãƒ•ã‚§ã‚¯ãƒˆç™»éŒ² API
 	void RegisterEffect(const std::string& name, EffectHandler  handler);
-	// ƒCƒxƒ“ƒgŠ®—¹ƒR[ƒ‹ƒoƒbƒN
+	// ã‚¤ãƒ™ãƒ³ãƒˆå®Œäº†ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯
 	std::function<void(const StoryEvent&)>onEventFinished;
 
-	// ”wŒi‰æ‘œİ’èi”Ä—p ImTextureIDj
+	// èƒŒæ™¯ç”»åƒè¨­å®šï¼ˆæ±ç”¨ ImTextureIDï¼‰
 	void SetBackgroundTexture(ImTextureID tex) { m_bgTex = tex; }
 	ImTextureID GetBackgroundTexture() const { return m_bgTex; }
 
 #ifdef IMGUI_IMPL_DIRECTX11
-	// DirectX11 ‚Ì SRV ‚ğ“n‚·ƒwƒ‹ƒp[iStoryPlayer ‚ªŠù‘¶ SRV ‚ğ‰ğ•ú‚µ‚ÄŠÇ—‚µ‚Ü‚·j
+	// DirectX11 ã® SRV ã‚’æ¸¡ã™ãƒ˜ãƒ«ãƒ‘ãƒ¼ï¼ˆStoryPlayer ãŒæ—¢å­˜ SRV ã‚’è§£æ”¾ã—ã¦ç®¡ç†ã—ã¾ã™ï¼‰
 	void SetBackgroundSRV(ID3D11ShaderResourceView* srv);
 #endif
 
@@ -99,44 +99,44 @@ private:
 	void TriggerEffect(const StoryEvent& ev);
 	void ShowCurrentText();
 
-	// ’Ç‰Áƒƒ“ƒo
-	float m_textScale = 1.0f;      // •¶š‚ÌŠg‘å—¦i1.0 = •W€j
-	ImVec2 m_dialogSize = ImVec2(400.0f, 160.0f); // ƒ_ƒCƒAƒƒOƒTƒCƒY‚ÌƒfƒtƒHƒ‹ƒg
+	// è¿½åŠ ãƒ¡ãƒ³ãƒ
+	float m_textScale = 1.0f;      // æ–‡å­—ã®æ‹¡å¤§ç‡ï¼ˆ1.0 = æ¨™æº–ï¼‰
+	ImVec2 m_dialogSize = ImVec2(400.0f, 160.0f); // ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã‚µã‚¤ã‚ºã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆ
 
-	// ƒtƒF[ƒh‘JˆÚ—pistory -> battlej
+	// ãƒ•ã‚§ãƒ¼ãƒ‰é·ç§»ç”¨ï¼ˆstory -> battleï¼‰
 	float m_fsFadeAlpha = 0.0f;
 	float m_fsFadeDuration = 0.8f;
 	float m_fsFadeElapsed = 0.0f;
 	bool  m_fsFadingOut = false;
 
-	// ”wŒiƒeƒNƒXƒ`ƒƒiImGui —pj
+	// èƒŒæ™¯ãƒ†ã‚¯ã‚¹ãƒãƒ£ï¼ˆImGui ç”¨ï¼‰
 	ImTextureID m_bgTex = nullptr;
 
 #ifdef IMGUI_IMPL_DIRECTX11
-	// DirectX11 —p‚É SRV ‚ÌQÆ‚ğ•Û‚µ‚Ä©“®‰ğ•ú
+	// DirectX11 ç”¨ã« SRV ã®å‚ç…§ã‚’ä¿æŒã—ã¦è‡ªå‹•è§£æ”¾
 	ID3D11ShaderResourceView* m_bgSrv = nullptr;
 #endif
 
-	// ’x‰„ƒ[ƒh—pƒƒ“ƒoi’Ç‰Áj
-	std::string m_bgPath;             // “Ç‚İ‚Ş‰æ‘œ‚ÌƒpƒXi’x‰„“Ç‚İ‚İ—pj
-	bool m_bgLoadedAttempted = false; // ˆê“x“Ç‚İ‚İsÏ‚İƒtƒ‰ƒO
+	// é…å»¶ãƒ­ãƒ¼ãƒ‰ç”¨ãƒ¡ãƒ³ãƒï¼ˆè¿½åŠ ï¼‰
+	std::string m_bgPath;             // èª­ã¿è¾¼ã‚€ç”»åƒã®ãƒ‘ã‚¹ï¼ˆé…å»¶èª­ã¿è¾¼ã¿ç”¨ï¼‰
+	bool m_bgLoadedAttempted = false; // ä¸€åº¦èª­ã¿è¾¼ã¿è©¦è¡Œæ¸ˆã¿ãƒ•ãƒ©ã‚°
 
-	// “à•”ƒwƒ‹ƒp[i’x‰„“Ç‚İ‚İj
+	// å†…éƒ¨ãƒ˜ãƒ«ãƒ‘ãƒ¼ï¼ˆé…å»¶èª­ã¿è¾¼ã¿ï¼‰
 	void LoadBackgroundTextureIfNeeded();
 	// load character textures lazily
 	void LoadCharacterTexturesIfNeeded();
 
-	// ƒtƒF[ƒhŠJn
+	// ãƒ•ã‚§ãƒ¼ãƒ‰é–‹å§‹
 	void StartFadeToBattle(float duration = 0.8f);
 
-    // ÅŒã‚Ìƒ[ƒh/•Û‘¶ƒGƒ‰[‚ğ•ÛiUI•\¦—pj
+    // æœ€å¾Œã®ãƒ­ãƒ¼ãƒ‰/ä¿å­˜ã‚¨ãƒ©ãƒ¼ã‚’ä¿æŒï¼ˆUIè¡¨ç¤ºç”¨ï¼‰
     std::string m_lastLoadError;
 
-    // ’x‰„ƒ[ƒhÄs§Œä
-    int m_bgLoadAttempts = 0;          // s‰ñ”
-    int m_bgMaxLoadAttempts = 8;       // Å‘ås‰ñ”i-1 ‚Å–³§ŒÀj
-    float m_bgLastAttemptTime = 0.0f;  // ÅIs (ImGui::GetTime())
-    float m_bgRetryInterval = 2.0f;    // ÄsŠÔŠui•bj
+    // é…å»¶ãƒ­ãƒ¼ãƒ‰å†è©¦è¡Œåˆ¶å¾¡
+    int m_bgLoadAttempts = 0;          // è©¦è¡Œå›æ•°
+    int m_bgMaxLoadAttempts = 8;       // æœ€å¤§è©¦è¡Œå›æ•°ï¼ˆ-1 ã§ç„¡åˆ¶é™ï¼‰
+    float m_bgLastAttemptTime = 0.0f;  // æœ€çµ‚è©¦è¡Œæ™‚åˆ» (ImGui::GetTime())
+    float m_bgRetryInterval = 2.0f;    // å†è©¦è¡Œé–“éš”ï¼ˆç§’ï¼‰
 
 	// Dev UI: toggle for overlay/debug window
 	bool m_showDevWindow = false;
@@ -170,28 +170,28 @@ public:
 	int m_editorMode = 0;
 	// Node editor state
 	int m_nodeEditorSelectedId = -1;
-	// ƒm[ƒh‚Ì‰æ–Êã‚ÌˆÊ’ui0..1 ‚Ì³‹K‰»À•WjBNode Graph ƒrƒ…[‚Å•ÒWE•Û‘¶‚µ‚Ü‚·B
+	// ãƒãƒ¼ãƒ‰ã®ç”»é¢ä¸Šã®ä½ç½®ï¼ˆ0..1 ã®æ­£è¦åŒ–åº§æ¨™ï¼‰ã€‚Node Graph ãƒ“ãƒ¥ãƒ¼ã§ç·¨é›†ãƒ»ä¿å­˜ã—ã¾ã™ã€‚
 	std::unordered_map<int, ImVec2> m_nodePositions;
 
 	// Node graph view interaction state
-	ImVec2 m_nodeGraphPan = ImVec2(0.0f, 0.0f); // ƒpƒ“ƒIƒtƒZƒbƒgiƒsƒNƒZƒ‹j
-	float m_nodeGraphZoom = 1.0f; // ƒY[ƒ€ŒW”
-	// Ú‘±ì¬’†‚Ìó‘Ô
+	ImVec2 m_nodeGraphPan = ImVec2(0.0f, 0.0f); // ãƒ‘ãƒ³ã‚ªãƒ•ã‚»ãƒƒãƒˆï¼ˆãƒ”ã‚¯ã‚»ãƒ«ï¼‰
+	float m_nodeGraphZoom = 1.0f; // ã‚ºãƒ¼ãƒ ä¿‚æ•°
+	// æ¥ç¶šä½œæˆä¸­ã®çŠ¶æ…‹
 	bool m_draggingConnection = false;
 	int m_dragSourceNode = -1;
-	int m_dragSourceChoiceIndex = -1; // Ú‘±ƒhƒ‰ƒbƒO‚ÌŒ³‚Æ‚È‚é choice ƒCƒ“ƒfƒbƒNƒXi-1 = V‹Kì¬j
-	// ƒ|ƒbƒvƒAƒbƒv—p: Ú‘±ŠJn‚Å‘I‘ğŒó•â‚ğ•\¦‚·‚éƒm[ƒh ID
+	int m_dragSourceChoiceIndex = -1; // æ¥ç¶šãƒ‰ãƒ©ãƒƒã‚°ã®å…ƒã¨ãªã‚‹ choice ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ï¼ˆ-1 = æ–°è¦ä½œæˆï¼‰
+	// ãƒãƒƒãƒ—ã‚¢ãƒƒãƒ—ç”¨: æ¥ç¶šé–‹å§‹ã§é¸æŠå€™è£œã‚’è¡¨ç¤ºã™ã‚‹ãƒãƒ¼ãƒ‰ ID
 	int m_pendingChoicePopupNode = -1;
 
-	// ‘I‘ğ‚³‚ê‚½ƒGƒbƒWiÚ‘±j‚Ìî•ñBNone ‚Ìê‡‚Í -1B
+	// é¸æŠã•ã‚ŒãŸã‚¨ãƒƒã‚¸ï¼ˆæ¥ç¶šï¼‰ã®æƒ…å ±ã€‚None ã®å ´åˆã¯ -1ã€‚
 	int m_selectedEdgeSourceNode = -1;
 	int m_selectedEdgeChoiceIndex = -1;
 	int m_selectedEdgeTargetNode = -1;
 
 	// Editor state for creating/editing stories
-	int m_editorSelected = -1;                // ‘I‘ğ’†‚ÌƒCƒxƒ“ƒgƒCƒ“ƒfƒbƒNƒX
-	std::string m_editorEffectParamsBuf;      // ‘I‘ğ’†ƒCƒxƒ“ƒg‚Ì effectParams ‚ğƒeƒLƒXƒg‚Å•ÒW‚·‚éƒoƒbƒtƒ@
-	std::string m_editorStoryPath;            // •ÒW‚Ì“Ç‚İ‘‚«—pƒpƒXiUI‚Å•ÒW‰Âj
+	int m_editorSelected = -1;                // é¸æŠä¸­ã®ã‚¤ãƒ™ãƒ³ãƒˆã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹
+	std::string m_editorEffectParamsBuf;      // é¸æŠä¸­ã‚¤ãƒ™ãƒ³ãƒˆã® effectParams ã‚’ãƒ†ã‚­ã‚¹ãƒˆã§ç·¨é›†ã™ã‚‹ãƒãƒƒãƒ•ã‚¡
+	std::string m_editorStoryPath;            // ç·¨é›†æ™‚ã®èª­ã¿æ›¸ãç”¨ãƒ‘ã‚¹ï¼ˆUIã§ç·¨é›†å¯ï¼‰
 
 	// Event preview API (for editor)
 	void PreviewEvent(int index);

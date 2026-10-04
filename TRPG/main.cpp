@@ -1,18 +1,18 @@
-#include "main.h"
+ï»¿#include "main.h"
 #include  "Application.h"
 
-// ƒGƒ“ƒgƒŠ[ƒ|ƒCƒ“ƒg
+// ã‚¨ãƒ³ãƒˆãƒªãƒ¼ãƒã‚¤ãƒ³ãƒˆ
 int main(void)
 {
 
 #if defined(DEBUG) || defined(_DEBUG)
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #else
-    HWND consoleWindow = GetConsoleWindow(); // ƒRƒ“ƒ\[ƒ‹ƒEƒBƒ“ƒhƒE‚Ìƒnƒ“ƒhƒ‹‚ğæ“¾
-    ShowWindow(consoleWindow, SW_HIDE);     // ƒRƒ“ƒ\[ƒ‹ƒEƒBƒ“ƒhƒE‚ğ”ñ•\¦‚É‚·‚é
+    HWND consoleWindow = GetConsoleWindow(); // ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®ãƒãƒ³ãƒ‰ãƒ«ã‚’å–å¾—
+    ShowWindow(consoleWindow, SW_HIDE);     // ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’éè¡¨ç¤ºã«ã™ã‚‹
 #endif//defined(DEBUG) || defined(_DEBUG)
 
-    // ƒAƒvƒŠƒP[ƒVƒ‡ƒ“Às
+    // ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³å®Ÿè¡Œ
     Application app(SCREEN_WIDTH, SCREEN_HEIGHT);
     app.Run();
 

@@ -17,6 +17,25 @@
 
 using json = nlohmann::json;
 
+namespace {
+#ifdef _WIN32
+std::filesystem::path Utf8ToFilesystemPath(const std::string& s)
+{
+    if (s.empty()) return std::filesystem::path();
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+    if (len <= 0) return std::filesystem::path(s);
+    std::wstring ws(static_cast<size_t>(len - 1), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, ws.data(), len);
+    return std::filesystem::path(ws);
+}
+#else
+std::filesystem::path Utf8ToFilesystemPath(const std::string& s)
+{
+    return std::filesystem::path(s);
+}
+#endif
+}
+
 // Implementations moved to StoryPlayer_Editor.cpp
 
 // (Moved runtime node UI and character drawing helpers to StoryPlayer_Runtime.cpp)
@@ -80,12 +99,7 @@ bool StoryPlayer::LoadGraphFromFile(const std::string& path)
     namespace fs = std::filesystem;
     try {
         // Construct a filesystem path from UTF-8 input to avoid ANSI code-page conversions on Windows.
-        // Avoid deprecated std::filesystem::u8path overloads in C++20 by constructing a path from a
-        // std::u8string first.
-        std::u8string u8s;
-        u8s.reserve(path.size());
-        for (char c : path) u8s.push_back(static_cast<char8_t>(c));
-        fs::path ppath(u8s);
+        fs::path ppath = Utf8ToFilesystemPath(path);
         if (!fs::exists(ppath)) {
             m_lastLoadError = "Graph file does not exist: " + path;
             ::Log::Log(::Log::Level::Error, m_lastLoadError);
@@ -531,17 +545,14 @@ void StoryPlayer::Update() {
     UpdateImpl(dt);
 }
 
-bool StoryPlayer::LoadFromFile(const std::string& path) {
-    // Clear previous error
+bool StoryPlayer::LoadFromFile(const std::string& path)
+{
     m_lastLoadError.clear();
 
-    // Check file existence and open using filesystem path constructed from UTF-8 input
     namespace fs = std::filesystem;
+
     try {
-        std::u8string u8s;
-        u8s.reserve(path.size());
-        for (char c : path) u8s.push_back(static_cast<char8_t>(c));
-        fs::path ppath(u8s);
+        fs::path ppath = Utf8ToFilesystemPath(path);
         if (!fs::exists(ppath)) {
             m_lastLoadError = "Story file does not exist: " + path;
             ::Log::Log(::Log::Level::Error, m_lastLoadError);
@@ -555,72 +566,78 @@ bool StoryPlayer::LoadFromFile(const std::string& path) {
             return false;
         }
 
-        // Read file into string so we can validate before parsing (avoids first-chance exceptions in debugger)
         std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-    json j;
-    try {
+
+        json j;
         if (!json::accept(content)) {
             m_lastLoadError = "Failed to parse JSON: invalid JSON (accept failed)";
             ::Log::Log(::Log::Level::Error, m_lastLoadError + std::string(" : ") + path);
             return false;
         }
-        j = json::parse(content);
-    }
-    catch (const std::exception& ex) {
-        m_lastLoadError = std::string("Failed to parse JSON: ") + ex.what();
-        ::Log::Log(::Log::Level::Error, m_lastLoadError);
-        return false;
-    }
 
-    // Support two formats:
-    // 1) legacy: root is an array of events
-    // 2) object: { "events": [...], "characters": [...] }
-    json eventsArray;
-    m_characters.clear();
-    if (j.is_array()) {
-        eventsArray = j;
-    } else if (j.is_object() && j.contains("events") && j["events"].is_array()) {
-        eventsArray = j["events"];
-        if (j.contains("characters")) {
-            try {
-                ParseCharactersJson(j["characters"], m_characters);
-            } catch (...) {
-                ::Log::Log(::Log::Level::Warning, "StoryPlayer: failed to parse characters array in story JSON");
+        try {
+            j = json::parse(content);
+        }
+        catch (const std::exception& ex) {
+            m_lastLoadError = std::string("Failed to parse JSON: ") + ex.what();
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
+        }
+
+        json eventsArray;
+        m_characters.clear();
+        if (j.is_array()) {
+            eventsArray = j;
+        }
+        else if (j.is_object() && j.contains("events") && j["events"].is_array()) {
+            eventsArray = j["events"];
+            if (j.contains("characters")) {
+                try {
+                    ParseCharactersJson(j["characters"], m_characters);
+                }
+                catch (...) {
+                    ::Log::Log(::Log::Level::Warning, "StoryPlayer: failed to parse characters array in story JSON");
+                }
             }
         }
-    } else {
-        m_lastLoadError = "Story JSON root is not an array or object with 'events': " + path;
-        ::Log::Log(::Log::Level::Error, m_lastLoadError);
-        return false;
-    }
-
-    m_events.clear();
-    try {
-        for (auto& it : eventsArray) {
-            StoryEvent ev;
-            if (it.contains("text")) ev.text = it.value("text", "");
-            if (it.contains("speaker")) ev.speaking = it.value("speaker", "");
-            if (it.contains("face")) ev.faceImage = it.value("face", "");
-            if (it.contains("effect")) ev.effect = it.value("effect", "");
-            if (it.contains("duration")) ev.duration = it.value("duration", 1.0f);
-            if (it.contains("effectParams")) ev.effectParams = it["effectParams"];
-            else ev.effectParams = nullptr;
-            m_events.push_back(ev);
+        else {
+            m_lastLoadError = "Story JSON root is not an array or object with 'events': " + path;
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            return false;
         }
+
+        m_events.clear();
+        try {
+            for (auto& it : eventsArray) {
+                StoryEvent ev;
+                if (it.contains("text")) ev.text = it.value("text", "");
+                if (it.contains("speaker")) ev.speaking = it.value("speaker", "");
+                if (it.contains("face")) ev.faceImage = it.value("face", "");
+                if (it.contains("effect")) ev.effect = it.value("effect", "");
+                if (it.contains("duration")) ev.duration = it.value("duration", 1.0f);
+                if (it.contains("effectParams")) ev.effectParams = it["effectParams"];
+                else ev.effectParams = nullptr;
+                m_events.push_back(ev);
+            }
+        }
+        catch (const std::exception& ex) {
+            m_lastLoadError = std::string("Error reading story entries: ") + ex.what();
+            ::Log::Log(::Log::Level::Error, m_lastLoadError);
+            m_events.clear();
+            return false;
+        }
+
+        m_index = 0;
+        m_timer = 0.0f;
+        m_playing = false;
+        m_lastLoadError.clear();
+        return true;
     }
     catch (const std::exception& ex) {
-        m_lastLoadError = std::string("Error reading story entries: ") + ex.what();
+        m_lastLoadError = std::string("Filesystem/IO error: ") + ex.what();
         ::Log::Log(::Log::Level::Error, m_lastLoadError);
-        m_events.clear();
         return false;
     }
-
-    m_index = 0;
-    m_timer = 0.0f;
-    m_playing = false;
-    // success: clear last error
-    m_lastLoadError.clear();
-    return true;
 }
 
 bool StoryPlayer::SaveToFile(const std::string& path) const

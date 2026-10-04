@@ -394,14 +394,14 @@ void SceneManager::Render() {
             ImGui::TextColored(ImVec4(0.9f, 0.9f, 0.6f, 1.0f), "Dev shortcuts (debug only)");
             ImGui::Separator();
             ImGui::Text("F1: Title");
-            ImGui::Text("F2: TRPG 選択");
-            ImGui::Text("F3: シナリオ選択");
-            ImGui::Text("F4: キャラクター選択");
-            ImGui::Text("F5: 本編");
-            ImGui::Text("F6: バトル");
-            ImGui::Text("F7: リザルト");
+            ImGui::Text("F2: TRPG Select");
+            ImGui::Text("F3: Scenario Select");
+            ImGui::Text("F4: Character Select");
+            ImGui::Text("F5: Story Player");
+            ImGui::Text("F6: Battle");
+            ImGui::Text("F7: Result");
             ImGui::Spacing();
-            ImGui::TextWrapped("※ ショートカットは Dev Mode が ON の時のみ有効です。F12 で切替。Dev Mode を有効にするにはチェックまたは F12 を押してください。");
+            ImGui::TextWrapped("This shortcut panel is available only when Dev Mode is ON. Toggle Dev Mode with F12.");
             ImGui::End();
         }
     }

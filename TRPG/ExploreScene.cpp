@@ -3,6 +3,7 @@
 #include "CharacterSelect.h"
 #include "system/json.hpp"
 #include "AssetManager.h"
+#include "TextureManager.h"
 #include "system/imgui/imgui.h"
 #include "Dice.h"
 #include "DiceVisual.h"
@@ -22,6 +23,32 @@ using json = nlohmann::json;
 
 static std::unordered_map<int, EventNode> g_nodes;
 static std::vector<std::string> g_log;
+static std::string  g_bgImagePath;
+static ImTextureID  g_bgTex = nullptr;
+static const char*  k_defaultBg = "texture/bg_explore.png";
+
+static void UpdateBackgroundTexture(const std::string &imagePath) {
+    const char *want = imagePath.empty() ? k_defaultBg : imagePath.c_str();
+    if (g_bgImagePath == want) return;
+    g_bgImagePath = want;
+    g_bgTex = TextureManager::GetImGuiTextureID(want);
+}
+
+static void RenderBackground(ImTextureID tex) {
+    if (!tex) return;
+    ImGuiIO &io = ImGui::GetIO();
+    ImVec2 vp = io.DisplaySize;
+    ImGui::GetBackgroundDrawList()->AddImage(
+        tex,
+        ImVec2(0.0f, 0.0f), ImVec2(vp.x, vp.y),
+        ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f),
+        IM_COL32(255, 255, 255, 200)
+    );
+    ImGui::GetBackgroundDrawList()->AddRectFilled(
+        ImVec2(0.0f, 0.0f), ImVec2(vp.x, vp.y),
+        IM_COL32(8, 10, 20, 120)
+    );
+}
 // 中央のゲーム状態（探索シーンと共有される状態）
 struct GameState {
     int currentNode = -1; // 現在のノードID
@@ -368,9 +395,9 @@ void ExploreScene::RenderUI() {
  * - 効果の適用は ApplyChoiceEffects に委譲し、状態更新後に自動セーブします。
  */
 void ExploreScene::Render() {
+    if (ImGui::GetCurrentContext() == nullptr) return;
     if (g_state.currentNode < 0 || g_nodes.find(g_state.currentNode) == g_nodes.end()) {
         // show a helpful message so user knows why nothing is displayed
-        if (ImGui::GetCurrentContext() == nullptr) return;
         ImGuiIO &io = ImGui::GetIO();
         ImVec2 vp = io.DisplaySize;
         ImGui::SetNextWindowPos(ImVec2(vp.x*0.25f, vp.y*0.4f), ImGuiCond_Always);
@@ -386,6 +413,8 @@ void ExploreScene::Render() {
         return;
     }
     const EventNode &n = g_nodes[g_state.currentNode];
+    UpdateBackgroundTexture(n.imagePath);
+    RenderBackground(g_bgTex);
 
     // center dialog near bottom by default but ensure visible on most resolutions
     ImGuiIO &io = ImGui::GetIO();

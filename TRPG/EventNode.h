@@ -87,6 +87,7 @@ struct Choice {
 struct EventNode {
     int id = -1;
     std::string text;
+    std::string imagePath;
     // optional speaker id for multi-character support
     std::string speaker; // character id to mark as speaking
     std::string speakerExpression; // optional expression/variant for speaker
@@ -98,6 +99,7 @@ struct EventNode {
         EventNode n;
         if (j.contains("id")) n.id = j["id"].get<int>();
         if (j.contains("text")) n.text = j["text"].get<std::string>();
+        if (j.contains("image")) n.imagePath = j["image"].get<std::string>();
         if (j.contains("choices") && j["choices"].is_array()) {
             for (auto &cj : j["choices"]) {
                 Choice c;

@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <vector>
 #include <string>
 #include <fstream>
@@ -28,7 +28,7 @@ public:
         return characters;
     }
 
-    // ƒtƒ@ƒCƒ‹•Û‘¶
+    // ãƒ•ã‚¡ã‚¤ãƒ«ä¿å­˜
     void Save(const std::string& failname) {
         nlohmann::json j;
         for (const auto& c : characters) {
@@ -52,10 +52,10 @@ public:
                 });
         }
         std::ofstream file(failname);
-        file << j.dump(4); // 4ƒXƒy[ƒXƒCƒ“ƒfƒ“ƒg‚Å‘‚«‚İ
+        file << j.dump(4); // 4ã‚¹ãƒšãƒ¼ã‚¹ã‚¤ãƒ³ãƒ‡ãƒ³ãƒˆã§æ›¸ãè¾¼ã¿
     }
 
-    // ƒtƒ@ƒCƒ‹“Ç‚İ‚İ
+    // ãƒ•ã‚¡ã‚¤ãƒ«èª­ã¿è¾¼ã¿
     void Load(const std::string& failname) {
         characters.clear();
         std::ifstream file(failname);
